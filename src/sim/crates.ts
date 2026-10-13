@@ -1,5 +1,5 @@
 import {
-  CARRY_BASE, CARRY_HANDCART, CRATE_RANGE, DOCK_DECAY_SECONDS, ICE_CAPACITY, ICE_DECAY_SECONDS, LAYOUT, MIN_PRICE_MULT,
+  CARRY_BASE, CARRY_HANDCART, COLD_DECAY_SECONDS, CRATE_RANGE, DOCK_DECAY_SECONDS, ICE_CAPACITY, ICE_DECAY_SECONDS, LAYOUT, MIN_PRICE_MULT,
 } from './config';
 import type { Species } from './config';
 import type { Crate, CrateLoc, Ev, GameState } from './state';
@@ -20,6 +20,8 @@ function cratesAt(state: GameState, loc: CrateLoc): Crate[] {
 export const handCrates = (s: GameState) => cratesAt(s, 'hand');
 export const iceCrates = (s: GameState) => cratesAt(s, 'ice');
 export const dockCrates = (s: GameState) => cratesAt(s, 'dock');
+export const coldCrates = (s: GameState) => cratesAt(s, 'cold');
+export const smokeCrates = (s: GameState) => cratesAt(s, 'smoke');
 
 export function carryCapacity(state: GameState): number {
   return state.upgrades.handcart ? CARRY_HANDCART : CARRY_BASE;
@@ -62,8 +64,8 @@ export function removeCrate(state: GameState, id: number): void {
 export function decayCrates(state: GameState, dt: number): Ev[] {
   const evs: Ev[] = [];
   for (const c of state.crates) {
-    if (c.freshness <= 0) continue;
-    const secs = c.loc === 'ice' ? ICE_DECAY_SECONDS : DOCK_DECAY_SECONDS; // hauled crates spoil like dock crates
+    if (c.freshness <= 0 || c.smoked || c.king || c.loc === 'smoke') continue; // smoked fish and the King Fish never spoil; crates on the racks are being smoked
+    const secs = c.loc === 'ice' ? ICE_DECAY_SECONDS : c.loc === 'cold' ? COLD_DECAY_SECONDS : DOCK_DECAY_SECONDS; // hauled crates spoil like dock crates
     c.freshness = Math.max(0, c.freshness - (100 / secs) * dt);
     if (c.freshness <= 0) {
       state.stats.spoiled += 1;
@@ -109,6 +111,7 @@ export function storeInIce(state: GameState, crateId: number): Ev[] {
   if (!state.upgrades.icebox) return [{ type: 'denied', reason: 'You need an ice box first.' }];
   const c = state.crates.find((k) => k.id === crateId && k.loc === 'hand');
   if (!c) return [{ type: 'denied', reason: 'You are not carrying that.' }];
+  if (c.king || c.smoked) return [{ type: 'denied', reason: 'That never goes bad. It does not need ice.' }];
   if (iceCrates(state).length >= ICE_CAPACITY) return [{ type: 'denied', reason: 'The ice box is full.' }];
   c.loc = 'ice';
   return [{ type: 'crateStored', crateId: c.id }];

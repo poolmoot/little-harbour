@@ -80,6 +80,7 @@ export function creditOrder(state: GameState, species: Species): Ev[] {
   const bonus = Math.round(o.baseValue * ORDER_BONUS);
   earnBonus(state, bonus);
   state.stats.filled += 1;
+  state.tally.orders += 1;
   state.orders = state.orders.filter((x) => x.id !== o.id);
   state.orderCooldowns.push(ORDER_REFILL_DELAY);
   return [{ type: 'orderFilled', orderId: o.id, name: o.name, bonus }];

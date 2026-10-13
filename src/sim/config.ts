@@ -135,6 +135,15 @@ export const LAYOUT = {
   iceDrop: { x: -3.6, z: 3.6 },
   noticeBoard: { x: 5.2, z: 5.2 },
   iceBox: { x: -3.6, z: 2.4 },
+  /** Four building plots on the quay. The door is where workers stop (in front, towards the camera). */
+  plots: {
+    coldstore: { x: -15, z: 10.5, doorX: -15, doorZ: 12.9 },
+    smokehouse: { x: 15.5, z: 9.5, doorX: 15.5, doorZ: 11.9 },
+    restaurant: { x: 18.5, z: 3.5, doorX: 18.5, doorZ: 5.9 },
+    lighthouse: { x: 19.5, z: 11.5, doorX: 19.5, doorZ: 13.2 },
+  },
+  /** Workers walk east-west along this line when going between buildings. */
+  corridorZ: 7.4,
   playerStart: { x: 0, z: 6 },
   quayMinX: -22,
   quayMaxX: 22,
@@ -143,3 +152,94 @@ export const LAYOUT = {
 export const INTERACT_RANGE = 2.8;
 export const CRATE_RANGE = 1.3;
 export const BOAT_RANGE = 2.4;
+
+// ---- Tycoon stage: buildings -----------------------------------------------
+export type BuildingId = 'coldstore' | 'smokehouse' | 'restaurant' | 'lighthouse';
+export const BUILDING_IDS: BuildingId[] = ['coldstore', 'smokehouse', 'restaurant', 'lighthouse'];
+/** rank = rank needed. cost[i] = price to reach level i (index 0 unused). */
+export const BUILDINGS: Record<BuildingId, { rank: number; cost: number[] }> = {
+  coldstore: { rank: 1, cost: [0, 600, 2000, 6000] },
+  smokehouse: { rank: 1, cost: [0, 900, 3000, 8000] },
+  restaurant: { rank: 2, cost: [0, 2500, 7000, 16000] },
+  lighthouse: { rank: 3, cost: [0, 12000] },
+};
+export const COLD_CAPACITY = [0, 12, 24, 40];
+export const COLD_DECAY_SECONDS = 1200;
+export const SMOKE_RACKS = [0, 2, 4, 6];
+export const SMOKE_SECONDS = [0, 45, 35, 25];
+export const SMOKED_MULT = 1.6;
+export const DEFAULT_SMOKE_LIST: Species[] = ['herring', 'mackerel'];
+export const RESTAURANT_CAPACITY = [0, 6, 12, 20];
+export const RESTAURANT_MULT = 2;
+export const RESTAURANT_MIN_FRESH = 80;
+export const RESTAURANT_VARIETY_BONUS = 0.1;
+
+// ---- Weather and special days ----------------------------------------------
+export type WeatherId = 'calm' | 'wind' | 'fog' | 'storm';
+export const WEATHER_IDS: WeatherId[] = ['calm', 'wind', 'fog', 'storm'];
+export const WEATHER_CHANCE: Record<WeatherId, number> = { calm: 45, wind: 20, fog: 20, storm: 15 };
+export const WEATHER_TRIP_MULT: Record<WeatherId, number> = { calm: 1, wind: 0.8, fog: 1.25, storm: 1 };
+export const STORM_FIRST_DAY = 4;
+export const STORM_ZONES: ZoneId[] = ['opensea', 'deep'];
+export const STORM_CATCH_MULT = 1.5;
+export const STORM_DAMAGE_CHANCE = 0.25;
+export const REPAIR_SECONDS = 60;
+export const REPAIR_COST_FRACTION = 0.05;
+export const MARKET_DAY_CHANCE = 1 / 6;
+export const BIG_CATCH_CHANCE = 1 / 5;
+export const MARKET_DAY_MULT = 1.5;
+export const BIG_CATCH_EXTRA = 2;
+
+// ---- Contracts -------------------------------------------------------------
+export const CONTRACT_RANK = 1;
+export const CONTRACT_OFFERS = 2;
+export const CONTRACT_DAYS = [2, 3];
+export const CONTRACT_REWARD_MULT = 2.5;
+export const CONTRACT_COOLDOWN_DAYS = 1;
+/** Share of what the fleet could catch of that fish in the time that a contract asks for. */
+export const CONTRACT_SHARE = 0.35;
+export const CONTRACT_MIN_QTY = 4;
+export const CONTRACT_MAX_QTY = 60;
+/** Seconds a boat needs between trips (unloading, setting off), and the hours of sailing in a day. */
+export const CONTRACT_TURNAROUND = 12;
+export const CONTRACT_SAIL_HOURS = 14;
+
+// ---- King Fish and the money-per-minute figure ----------------------------------
+export const KING_CHANCE = 0.04;
+export const RATE_SAMPLE_SECONDS = 5;
+export const RATE_WINDOW_SECONDS = 120;
+
+// ---- Goals -------------------------------------------------------------------
+export type GoalKind =
+  | 'dispatched' | 'unloaded' | 'sold' | 'pier' | 'holdLevel' | 'orders' | 'rank' | 'dockhands' | 'boats'
+  | 'captains' | 'zoneSent' | 'building' | 'buildingLevel' | 'zoneFish' | 'contracts' | 'storm' | 'king';
+export type GoalArrow = 'boat' | 'market' | 'pierEnd' | 'shipyard' | 'board' | 'inn';
+/** n = how many / which level / which rank. zone and building pick the thing it is about. Words are in ui/text.ts under the same id. */
+export interface GoalDef { id: string; kind: GoalKind; reward: number; n?: number; zone?: ZoneId; building?: BuildingId; arrow?: GoalArrow }
+export const GOALS: GoalDef[] = [
+  { id: 'send', kind: 'dispatched', n: 1, reward: 10, arrow: 'boat' },
+  { id: 'unload', kind: 'unloaded', n: 1, reward: 10, arrow: 'boat' },
+  { id: 'sell', kind: 'sold', n: 1, reward: 15, arrow: 'market' },
+  { id: 'pier', kind: 'pier', n: 1, reward: 15, arrow: 'pierEnd' },
+  { id: 'space', kind: 'holdLevel', n: 1, reward: 20, arrow: 'shipyard' },
+  { id: 'order', kind: 'orders', n: 1, reward: 30, arrow: 'board' },
+  { id: 'rank1', kind: 'rank', n: 1, reward: 40 },
+  { id: 'worker', kind: 'dockhands', n: 1, reward: 40, arrow: 'inn' },
+  { id: 'boat2', kind: 'boats', n: 2, reward: 50, arrow: 'shipyard' },
+  { id: 'reef', kind: 'zoneSent', zone: 'reef', n: 1, reward: 40 },
+  { id: 'cold', kind: 'building', building: 'coldstore', reward: 40 },
+  { id: 'smoke', kind: 'building', building: 'smokehouse', reward: 50 },
+  { id: 'rank2', kind: 'rank', n: 2, reward: 100 },
+  { id: 'captain', kind: 'captains', n: 1, reward: 60, arrow: 'inn' },
+  { id: 'reeffish', kind: 'zoneFish', zone: 'reef', reward: 100 },
+  { id: 'contract', kind: 'contracts', n: 1, reward: 150, arrow: 'board' },
+  { id: 'restaurant', kind: 'building', building: 'restaurant', reward: 125 },
+  { id: 'sell100', kind: 'sold', n: 100, reward: 100 },
+  { id: 'rank3', kind: 'rank', n: 3, reward: 300 },
+  { id: 'storm', kind: 'storm', n: 1, reward: 150 },
+  { id: 'level2', kind: 'buildingLevel', n: 2, reward: 150 },
+  { id: 'seafish', kind: 'zoneFish', zone: 'opensea', reward: 250 },
+  { id: 'rank4', kind: 'rank', n: 4, reward: 500 },
+  { id: 'lighthouse', kind: 'building', building: 'lighthouse', reward: 600 },
+  { id: 'king', kind: 'king', reward: 1000, arrow: 'inn' },
+];

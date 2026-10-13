@@ -18,6 +18,13 @@ export function earnBonus(state: GameState, amount: number): void {
   state.stats.bonus += amount;
 }
 
+/** A goal reward: counts toward money and rank, and is kept in its own line of the day's ledger. */
+export function earnReward(state: GameState, amount: number): void {
+  state.money += amount;
+  state.lifetime += amount;
+  state.stats.rewards += amount;
+}
+
 export function spend(state: GameState, amount: number): void {
   state.money -= amount;
   state.stats.spent += amount;
@@ -29,6 +36,6 @@ export function spendOnTrip(state: GameState, amount: number): void {
   state.stats.tripCosts += amount;
 }
 
-export function netProfit(st: { earned: number; wages: number; tripCosts: number; spent: number }): number {
-  return st.earned - st.wages - st.tripCosts - st.spent;
+export function netProfit(st: { earned: number; wages: number; tripCosts: number; spent: number; rewards?: number }): number {
+  return st.earned + (st.rewards ?? 0) - st.wages - st.tripCosts - st.spent;
 }

@@ -72,7 +72,7 @@ describe('migration from the MVP save', () => {
     };
     st.setItem('harbour-game-save', JSON.stringify(old));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(3);
+    expect(l.version).toBe(4);
     expect(l.money).toBe(777);
     expect(l.boats).toHaveLength(2);
     for (const b of l.boats) {
@@ -106,5 +106,75 @@ describe('migration from the MVP save', () => {
     expect(l.dockhands[0].job).toBeNull();
     expect(l.crates[0].loc).toBe('dock');
     expect(l.crates[0].carrier).toBeUndefined();
+  });
+});
+
+describe('migration from version 3 (before the tycoon stage)', () => {
+  const v3 = () => ({
+    version: 3, money: 4321, day: 12, dayTime: 200, clock: 4000, nextId: 80, lifetime: 9000, rank: 2,
+    upgrades: { icebox: true, handcart: true, stall1: true, stall2: false },
+    boats: [
+      { id: 1, name: 'Gull', berth: 0, hull: 2, hold: 2, gear: 1, sails: 1, target: 'opensea', captain: { id: 5, name: 'Ansel', trait: 'swift', wage: 40 }, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [] },
+      { id: 2, name: 'Wren', berth: 1, hull: 1, hold: 1, gear: 0, sails: 0, target: 'reef', captain: null, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [] },
+    ],
+    dockhands: [{ id: 7, name: 'Pip', slot: 0, job: null }],
+    crates: [{ id: 9, species: 'cod', freshness: 55, loc: 'ice' }],
+    book: { herring: { caught: 30, bestSale: 9 }, seabass: { caught: 4, bestSale: 40 }, tuna: { caught: 2, bestSale: 150 } },
+    stats: { earned: 100, sold: 10, spoiled: 1, filled: 1, missed: 0, income: {}, bonus: 0, wages: 0, tripCosts: 5, spent: 0, best: { species: null, price: 0 } },
+  });
+
+  it('loads with money, boats, staff, rank and fish book intact, and the new parts at their starting values', () => {
+    const st = memory();
+    st.setItem('harbour-game-save', JSON.stringify(v3()));
+    const l = loadGame(st, new Rng(1))!;
+    expect(l.version).toBe(4);
+    expect(l.money).toBe(4321);
+    expect(l.day).toBe(12);
+    expect(l.lifetime).toBe(9000);
+    expect(l.rank).toBe(2);
+    expect(l.boats.map((b) => [b.name, b.hull, b.hold, b.gear, b.sails])).toEqual([['Gull', 2, 2, 1, 1], ['Wren', 1, 1, 0, 0]]);
+    expect(l.boats[0].captain!.name).toBe('Ansel');
+    expect(l.boats.every((b) => b.stayInStorms)).toBe(true);
+    expect(l.dockhands).toHaveLength(1);
+    expect(l.book.seabass.caught).toBe(4);
+    expect(l.crates[0].freshness).toBe(55);
+    expect(l.upgrades).toEqual({ icebox: true, handcart: true, stall1: true, stall2: false });
+    expect(l.buildings).toEqual({ coldstore: 0, smokehouse: 0, restaurant: 0, lighthouse: 0 });
+    expect(l.weather).toBe('calm');
+    expect(l.smokeList).toEqual(['herring', 'mackerel']);
+    expect(l.contracts).toEqual({ offers: [], active: null, coolUntil: 0 });
+    expect(l.king.found).toBe(false);
+  });
+  it('skips goals the player has clearly already met, without paying for them', () => {
+    const st = memory();
+    st.setItem('harbour-game-save', JSON.stringify(v3()));
+    const l = loadGame(st, new Rng(1))!;
+    expect(l.money).toBe(4321);
+    expect(l.goal).toBeGreaterThanOrEqual(10);
+    // The next unmet goal is a building one: the player has built nothing yet.
+    const s2 = loadGame(st, new Rng(1))!;
+    expect(s2.goal).toBe(l.goal);
+  });
+  it('round-trips a version 4 save with buildings and a contract', () => {
+    const st = memory();
+    const s = initialState();
+    s.buildings.smokehouse = 2;
+    s.smokeList = ['cod'];
+    s.weather = 'fog';
+    s.special = { kind: 'bigcatch', zone: 'reef' };
+    s.goal = 7;
+    s.tally.sold = 55;
+    s.contracts.active = { id: 3, species: 'cod', smoked: true, qty: 9, filled: 2, days: 3, deadline: 1000, reward: 900, baseValue: 360 };
+    s.king.found = true;
+    saveGame(s, st);
+    const l = loadGame(st, new Rng(1))!;
+    expect(l.buildings.smokehouse).toBe(2);
+    expect(l.smokeList).toEqual(['cod']);
+    expect(l.weather).toBe('fog');
+    expect(l.special).toEqual({ kind: 'bigcatch', zone: 'reef' });
+    expect(l.goal).toBe(7);
+    expect(l.tally.sold).toBe(55);
+    expect(l.contracts.active!.filled).toBe(2);
+    expect(l.king.found).toBe(true);
   });
 });
