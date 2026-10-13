@@ -7,7 +7,7 @@ import { button, chip, empty, freshMeter, item, money, price } from '../componen
 import { fishIcon, icon } from '../icons';
 import { NPC_LOOK } from '../../view/people';
 import { portrait } from '../../view/portraits';
-import { FISH_NAME } from '../text';
+import { KING, FISH_NAME } from '../text';
 import { pickTab } from './types';
 import type { Screen, TabDef } from './types';
 
@@ -17,12 +17,13 @@ function sell(s: GameState): string {
   const hand = handCrates(s);
   if (!hand.length) return empty('Nothing in your hands. Carry crates here from the dock.');
   return hand.map((c) => {
+    if (c.king) return item({ art: fishIcon(hex(SPECIES_COLOUR[c.species]), 26), title: 'King Fish', sub: KING.noSell });
     const wanted = s.orders.some((o) => o.species === c.species && o.filled < o.qty);
     return item({
       art: fishIcon(hex(SPECIES_COLOUR[c.species]), 26),
-      title: `${FISH_NAME[c.species]}${wanted ? ` ${chip('<span class="warn">Order: double</span>')}` : ''}`,
-      sub: c.freshness <= 0 ? 'Gone bad' : `${Math.round(c.freshness)}% fresh`,
-      extra: freshMeter(c.freshness),
+      title: `${FISH_NAME[c.species]}${c.smoked ? ' (smoked)' : ''}${wanted ? ` ${chip('<span class="warn">Order: double</span>')}` : ''}`,
+      sub: c.smoked ? 'Smoked. It never goes bad.' : c.freshness <= 0 ? 'Gone bad' : `${Math.round(c.freshness)}% fresh`,
+      extra: c.smoked ? '' : freshMeter(c.freshness),
       right: `${price(money(crateValue(s, c)))}${button({ label: 'Sell', act: 'sell', a: c.id, size: 'sm' })}`,
     });
   }).join('');

@@ -1,15 +1,30 @@
 import { LAYOUT } from './sim/config';
+import type { WeatherId } from './sim/config';
 import type { Ev, GameState } from './sim/sim';
 import type { DayStats } from './sim/state';
 import type { GameAudio } from './audio/index';
 import type { Hud } from './ui/hud';
+import type { PanelKind } from './ui/panels';
 import { MENU } from './ui/menuText';
-import { RANK_NAME, denyText, say } from './ui/text';
+import { SAY2 } from './ui/screenText';
+import { KING, RANK_NAME, denyText, say, sayTycoon } from './ui/text';
+
+/** How loud each weather layer is for a kind of weather (0 to 1). */
+export function weatherSound(w: WeatherId): { rain: number; wind: number; fog: number } {
+  switch (w) {
+    case 'storm': return { rain: 1, wind: 1, fog: 0 };
+    case 'wind': return { rain: 0, wind: 0.35, fog: 0 };
+    case 'fog': return { rain: 0, wind: 0, fog: 1 };
+    default: return { rain: 0, wind: 0, fog: 0 };
+  }
+}
 
 export interface EventDeps {
   audio: GameAudio;
   hud: Hud;
   showSummary(day: number, stats: DayStats): void;
+  /** Open a window (the ending screen). */
+  openPanel(kind: PanelKind): void;
   getState(): GameState;
   /** Floating text at a world position. */
   popAt(x: number, y: number, z: number, text: string): void;
@@ -24,9 +39,29 @@ export class EventRouter {
   recentMissed = -99;
   private staffSold = 0;
   private lastStaffPop = 0;
+  private lastToast: Record<string, number> = {};
 
   constructor(private d: EventDeps) {
     d.audio.onMuteChange = (muted) => d.hud.toast(muted ? MENU.soundOff : MENU.soundOn);
+  }
+
+  /** Set the rain, storm-wind and fog sound layers for this weather (on load and when the day changes). */
+  syncWeather(w: WeatherId): void {
+    const v = weatherSound(w);
+    this.d.audio.setRain(v.rain);
+    this.d.audio.setStormWind(v.wind);
+    this.d.audio.setFog(v.fog);
+  }
+
+  /** True at most once every `secs` seconds for a key, so busy workers do not flood the screen with toasts. */
+  private due(key: string, secs: number): boolean {
+    if (this.now - (this.lastToast[key] ?? -99) < secs) return false;
+    this.lastToast[key] = this.now;
+    return true;
+  }
+
+  private boatName(id: number): string {
+    return this.d.getState().boats.find((b) => b.id === id)?.name ?? 'The boat';
   }
 
   handle(evs: Ev[]): void {
@@ -122,6 +157,86 @@ export class EventRouter {
         case 'dayEnded':
           a.dayReport();
           this.d.showSummary(e.day, e.stats);
+          saveNow = true;
+          break;
+        case 'goalDone':
+          a.fx.goalComplete();
+          h.goalDone(e.reward);
+          h.toast(sayTycoon.goalDone(e.reward), 'good');
+          saveNow = true;
+          break;
+        case 'buildingBuilt':
+          if (e.level === 1) a.fx.buildingBuilt(); else a.fx.buildingUpgraded();
+          h.toast(sayTycoon.built(e.id, e.level), 'good');
+          saveNow = true;
+          break;
+        case 'crateSmoking':
+          a.fx.crateIce();
+          if (this.due('smoking', 4)) h.toast(sayTycoon.smoking);
+          break;
+        case 'crateSmoked':
+          a.fx.cratePickUp();
+          if (this.due('smoked', 4)) h.toast(sayTycoon.smoked, 'good');
+          break;
+        case 'restaurantServed': {
+          const door = LAYOUT.plots.restaurant;
+          if (e.staff) {
+            if (this.due('served', 3)) { a.fx.coins(e.price); this.d.popAt(door.x, 3, door.z, `+$${e.price}`); }
+          } else {
+            a.fx.coins(e.price);
+            this.d.popAt(door.x, 3, door.z, `+$${e.price}`);
+            h.toast(sayTycoon.served(e.species, e.price), 'good');
+          }
+          saveNow = true;
+          break;
+        }
+        case 'weatherChanged':
+          this.syncWeather(e.weather);
+          h.toast(sayTycoon.newDay(e.weather, e.special, e.tomorrowWeather, e.tomorrowSpecial));
+          if (e.special?.kind === 'market') { a.fx.marketDay(); h.toast(SAY2.marketDay, 'good'); }
+          else if (e.special?.kind === 'bigcatch') h.toast(SAY2.bigCatch, 'good');
+          if (e.tomorrowWeather === 'storm') { a.fx.stormWarning(); h.toast(SAY2.stormComing, 'warn'); }
+          break;
+        case 'boatDamaged':
+          a.fx.boatDamaged();
+          h.toast(sayTycoon.damaged(this.boatName(e.boatId)), 'warn');
+          saveNow = true;
+          break;
+        case 'boatRepairStarted':
+          a.fx.upgrade();
+          h.toast(sayTycoon.repairing(this.boatName(e.boatId)));
+          saveNow = true;
+          break;
+        case 'boatRepaired':
+          a.fx.boatReturn();
+          h.toast(sayTycoon.repaired(this.boatName(e.boatId)), 'good');
+          saveNow = true;
+          break;
+        case 'contractOffered': h.toast(sayTycoon.offered); break;
+        case 'contractAccepted':
+          a.fx.contractAccepted();
+          h.toast(sayTycoon.accepted);
+          saveNow = true;
+          break;
+        case 'contractDone':
+          a.fx.contractDone();
+          h.toast(sayTycoon.contractDone(e.reward), 'good');
+          saveNow = true;
+          break;
+        case 'contractFailed':
+          a.fx.contractMissed();
+          h.toast(sayTycoon.contractFailed, 'warn');
+          saveNow = true;
+          break;
+        case 'kingFishFound':
+          a.fx.kingFishCaught();
+          h.banner(SAY2.kingBanner, SAY2.kingBannerSub);
+          h.toast(KING.found, 'good');
+          saveNow = true;
+          break;
+        case 'endingReached':
+          a.fx.ending();
+          this.d.openPanel('ending');
           saveNow = true;
           break;
         case 'denied':

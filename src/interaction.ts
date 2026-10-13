@@ -1,13 +1,14 @@
-import { BOAT_RANGE, CRATE_RANGE, INTERACT_RANGE, LAYOUT } from './sim/config';
-import { carryCapacity, castLine, dockCrates, handCrates, hook, pickUp, unloadBoat } from './sim/sim';
+import { BOAT_RANGE, BUILDING_IDS, CRATE_RANGE, INTERACT_RANGE, LAYOUT } from './sim/config';
+import { carryCapacity, castLine, deliverKingFish, dockCrates, handCrates, hook, pickUp, unloadBoat } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import type { Rng } from './sim/rng';
 import type { Prompt } from './ui/hud';
 import type { PanelKind } from './ui/panels';
-import { say } from './ui/text';
+import { SAY2 } from './ui/screenText';
+import { BUILDING_LABEL, say } from './ui/text';
 
 
-export type TargetKind = 'crate' | 'boat' | 'market' | 'shipyard' | 'board' | 'icebox' | 'fishing' | 'inn';
+export type TargetKind = 'crate' | 'boat' | 'market' | 'shipyard' | 'board' | 'icebox' | 'fishing' | 'inn' | 'plot';
 export interface Target {
   kind: TargetKind;
   id: number;
@@ -16,7 +17,7 @@ export interface Target {
   dist: number;
 }
 
-export const STATIONS: Record<Exclude<TargetKind, 'crate' | 'boat'>, { x: number; z: number; range: number }> = {
+export const STATIONS: Record<Exclude<TargetKind, 'crate' | 'boat' | 'plot'>, { x: number; z: number; range: number }> = {
   market: { x: LAYOUT.market.x, z: LAYOUT.market.z + 1.7, range: INTERACT_RANGE },
   shipyard: { x: LAYOUT.shipyard.x, z: LAYOUT.shipyard.z + 2.8, range: INTERACT_RANGE },
   board: { x: LAYOUT.noticeBoard.x, z: LAYOUT.noticeBoard.z + 0.5, range: INTERACT_RANGE },
@@ -42,7 +43,8 @@ export function interact(t: Target | null, s: GameState, rng: Rng): Interaction 
     case 'shipyard': return { open: 'shipyard' };
     case 'board': return { open: 'board' };
     case 'icebox': return { open: 'ice' };
-    case 'inn': return { open: 'hire' };
+    case 'inn': return handCrates(s).some((c) => c.king) ? { evs: deliverKingFish(s) } : { open: 'hire' };
+    case 'plot': return { open: 'plot', arg: t.id };
     case 'fishing': return { evs: s.fishing.phase === 'idle' ? castLine(s, rng) : hook(s, rng) };
   }
 }
@@ -62,6 +64,10 @@ export function findTarget(s: GameState, p: { x: number; z: number }): Target | 
     const berth = LAYOUT.berths[b.berth];
     consider('boat', b.id, berth.edgeX, berth.edgeZ, BOAT_RANGE);
   }
+  BUILDING_IDS.forEach((id, i) => {
+    const p = LAYOUT.plots[id];
+    consider('plot', i, p.doorX, p.doorZ, INTERACT_RANGE);
+  });
   for (const k of Object.keys(STATIONS) as (keyof typeof STATIONS)[]) {
     const st = STATIONS[k];
     consider(k, 0, st.x, st.z, st.range);
@@ -88,7 +94,11 @@ if (!t) return null;
     case 'market': return { text: say.market, key: true };
     case 'shipyard': return { text: say.shipyard, key: true };
     case 'board': return { text: say.board, key: true };
-    case 'inn': return { text: say.inn, key: true };
+    case 'inn': return handCrates(s).some((c) => c.king) ? { text: SAY2.promptKing, key: true, hot: true } : { text: say.inn, key: true };
+    case 'plot': {
+      const id = BUILDING_IDS[t.id];
+      return { text: BUILDING_LABEL.prompt(id, s.buildings[id]), key: true };
+    }
     case 'icebox': return { text: s.upgrades.icebox ? say.iceOwned : say.iceBuy, key: true };
     case 'fishing':
       if (s.fishing.phase === 'idle') return { text: say.cast, key: true };

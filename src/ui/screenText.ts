@@ -113,7 +113,6 @@ export const CONTRACT_TEXT = {
   smoked: 'smoked',
   backTomorrow: 'No contracts right now. Come back tomorrow.',
   offerSub: (days: number): string => `You have ${days === 1 ? '1 day' : `${days} days`} once you take it.`,
-  activeSub: (done: number, qty: number, left: string): string => `${done} of ${qty} sold · ${left}`,
   only1: 'You can have one contract at a time.',
 };
 
@@ -148,6 +147,7 @@ export const BOAT_TEXT = {
 
 export const SHIPYARD_TEXT = {
   brokenTitle: 'Broken boats',
+  yourBoats: 'Your boats',
   fix: 'Fix it',
   fixCost: (cost: number): string => `Cost $${cost.toLocaleString('en')}`,
   fixTime: (secs: number): string => `Takes ${secs} seconds`,
@@ -177,6 +177,10 @@ export const ORDER_TEXT = {
 export const ENDING_TEXT = {
   windowTitle: 'The King Fish!',
   bram: 'Bram, inn owner',
+  days: 'Days played',
+  earned: 'Money earned',
+  fish: 'Fish caught',
+  boats: 'Boats owned',
 };
 
 // ---- toasts and prompts for the new events ----------------------------------------------------------------------------
@@ -189,6 +193,5 @@ export const SAY2 = {
   kingBanner: 'The King Fish!',
   kingBannerSub: 'Carry it to the inn.',
   smokedWaiting: (n: number): string => `${n} smoked crate${n === 1 ? ' is' : 's are'} ready.`,
-  promptPlot: (name: string, built: boolean): string => (built ? `${name}: open` : `${name}: for sale`),
   promptKing: 'Show the King Fish to everyone',
 };

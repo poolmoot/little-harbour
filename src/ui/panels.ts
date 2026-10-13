@@ -1,4 +1,4 @@
-import type { Track, UpgradeId, ZoneId } from '../sim/config';
+import type { BuildingId, Species, Track, UpgradeId, ZoneId } from '../sim/config';
 import type { DayStats, GameState, HaulPolicy } from '../sim/state';
 import type { AudioSettings, VolumeKey } from '../audio/settings';
 import type { QualityMode } from '../view/quality';
@@ -11,14 +11,16 @@ import { ledgerScreen } from './screens/ledger';
 import { logbookScreen } from './screens/logbook';
 import { marketScreen } from './screens/market';
 import { noticesScreen } from './screens/notices';
+import { endingScreen } from './screens/ending';
 import { howtoScreen } from './screens/howto';
+import { plotScreen } from './screens/plot';
 import { pauseScreen } from './screens/pause';
 import { settingsScreen } from './screens/settings';
 import { shipyardScreen } from './screens/shipyard';
 import { titleScreen } from './screens/title';
 import type { Screen, ScreenView } from './screens/types';
 
-export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto';
+export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending';
 
 const SCREENS: Record<PanelKind, Screen> = {
   boat: boatScreen,
@@ -33,6 +35,8 @@ const SCREENS: Record<PanelKind, Screen> = {
   pause: pauseScreen,
   settings: settingsScreen,
   howto: howtoScreen,
+  plot: plotScreen,
+  ending: endingScreen,
 };
 
 export interface PanelActions {
@@ -50,6 +54,17 @@ export interface PanelActions {
   setPolicy(p: HaulPolicy): void;
   store(id: number): void;
   take(id: number): void;
+  /** Build a building, or make it bigger. */
+  build(id: BuildingId): void;
+  coldIn(crateId: number): void;
+  coldOut(crateId: number): void;
+  smokeIn(crateId: number): void;
+  smokeOut(crateId: number): void;
+  sellToRestaurant(crateId: number): void;
+  setSmoke(species: Species, on: boolean): void;
+  setStayHome(boatId: number, stay: boolean): void;
+  repair(boatId: number): void;
+  acceptContract(contractId: number): void;
   getQuality(): QualityMode;
   setQuality(m: QualityMode): void;
   resetGame(): void;
@@ -210,6 +225,16 @@ export class Panels {
       case 'openboat': this.open('boat', Number(a)); break;
       case 'store': this.actions.store(Number(a)); break;
       case 'take': this.actions.take(Number(a)); break;
+      case 'build': this.actions.build(a as BuildingId); break;
+      case 'coldin': this.actions.coldIn(Number(a)); break;
+      case 'coldout': this.actions.coldOut(Number(a)); break;
+      case 'smokein': this.actions.smokeIn(Number(a)); break;
+      case 'smokeout': this.actions.smokeOut(Number(a)); break;
+      case 'restsell': this.actions.sellToRestaurant(Number(a)); break;
+      case 'smokelist': this.actions.setSmoke(a as Species, b === '1'); break;
+      case 'stayhome': this.actions.setStayHome(Number(a), b === '1'); break;
+      case 'repair': this.actions.repair(Number(a)); break;
+      case 'accept': this.actions.acceptContract(Number(a)); break;
       case 'quality': this.actions.setQuality(a as QualityMode); break;
       case 'reset': this.confirmReset = true; this.render(true); break;
       case 'resetno': this.confirmReset = false; this.render(true); break;

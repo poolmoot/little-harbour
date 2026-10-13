@@ -1,4 +1,4 @@
-import { TRACKS, TRACK_MAX, ZONES, ZONE_IDS } from '../../sim/config';
+import { STORM_ZONES, TRACKS, TRACK_MAX, ZONES, ZONE_IDS } from '../../sim/config';
 import type { Track } from '../../sim/config';
 import { zoneWeights } from '../../sim/catch';
 import { canUpgradeBoat, holdSize, rareMult, trackCost, tripCostFor, tripTimeFor, zoneUnlockedFor } from '../../sim/fleet';
@@ -7,13 +7,14 @@ import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import type { Boat, GameState } from '../../sim/state';
 import { isNight, phaseOf } from '../../sim/time';
 import { hex, SPECIES_COLOUR } from '../../palette';
-import { button, card, cards, chip, empty, face, item, money, mult, priceLabel, stars } from '../components';
+import { button, card, cards, chip, empty, face, item, money, mult, priceLabel, stars, tick } from '../components';
 import { captainLook } from '../../view/people';
 import { portrait as facePicture } from '../../view/portraits';
 import type { CardTone } from '../components';
 import { fishIcon, HULL_ICONS, icon } from '../icons';
 import type { IconName } from '../icons';
-import { FISH_NAME, LABEL, RANK_NAME, TRACK_NAME, TRAIT, ZONE_NAME, boatType, crates, denyText, trackNext, trackNow, zoneNeeds } from '../text';
+import { BOAT_TEXT } from '../screenText';
+import { FISH_NAME, LABEL, WEATHER_LABEL, RANK_NAME, TRACK_NAME, TRAIT, ZONE_NAME, boatType, crates, denyText, trackNext, trackNow, zoneNeeds } from '../text';
 import { pickTab } from './types';
 import type { Screen, TabDef } from './types';
 
@@ -43,9 +44,14 @@ function upgrades(s: GameState, boat: Boat): string {
   }), 104);
 }
 
+/** The "Stay home in storms" tick, with a line about what it does. */
+function stayHome(s: GameState, boat: Boat): string {
+  return `<div>${tick({ label: WEATHER_LABEL.stayHome, on: boat.stayInStorms, act: 'stayhome', a: boat.id, b: boat.stayInStorms ? 0 : 1 })}</div><p class="dim">${s.weather === 'storm' && boat.stayInStorms ? BOAT_TEXT.stayToday : BOAT_TEXT.stayNote}</p>`;
+}
+
 function grounds(s: GameState, boat: Boat): string {
   const phase = phaseOf(s.dayTime);
-  return ZONE_IDS.map((z) => {
+  return stayHome(s, boat) + ZONE_IDS.map((z) => {
     const unlocked = zoneUnlockedFor(boat, z);
     const sel = boat.target === z;
     const w = zoneWeights(z, phase);
@@ -81,17 +87,19 @@ function portrait(boat: Boat): string {
   const zone = ZONES[boat.target];
   return `<div class="portrait">${icon(HULL_ICONS[boat.hull], 120)}${stars(boat.hull + 1, 4, 16)}
     <div class="portrait-name ol">${boatType(boat.hull)}</div>
-    <div class="chips">${chip(`${icon('crate', 14)}${crates(holdSize(boat))}`)}${chip(`${icon('net', 14)}Rare fish ×${mult(rareMult(boat))}`)}${chip(`${icon('sail', 14)}Trip time ×${mult(tripTimeFor(boat, boat.target) / zone.trip)}`)}</div></div>`;
+    <div class="chips">${boat.damaged ? chip(`<span class="bad">${BOAT_TEXT.broken}</span>`) : ''}${chip(`${icon('crate', 14)}${crates(holdSize(boat))}`)}${chip(`${icon('net', 14)}Rare fish ×${mult(rareMult(boat))}`)}${chip(`${icon('sail', 14)}Trip time ×${mult(tripTimeFor(boat, boat.target) / zone.trip)}`)}</div></div>`;
 }
 
 function foot(s: GameState, boat: Boat): string {
   const cost = tripCostFor(boat.target);
   const where = `<div class="row-x">${icon('anchor', 22)}<div><div class="ol">Going to ${ZONE_NAME[boat.target]}</div><div class="dim">${Math.round(tripTimeFor(boat, boat.target))}s trip · ${LABEL.tripCost} $${money(cost)}</div></div></div>`;
+  if (boat.damaged) return `${where}${button({ label: boat.repairLeft !== undefined ? BOAT_TEXT.fixing(Math.ceil(boat.repairLeft)) : BOAT_TEXT.cannotSail, tone: 'ghost', off: true })}`;
   if (boat.captain) return `${where}<span class="dim">${boat.captain.name} sails for you</span>`;
   const night = isNight(s);
+  const stays = s.weather === 'storm' && boat.stayInStorms && STORM_ZONES.includes(boat.target);
   const poor = s.money < cost;
-  const ok = boat.status === 'docked' && !night && !poor;
-  const label = night ? 'Too dark' : boat.status !== 'docked' ? 'Boat is away' : poor ? `Not enough money ($${money(cost)} needed)` : `Send out ${priceLabel(cost)}`;
+  const ok = boat.status === 'docked' && !night && !poor && !stays;
+  const label = stays ? 'Stays home (storm)' : night ? 'Too dark' : boat.status !== 'docked' ? 'Boat is away' : poor ? `Not enough money ($${money(cost)} needed)` : `Send out ${priceLabel(cost)}`;
   return `${where}${button({ label, act: 'send', a: boat.id, b: boat.target, off: !ok })}`;
 }
 
@@ -106,7 +114,9 @@ export const boatScreen: Screen = (ctx) => {
     icon: icon(HULL_ICONS[boat.hull], 28),
     tabs: TABS,
     tab,
-    note: tab === 'grounds' && !isNight(s) ? LABEL.tripCostNote : isNight(s) ? '<span class="warn">It is too dark to go out. Boats can sail again in the morning.</span>' : undefined,
+    note: boat.damaged
+      ? `<span class="bad">${boat.repairLeft !== undefined ? BOAT_TEXT.fixing(Math.ceil(boat.repairLeft)) : `${BOAT_TEXT.brokenChip} ${BOAT_TEXT.fixHint}`}</span>`
+      : tab === 'grounds' && !isNight(s) ? LABEL.tripCostNote : isNight(s) ? '<span class="warn">It is too dark to go out. Boats can sail again in the morning.</span>' : undefined,
     body: `<div class="split">${portrait(boat)}<div>${pane}</div></div>`,
     foot: foot(s, boat),
   };

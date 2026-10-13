@@ -20,7 +20,7 @@ export const iceboxScreen: Screen = ({ state: s }) => {
   if (!s.upgrades.icebox) {
     return { title, icon: ic, body: empty(`You do not have an ice box yet. Buy one at the shipyard for $${UPGRADES.icebox.cost}. Fish stay fresh 4 times longer.`) };
   }
-  const hand = handCrates(s), ice = iceCrates(s);
+  const hand = handCrates(s).filter((c) => !c.smoked && !c.king), ice = iceCrates(s);
   const body = section('In your hands') + (hand.length ? hand.map((c) => crateRow(c, 'Put on ice', 'store')).join('') : empty('Nothing.'))
     + section(`On ice ${ice.length} / ${ICE_CAPACITY}`) + (ice.length ? ice.map((c) => crateRow(c, 'Take out', 'take')).join('') : empty('Empty.'));
   return { title, icon: ic, note: 'Crates on ice go bad 4 times slower.', body };

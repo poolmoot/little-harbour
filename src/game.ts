@@ -6,6 +6,7 @@ import type { ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
 import { buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy } from './sim/sim';
+import { acceptContract, buyBuilding, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate, storeInCold, takeFromCold } from './sim/sim';
 import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
@@ -106,6 +107,7 @@ export class Game {
       audio: this.audio,
       hud: this.hud,
       showSummary: (day, stats) => this.panels.showSummary(day, stats),
+      openPanel: (kind) => this.panels.open(kind),
       getState: () => this.state,
       popAt: (x, y, z, text) => this.popAt(x, y, z, text),
       saveNow: () => { this.save(); this.saveTimer = 0; },
@@ -127,6 +129,16 @@ export class Game {
         setPolicy: (p) => this.run(setHaulPolicy(this.state, p)),
         store: (id) => this.run(storeInIce(this.state, id)),
         take: (id) => this.run(takeFromIce(this.state, id)),
+        build: (id) => this.run(buyBuilding(this.state, id)),
+        coldIn: (id) => this.run(storeInCold(this.state, id)),
+        coldOut: (id) => this.run(takeFromCold(this.state, id)),
+        smokeIn: (id) => this.run(smokeCrate(this.state, id)),
+        smokeOut: (id) => this.run(collectSmoked(this.state, id)),
+        sellToRestaurant: (id) => this.run(sellToRestaurant(this.state, id)),
+        setSmoke: (sp, on) => this.run(setSmokeList(this.state, sp, on)),
+        setStayHome: (id, stay) => this.run(setStayInStorms(this.state, id, stay)),
+        repair: (id) => this.run(repairBoat(this.state, id)),
+        acceptContract: (id) => this.run(acceptContract(this.state, id)),
         getQuality: () => this.quality.mode,
         setQuality: (m) => { this.quality.setMode(m); this.panels.refresh(); },
         resetGame: () => this.reset(),
@@ -155,6 +167,7 @@ export class Game {
     // Keep the settings screen in step when M is pressed while it is open.
     this.audio.settings.subscribe(() => this.panels.refresh());
 
+    this.events.syncWeather(this.state.weather);
     if (skipTitle()) this.beginPlay();
     else this.panels.open('title');
     if (import.meta.env.DEV) {
