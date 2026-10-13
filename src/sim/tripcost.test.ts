@@ -72,7 +72,7 @@ describe('trip costs', () => {
     delete raw.stats.tripCosts;
     const mem = new Map<string, string>([['harbour-game-save', JSON.stringify(raw)]]);
     const l = loadGame({ getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => void mem.set(k, v), removeItem: (k) => void mem.delete(k) }, new Rng(1))!;
-    expect(l.version).toBe(3);
+    expect(l.version).toBe(4);
     expect(l.stats.tripCosts).toBe(0);
   });
 });

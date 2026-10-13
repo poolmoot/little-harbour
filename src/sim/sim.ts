@@ -1,4 +1,10 @@
 import { decayCrates, discardSpoiled } from './crates';
+import { resetRestaurant, stepSmokehouse } from './buildings';
+import { stepContracts } from './contracts';
+import { stepGoals } from './goals';
+import { stepIncome } from './income';
+import { stepRepairs } from './storm';
+import { rollNewDay, startWeather } from './weather';
 import { recoverDemand } from './market';
 import { stepBoats } from './boats';
 import { payWages, refreshCandidates, stepCaptains, stepDockhands } from './staff';
@@ -17,6 +23,12 @@ export { sellAll, sellCrate } from './market';
 export { castLine, hook, cancelCast } from './fishing';
 export { buyUpgrade } from './upgrades';
 export { buyBoat, buyBoatUpgrade, bestZone } from './fleet';
+export { buyBuilding, canBuyBuilding, nextBuildingCost, buildingMaxLevel, storeInCold, takeFromCold, smokeCrate, collectSmoked, setSmokeList, sellToRestaurant, restaurantPrice } from './buildings';
+export { acceptContract } from './contracts';
+export { currentGoal, goalProgress } from './goals';
+export { repairBoat, canRepair, repairCost, setStayInStorms } from './storm';
+export { deliverKingFish, endingSummary } from './ending';
+export { moneyPerMinute } from './income';
 export { rankOf } from './rank';
 export { fireCaptain, fireDockhand, hireCaptain, hireDockhand, setBoatTarget, setHaulPolicy } from './staff';
 
@@ -25,6 +37,7 @@ export { phaseOf } from './time';
 /** Start-of-game setup: post the first orders. */
 export function startGame(state: GameState, rng: Rng): Ev[] {
   if (state.candidates.length === 0) refreshCandidates(state, rng);
+  if (state.day === 1 && state.clock === 0) startWeather(state, rng);
   return fillOrders(state, rng);
 }
 
@@ -37,6 +50,10 @@ export function step(state: GameState, dt: number, rng: Rng): Ev[] {
     discardSpoiled(state);
     evs.push(...payWages(state, e.stats)); // wages belong to the day that just ended
     refreshCandidates(state, rng);
+    resetRestaurant(state);
+    const w = rollNewDay(state, rng);
+    e.forecast = w.forecast;
+    evs.push(w.ev);
   }
   evs.push(...clockEvs);
   evs.push(...stepBoats(state, dt, rng));
@@ -46,6 +63,11 @@ export function step(state: GameState, dt: number, rng: Rng): Ev[] {
   recoverDemand(state, dt);
   evs.push(...stepOrders(state, dt, rng));
   evs.push(...stepFishing(state, dt));
+  evs.push(...stepSmokehouse(state, dt));
+  evs.push(...stepRepairs(state, dt));
+  evs.push(...stepContracts(state, rng));
+  stepIncome(state, dt);
   evs.push(...stepRank(state));
+  evs.push(...stepGoals(state));
   return evs;
 }

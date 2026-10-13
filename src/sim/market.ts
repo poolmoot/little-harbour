@@ -1,20 +1,28 @@
 import {
-  DEMAND_DROPS, DEMAND_MIN, DEMAND_RECOVER, DEMAND_RECOVER_EVERY, FISH_PRICE, ORDER_CRATE_MULT, SPECIES,
+  DEMAND_DROPS, DEMAND_MIN, DEMAND_RECOVER, DEMAND_RECOVER_EVERY, FISH_PRICE, ORDER_CRATE_MULT, SMOKED_MULT, SPECIES,
 } from './config';
 import type { Species } from './config';
 import { freshnessMultiplier, handCrates, isSpoiled, removeCrate } from './crates';
 import type { Crate, Ev, GameState } from './state';
 import { earnSale } from './ledger';
 import { creditOrder, matchingOrder } from './orders';
+import { creditContract } from './contracts';
+import { marketMult } from './weather';
 
 export function unitPrice(state: GameState, species: Species, freshness: number): number {
-  return FISH_PRICE[species] * freshnessMultiplier(freshness) * state.demand[species];
+  return FISH_PRICE[species] * freshnessMultiplier(freshness) * state.demand[species] * marketMult(state);
+}
+
+/** Smoked fish: a higher price that ignores freshness. */
+export function smokedPrice(state: GameState, species: Species): number {
+  return FISH_PRICE[species] * SMOKED_MULT * state.demand[species] * marketMult(state);
 }
 
 /** What a crate would fetch right now (including the double for a matching order). */
 export function crateValue(state: GameState, c: Crate): number {
   if (isSpoiled(c)) return 0;
-  const base = unitPrice(state, c.species, c.freshness);
+  if (c.king) return 0;
+  const base = c.smoked ? smokedPrice(state, c.species) : unitPrice(state, c.species, c.freshness);
   return Math.round(matchingOrder(state, c.species) ? base * ORDER_CRATE_MULT : base);
 }
 
@@ -31,6 +39,7 @@ export const stallLevel = (state: GameState): number => (state.upgrades.stall2 ?
 /** Sell a crate wherever it is (hand or in a dockhand's arms). */
 export function sellCrateObj(state: GameState, c: Crate, staff: boolean): Ev[] {
   const evs: Ev[] = [];
+  if (c.king) return [{ type: 'denied', reason: 'The King Fish is not for sale. Take it to the inn.' }];
   if (isSpoiled(c)) {
     removeCrate(state, c.id);
     evs.push({ type: 'crateDiscarded', species: c.species });
@@ -40,11 +49,13 @@ export function sellCrateObj(state: GameState, c: Crate, staff: boolean): Ev[] {
   const matched = matchingOrder(state, c.species) !== null;
   earnSale(state, c.species, price);
   state.stats.sold += 1;
+  state.tally.sold += 1;
   const rec = state.book[c.species];
   rec.bestSale = Math.max(rec.bestSale, price);
   state.demand[c.species] = Math.max(DEMAND_MIN, state.demand[c.species] - DEMAND_DROPS[stallLevel(state)]);
   removeCrate(state, c.id);
   evs.push({ type: 'crateSold', species: c.species, price, freshness: c.freshness, orderBonus: matched, staff });
+  evs.push(...creditContract(state, c));
   if (matched) evs.push(...creditOrder(state, c.species));
   return evs;
 }

@@ -4,9 +4,11 @@ import {
 } from './config';
 import type { ZoneId } from './config';
 import { dispatchBoat, unloadBoat } from './boats';
-import { carryCapacity, freeDockSlot, isSpoiled, removeCrate } from './crates';
+import { rackRoom, restaurantWants, serveRestaurantCrate, startSmoking, coldRoom } from './buildings';
+import { freeDockSlot, isSpoiled, removeCrate } from './crates';
+import { planJob } from './routing';
 import { activeCaptain, bestZone, zoneUnlockedFor } from './fleet';
-import { crateValue, sellCrateObj } from './market';
+import { sellCrateObj } from './market';
 import { CAPTAINS_RANK, DOCKHANDS_RANK, captainsUnlocked, dockhandsUnlocked, rankOf } from './rank';
 import type { Rng } from './rng';
 import type { Check, Crate, Dockhand, Ev, GameState, HaulPolicy, Job, Pt } from './state';
@@ -141,8 +143,23 @@ function pathLen(p: Pt[]): number {
   return l;
 }
 
-function mkJob(phase: Job['phase'], path: Pt[], crateIds: number[], dest: Job['dest']): Job {
-  return { phase, path, len: pathLen(path), d: 0, crateIds, dest };
+function mkJob(phase: Job['phase'], path: Pt[], crateIds: number[], dest: Job['dest'], src?: Job['src']): Job {
+  const job: Job = { phase, path, len: pathLen(path), d: 0, crateIds, dest };
+  if (src) job.src = src;
+  return job;
+}
+
+const BUILDING_DEST: Partial<Record<Job['dest'], keyof typeof LAYOUT.plots>> = { cold: 'coldstore', restaurant: 'restaurant', smoke: 'smokehouse' };
+const doorOf = (id: keyof typeof LAYOUT.plots): Pt => ({ x: LAYOUT.plots[id].doorX, z: LAYOUT.plots[id].doorZ });
+
+/** A walk between two places on the quay: out of the pier lane, along the east-west corridor, then to the spot. */
+export function walkPath(from: Pt, to: Pt): Pt[] {
+  const raw: Pt[] = [from];
+  if (from.z < 1.5) raw.push(laneEntry(from.x));
+  const cz = LAYOUT.corridorZ;
+  const last = raw[raw.length - 1];
+  raw.push({ x: last.x, z: cz }, { x: to.x, z: cz }, to);
+  return raw.filter((p, i) => i === 0 || Math.hypot(p.x - raw[i - 1].x, p.z - raw[i - 1].z) > 0.01);
 }
 
 /** Where a job's walker is right now, and which way it faces. */
@@ -169,18 +186,20 @@ function laneEntry(x: number): Pt {
 }
 
 function haulPath(from: Pt, dest: Job['dest']): Pt[] {
+  const bld = BUILDING_DEST[dest];
+  if (bld) return walkPath(from, doorOf(bld));
+  if (from.z > 4 && dest === 'market') return walkPath(from, LAYOUT.marketDrop); // collecting from a building on the quay
   const e = laneEntry(from.x);
   return dest === 'market'
     ? [from, e, { x: -2.2, z: 6.4 }, { x: LAYOUT.marketDrop.x, z: 6.4 }, LAYOUT.marketDrop]
     : [from, e, { x: -2.4, z: LAYOUT.iceDrop.z }, LAYOUT.iceDrop];
 }
 function backPath(from: Pt, home: Pt, dest: Job['dest']): Pt[] {
+  if (BUILDING_DEST[dest] || from.x > 8 || from.x < -9.5) return walkPath(from, home);
   if (dest === 'market' && from.z > 4) return [from, { x: LAYOUT.marketDrop.x, z: 6.4 }, { x: -2.2, z: 6.4 }, home];
   if (dest === 'ice' && from.z > 3) return [from, { x: -2.4, z: LAYOUT.iceDrop.z }, home];
   return [from, laneEntry(from.x), home];
 }
-
-const claimed = (state: GameState, c: Crate): boolean => c.carrier !== undefined && state.dockhands.some((d) => d.id === c.carrier);
 
 function releaseCrates(state: GameState, d: Dockhand): void {
   for (const c of [...state.crates]) {
@@ -196,24 +215,17 @@ function releaseCrates(state: GameState, d: Dockhand): void {
 }
 
 function startJob(state: GameState, d: Dockhand): void {
-  const free = state.crates.filter((c) => c.loc === 'dock' && !isSpoiled(c) && !claimed(state, c));
-  if (free.length === 0) return;
-  const ranked = free.map((c) => ({ c, v: crateValue(state, c) })).sort((a, b) => b.v - a.v || b.c.freshness - a.c.freshness);
-  const first = ranked[0].c;
-  const iceRoom = state.upgrades.icebox
-    ? ICE_CAPACITY - state.crates.filter((c) => c.loc === 'ice').length - state.dockhands.reduce((n, o) => n + (o.job && o.job.dest === 'ice' ? o.job.crateIds.length : 0), 0)
-    : 0;
-  const toIce = state.haulPolicy === 'ice' && iceRoom > 0;
-  const cap = Math.min(carryCapacity(state), toIce ? iceRoom : Infinity);
-  const take: Crate[] = [first];
-  for (const r of ranked.slice(1)) {
-    if (take.length >= cap) break;
-    if (Math.hypot((r.c.x ?? 0) - (first.x ?? 0), (r.c.z ?? 0) - (first.z ?? 0)) <= 4.5) take.push(r.c);
-  }
-  for (const c of take) c.carrier = d.id;
+  const plan = planJob(state);
+  if (!plan) return;
+  for (const c of plan.crates) c.carrier = d.id;
   const from = homePos(d.slot);
+  const first = plan.crates[0];
+  if (plan.src === 'smoke') {
+    d.job = mkJob('out', walkPath(from, doorOf('smokehouse')), plan.crates.map((c) => c.id), plan.dest, 'smoke');
+    return;
+  }
   const target = { x: first.x ?? 0, z: first.z ?? 0 };
-  d.job = mkJob('out', [from, laneEntry(target.x), target], take.map((c) => c.id), toIce ? 'ice' : 'market');
+  d.job = mkJob('out', [from, laneEntry(target.x), target], plan.crates.map((c) => c.id), plan.dest, 'dock');
 }
 
 function finishPhase(state: GameState, d: Dockhand, evs: Ev[]): void {
@@ -224,14 +236,15 @@ function finishPhase(state: GameState, d: Dockhand, evs: Ev[]): void {
     const got: Crate[] = [];
     for (const id of job.crateIds) {
       const c = state.crates.find((k) => k.id === id);
-      if (c && c.loc === 'dock' && c.carrier === d.id && !isSpoiled(c)) got.push(c);
+      const here0 = job.src === 'smoke' ? c?.loc === 'smoke' && c.smoked : c?.loc === 'dock' && !isSpoiled(c);
+      if (c && here0 && c.carrier === d.id) got.push(c);
     }
     for (const c of state.crates) if (c.carrier === d.id && !got.includes(c)) c.carrier = undefined;
     if (got.length === 0) {
       d.job = mkJob('back', backPath(here, home, job.dest), [], job.dest);
       return;
     }
-    for (const c of got) { c.loc = 'haul'; }
+    for (const c of got) { c.loc = 'haul'; c.smokeLeft = undefined; }
     d.job = mkJob('haul', haulPath(here, job.dest), got.map((c) => c.id), job.dest);
     return;
   }
@@ -242,7 +255,14 @@ function finishPhase(state: GameState, d: Dockhand, evs: Ev[]): void {
       c.carrier = undefined;
       if (job.dest === 'market') {
         evs.push(...sellCrateObj(state, c, true));
-      } else if (state.crates.filter((k) => k.loc === 'ice').length < ICE_CAPACITY) {
+      } else if (job.dest === 'restaurant' && restaurantWants(state, c)) {
+        evs.push(...serveRestaurantCrate(state, c, true));
+      } else if (job.dest === 'smoke' && rackRoom(state) > 0 && !c.smoked && !isSpoiled(c)) {
+        startSmoking(state, c);
+        evs.push({ type: 'crateSmoking', crateId: c.id });
+      } else if (job.dest === 'cold' && coldRoom(state) > 0 && !isSpoiled(c)) {
+        c.loc = 'cold';
+      } else if (job.dest === 'ice' && state.crates.filter((k) => k.loc === 'ice').length < ICE_CAPACITY) {
         c.loc = 'ice';
       } else if (isSpoiled(c)) {
         removeCrate(state, c.id);

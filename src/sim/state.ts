@@ -1,7 +1,7 @@
-import { SPECIES, START_MONEY } from './config';
-import type { Phase, Species, Track, Trait, UpgradeId, ZoneId } from './config';
+import { DEFAULT_SMOKE_LIST, SPECIES, START_MONEY, ZONE_IDS } from './config';
+import type { BuildingId, Phase, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from './config';
 
-export type CrateLoc = 'dock' | 'hand' | 'ice' | 'haul';
+export type CrateLoc = 'dock' | 'hand' | 'ice' | 'haul' | 'cold' | 'smoke';
 export interface Crate {
   id: number;
   species: Species;
@@ -11,6 +11,9 @@ export interface Crate {
   z?: number;
   layer?: number;
   carrier?: number; // dockhand id that has claimed (or is carrying) this crate
+  smoked?: boolean; // finished smoked fish: sells for more, ignores freshness, never spoils
+  smokeLeft?: number; // seconds left in the smokehouse (loc 'smoke'); 0 when ready to collect
+  king?: boolean; // the King Fish: never sold, never spoils, goes to the inn
 }
 
 export interface Captain {
@@ -28,8 +31,10 @@ export interface Job {
   len: number;
   d: number; // distance walked along path
   crateIds: number[];
-  dest: 'market' | 'ice';
+  dest: Dest;
+  src?: 'dock' | 'smoke'; // where the crates are picked up (default: the dock)
 }
+export type Dest = 'market' | 'ice' | 'cold' | 'restaurant' | 'smoke';
 export interface Dockhand {
   id: number;
   name: string;
@@ -55,6 +60,13 @@ export interface Boat {
   progress: number; // seconds into trip
   tripTime: number;
   catch: Species[]; // ready to unload when status === 'returned'
+  stayInStorms: boolean; // does not sail to Open Sea or Deep Sea on a storm day
+  damaged?: boolean; // came back from a storm broken: fix it at the shipyard
+  repairLeft?: number; // seconds of repair work left, when being fixed
+  tripWeather?: WeatherId; // weather when it left
+  tripBonus?: number; // extra crates from a Big catch day
+  nightTrip?: boolean; // left at night (lighthouse)
+  king?: boolean; // the King Fish is in the catch
 }
 
 export interface Order {
@@ -82,8 +94,40 @@ export interface DayStats {
   bonus: number; // order bonuses
   wages: number;
   tripCosts: number; // food and supplies paid when boats leave
+  rewards: number; // goal rewards (not part of earned)
   spent: number; // upgrades, boats and market stall
   best: { species: Species | null; price: number };
+}
+
+export type Special = { kind: 'market' } | { kind: 'bigcatch'; zone: ZoneId } | null;
+
+export interface Contract {
+  id: number;
+  species: Species;
+  smoked: boolean;
+  qty: number;
+  filled: number;
+  days: number; // days allowed once accepted
+  deadline: number; // absolute clock seconds, set when accepted
+  reward: number; // paid when finished
+  baseValue: number;
+}
+export interface ContractBoard {
+  offers: Contract[];
+  active: Contract | null;
+  coolUntil: number; // clock seconds: no offers before this
+}
+
+/** Running counts for goals. */
+export interface Tally {
+  dispatched: number;
+  unloaded: number;
+  sold: number; // crates sold at the market or restaurant
+  pier: number; // fish caught from the pier
+  orders: number; // notice-board orders filled
+  storm: number; // trips to Open Sea or Deep Sea that came home safely in a storm
+  contracts: number;
+  zoneSent: Record<ZoneId, number>;
 }
 
 export interface GameState {
@@ -109,6 +153,27 @@ export interface GameState {
   book: Record<Species, { caught: number; bestSale: number }>;
   stats: DayStats;
   lastPhase: Phase;
+  // ---- tycoon stage
+  buildings: Record<BuildingId, number>; // level 0 = not built
+  smokeList: Species[]; // fish workers put in the smokehouse
+  restaurant: { served: number; kinds: Species[] }; // today's service
+  weather: WeatherId; // today
+  special: Special; // today
+  nextWeather: WeatherId; // tomorrow (forecast)
+  nextSpecial: Special;
+  contracts: ContractBoard;
+  goal: number; // index of the current goal; GOALS.length when all are done
+  tally: Tally;
+  king: { found: boolean; delivered: boolean; day: number };
+  incomeLog: number[]; // lifetime earnings sampled every few seconds (for money per minute)
+  incomeTimer: number;
+}
+
+export interface Forecast {
+  weather: WeatherId;
+  special: Special;
+  tomorrowWeather: WeatherId;
+  tomorrowSpecial: Special;
 }
 
 export type Ev =
@@ -136,7 +201,22 @@ export type Ev =
   | { type: 'rankUp'; rank: number }
   | { type: 'wagesPaid'; paid: number; unpaid: number }
   | { type: 'phaseChanged'; phase: Phase }
-  | { type: 'dayEnded'; day: number; stats: DayStats }
+  | { type: 'dayEnded'; day: number; stats: DayStats; forecast?: Forecast }
+  | { type: 'goalDone'; index: number; id: string; reward: number }
+  | { type: 'buildingBuilt'; id: BuildingId; level: number }
+  | { type: 'crateSmoking'; crateId: number }
+  | { type: 'crateSmoked'; crateId: number }
+  | { type: 'restaurantServed'; species: Species; price: number; staff: boolean }
+  | { type: 'weatherChanged'; weather: WeatherId; special: Special; tomorrowWeather: WeatherId; tomorrowSpecial: Special }
+  | { type: 'boatDamaged'; boatId: number }
+  | { type: 'boatRepairStarted'; boatId: number; cost: number }
+  | { type: 'boatRepaired'; boatId: number }
+  | { type: 'contractOffered' }
+  | { type: 'contractAccepted'; contractId: number }
+  | { type: 'contractDone'; contractId: number; reward: number }
+  | { type: 'contractFailed'; contractId: number }
+  | { type: 'kingFishFound'; boatId: number }
+  | { type: 'endingReached'; days: number; earned: number; fishCaught: number; boats: number }
   | { type: 'denied'; reason: string; needRank?: number };
 
 /** Result of a "can the player do this" check. needRank is set when only a higher rank is missing. */
@@ -147,7 +227,7 @@ export interface Check {
   cost?: number;
 }
 
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
@@ -156,11 +236,17 @@ function perSpecies<T>(f: () => T): Record<Species, T> {
 }
 
 export function emptyStats(): DayStats {
-  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, tripCosts: 0, spent: 0, best: { species: null, price: 0 } };
+  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, tripCosts: 0, rewards: 0, spent: 0, best: { species: null, price: 0 } };
+}
+
+export function emptyTally(): Tally {
+  const zoneSent = {} as Record<ZoneId, number>;
+  for (const z of ZONE_IDS) zoneSent[z] = 0;
+  return { dispatched: 0, unloaded: 0, sold: 0, pier: 0, orders: 0, storm: 0, contracts: 0, zoneSent };
 }
 
 export function newBoat(id: number, berth: number, name: string): Boat {
-  return { id, name, berth, hull: 0, hold: 0, gear: 0, sails: 0, target: 'shallows', captain: null, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [] };
+  return { id, name, berth, hull: 0, hold: 0, gear: 0, sails: 0, target: 'shallows', captain: null, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [], stayInStorms: true };
 }
 
 export function initialState(): GameState {
@@ -187,6 +273,19 @@ export function initialState(): GameState {
     book: perSpecies(() => ({ caught: 0, bestSale: 0 })),
     stats: emptyStats(),
     lastPhase: 'dawn',
+    buildings: { coldstore: 0, smokehouse: 0, restaurant: 0, lighthouse: 0 },
+    smokeList: [...DEFAULT_SMOKE_LIST],
+    restaurant: { served: 0, kinds: [] },
+    weather: 'calm',
+    special: null,
+    nextWeather: 'calm',
+    nextSpecial: null,
+    contracts: { offers: [], active: null, coolUntil: 0 },
+    goal: 0,
+    tally: emptyTally(),
+    king: { found: false, delivered: false, day: 0 },
+    incomeLog: [],
+    incomeTimer: 0,
   };
 }
 

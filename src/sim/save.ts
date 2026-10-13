@@ -1,9 +1,10 @@
-import { BOAT_NAMES, LAYOUT, SPECIES } from './config';
+import { BOAT_NAMES, BUILDING_IDS, LAYOUT, SPECIES, ZONE_IDS } from './config';
+import { catchUpGoals } from './goals';
 import { recordCaught, rollBoatCatch } from './boats';
 import { rankIndex } from './rank';
 import { resetDockhands } from './staff';
 import type { Rng } from './rng';
-import { STATE_VERSION, initialState, newBoat } from './state';
+import { STATE_VERSION, emptyTally, initialState, newBoat } from './state';
 import type { GameState } from './state';
 
 export const SAVE_KEY = 'harbour-game-save';
@@ -18,7 +19,7 @@ function serialize(state: GameState): string {
   return JSON.stringify(state);
 }
 
-/** Merge parsed data over a fresh state so missing fields (older saves) get defaults. v1 saves move their global Hold/Hull levels onto every boat; v2 saves get a zero trip-cost line (filled in by the merge above). */
+/** Merge parsed data over a fresh state so missing fields (older saves) get defaults. v1 saves move their global Hold/Hull levels onto every boat; v2 saves get a zero trip-cost line (filled in by the merge above). Saves before version 4 get no buildings, a calm forecast, an empty contract board and goal progress worked out from what they already own (goals they already meet are skipped without a reward). */
 function migrate(raw: unknown): GameState | null {
   if (!raw || typeof raw !== 'object') return null;
   const d = raw as Partial<GameState> & { upgrades?: Record<string, boolean> };
@@ -55,6 +56,31 @@ function migrate(raw: unknown): GameState | null {
     const spent = (d.upgrades?.icebox ? 120 : 0) + (d.upgrades?.handcart ? 200 : 0) + (holdLvl >= 1 ? 150 : 0) + (holdLvl >= 2 ? 400 : 0) + (hullLvl ? 500 : 0) + (d.upgrades?.boat2 ? 800 : 0);
     s.lifetime = Math.max(s.lifetime ?? 0, spent + (d.money ?? 0));
     s.rank = rankIndex(s.lifetime);
+  }
+  // ---- tycoon stage (version 4)
+  s.buildings = { ...base.buildings, ...(d.buildings ?? {}) };
+  for (const id of BUILDING_IDS) s.buildings[id] = Math.max(0, Math.floor(Number(s.buildings[id]) || 0));
+  s.smokeList = Array.isArray(d.smokeList) ? d.smokeList : base.smokeList;
+  s.restaurant = { ...base.restaurant, ...(d.restaurant ?? {}) };
+  s.contracts = { ...base.contracts, ...(d.contracts ?? {}) };
+  s.king = { ...base.king, ...(d.king ?? {}) };
+  s.incomeLog = Array.isArray(d.incomeLog) ? d.incomeLog : [];
+  s.tally = { ...emptyTally(), ...(d.tally ?? {}), zoneSent: { ...emptyTally().zoneSent, ...(d.tally?.zoneSent ?? {}) } };
+  if ((d.version ?? 0) < 4) {
+    // Work out what the player has already done, so the goal chain starts at the right place.
+    const t = s.tally;
+    const played = s.lifetime > 0 || s.boats.some((b) => b.hull > 0 || b.hold > 0);
+    if (played) {
+      t.dispatched = Math.max(t.dispatched, 1);
+      t.unloaded = Math.max(t.unloaded, 1);
+      t.sold = Math.max(t.sold, Math.floor(s.lifetime / 20), 1);
+      t.orders = Math.max(t.orders, s.lifetime >= 500 ? 1 : 0);
+    }
+    if (s.book.herring.caught + s.book.mackerel.caught > 0) t.pier = Math.max(t.pier, 1);
+    const hull = Math.max(...s.boats.map((b) => b.hull));
+    ZONE_IDS.forEach((z, i) => { if (i <= hull) t.zoneSent[z] = Math.max(t.zoneSent[z], 1); });
+    s.goal = 0;
+    catchUpGoals(s);
   }
   return s;
 }

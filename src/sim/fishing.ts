@@ -30,6 +30,7 @@ export function hook(state: GameState, rng: Rng): Ev[] {
   const species = rollPier(rng);
   addCrate(state, species, 'hand');
   recordCaught(state, species);
+  state.tally.pier += 1;
   return [{ type: 'fishLanded', species }];
 }
 
