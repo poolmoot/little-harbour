@@ -179,7 +179,7 @@ export class Water {
     this.mesh = new THREE.Mesh(seaGeometry(), m);
     this.mesh.position.y = SEA_Y;
     this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = -1;
+    this.mesh.renderOrder = 2; // after the boats' depth-only hull lids, so no sea is drawn inside a hull
     scene.add(this.mesh);
   }
 

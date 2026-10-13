@@ -7,7 +7,7 @@ import { SPECIES_COLOUR } from '../palette';
 import { bx, cy, flat, net, put, tex, windowMat } from './kit';
 import { boards } from './textures';
 import { Figure } from './figures';
-import { gunwale, hullGeometry } from './hull';
+import { gunwale, hullGeometry, hullLid } from './hull';
 import { SEA_Y, waveAt } from './waves';
 import type { BoatFoam, Wake } from './water';
 
@@ -25,6 +25,9 @@ const halfBeam = (t: number) => 0.8 * TIERS[t].sx;
 
 let hullGeo: THREE.BufferGeometry | null = null;
 let rimGeo: THREE.BufferGeometry[] = [];
+let lidGeo: THREE.BufferGeometry | null = null;
+// Writes depth but no colour: drawn after the boat and before the sea, it stops the water surface showing inside the hull.
+const lidMat = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
 const hullMat = (t: number) => {
   const m = tex(HULL_KEYS[t][0], boards(HULL_KEYS[t][0], [...HULL_KEYS[t][1]], 8, false), 0.8);
   m.side = THREE.DoubleSide;
@@ -36,6 +39,37 @@ const floatGeo = new THREE.SphereGeometry(0.09, 8, 6);
 const tmpM = new THREE.Matrix4();
 const tmpC = new THREE.Color();
 const TARP = new THREE.Color(0x8b7a5a);
+
+/** Red "!" badge shown above a boat that is back and waiting to be unloaded. Drawn once, shared by every boat. */
+let alertTex: THREE.CanvasTexture | null = null;
+function alertTexture(): THREE.CanvasTexture {
+  if (alertTex) return alertTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  g.lineJoin = 'round';
+  g.lineWidth = 10;
+  g.strokeStyle = '#0b1a44';
+  // speech-bubble body with a pointer towards the boat
+  g.beginPath();
+  g.roundRect(14, 8, 100, 88, 26);
+  g.moveTo(46, 94); g.lineTo(64, 122); g.lineTo(82, 94);
+  g.stroke();
+  const grad = g.createLinearGradient(0, 8, 0, 96);
+  grad.addColorStop(0, '#ff6b5a'); grad.addColorStop(1, '#e02a2a');
+  g.fillStyle = grad;
+  g.fill();
+  g.fillStyle = '#fff';
+  g.font = '900 78px "Lilita One", "Trebuchet MS", sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.strokeText('!', 64, 54);
+  g.fillText('!', 64, 54);
+  alertTex = new THREE.CanvasTexture(c);
+  alertTex.colorSpace = THREE.SRGBColorSpace;
+  return alertTex;
+}
+const ALERT_SIZE = 1.5;
 
 /** An animated sail: a gridded plane re-shaped each frame to bulge in the wind. dir +1 aft of the mast, -1 forward. */
 class Sail {
@@ -81,6 +115,8 @@ class BoatModel {
   private row = Math.random() * 6;
   private rowAmt = 0;
   private wakeT = 0;
+  private alert: THREE.Sprite;
+  private alertAmt = 0;
   tier = 0;
   heading = Math.PI;
   scale = 1;
@@ -89,6 +125,7 @@ class BoatModel {
     this.group.add(this.inner);
     hullGeo ??= hullGeometry(0.8, 0.72);
     if (!rimGeo.length) rimGeo = [gunwale(0.8, 0.72, -1), gunwale(0.8, 0.72, 1)];
+    lidGeo ??= hullLid(0.8, 0.72);
     const rim = flat(0xd9b27a, 0.7);
     const floor = tex('hullfloor', boards('hullfloor', [196, 160, 110], 5, true), 0.9);
     for (let t = 0; t < 4; t++) {
@@ -97,6 +134,9 @@ class BoatModel {
       sh.scale.set(T.sx, T.sy, T.sz);
       put(hullGeo, hullMat(t), 0, 0, 0, sh);
       for (const g of rimGeo) put(g, rim, 0, 0, 0, sh);
+      const lid = new THREE.Mesh(lidGeo, lidMat);
+      lid.renderOrder = 1;
+      sh.add(lid);
       bx(1.1, 0.04, 2.7, floor, 0, 0.2, 0.1, sh);
       for (const z of [-1.2, 1.55]) bx(1.5, 0.08, 0.3, flat(0xb98a55, 0.85), 0, 0.46, z, sh);
       this.inner.add(sh);
@@ -149,6 +189,12 @@ class BoatModel {
     this.tops = new THREE.InstancedMesh(crateTopGeo, new THREE.MeshStandardMaterial({ roughness: 0.55 }), 14);
     for (const m of [this.bodies, this.tops]) { m.frustumCulled = false; m.castShadow = true; m.count = 0; }
     this.inner.add(this.mast, this.gearGroup, this.bodies, this.tops);
+    // Always drawn on top and unaffected by fog or lighting, so it reads from anywhere in the harbour.
+    this.alert = new THREE.Sprite(new THREE.SpriteMaterial({ map: alertTexture(), depthTest: false, fog: false, toneMapped: false }));
+    this.alert.center.set(0.5, 0);
+    this.alert.renderOrder = 9;
+    this.alert.visible = false;
+    this.group.add(this.alert);
     this.setHull(0);
   }
 
@@ -246,6 +292,16 @@ class BoatModel {
     if (this.captain) this.captain.group.position.set(0, deckY(this.tier), TIERS[this.tier].sz * 1.45 + (this.tier === 3 ? 0.3 : 0));
   }
 
+  /** Pop the "unload me" badge in or out, and bob it gently while it shows. */
+  animateAlert(dt: number, t: number, waiting: boolean): void {
+    this.alertAmt += ((waiting ? 1 : 0) - this.alertAmt) * Math.min(1, dt * 8);
+    this.alert.visible = this.alertAmt > 0.02;
+    if (!this.alert.visible) return;
+    const top = this.mast.visible ? deckY(this.tier) + TIERS[this.tier].mastH + 0.5 : 2.3;
+    this.alert.position.y = top + Math.sin(t * 3.2) * 0.14;
+    this.alert.scale.setScalar(ALERT_SIZE * this.alertAmt * (1 + Math.sin(t * 6.4) * 0.05));
+  }
+
   /** Row the oars (moving) or rest them; sway the sails. */
   animate(dt: number, t: number, moving: boolean): void {
     this.rowAmt += ((moving ? 1 : 0) - this.rowAmt) * Math.min(1, dt * 4);
@@ -337,6 +393,7 @@ export class BoatsView {
       m.group.position.set(p.x, SEA_Y - 0.36 + this.ws.h, p.z);
       m.group.rotation.set(pitch, m.heading, roll, 'YXZ');
       m.animate(dt, now, moving);
+      m.animateAlert(dt, now, b.status === 'returned');
       if (moving && m.tickWake(dt)) {
         for (const sx of [-1, 1]) {
           this.wake.emit(p.x + (sx * 0.45) * c + 1.9 * s, p.z - sx * 0.45 * s + 1.9 * c, 0.9 * sc, 1.9);

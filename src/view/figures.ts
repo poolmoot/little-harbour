@@ -22,6 +22,10 @@ export interface FigureOpts {
   hat?: 'straw' | 'cap' | 'none';
   hatColor?: number;
   apron?: number;
+  /** Dungarees bib and straps in this colour. */
+  overalls?: number;
+  /** Neckerchief in this colour. */
+  scarf?: number;
   scale?: number;
   hair?: number;
   beard?: number;
@@ -37,28 +41,60 @@ export interface Pose {
 const ease = (x: number) => x * x * (3 - 2 * x);
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
-function cap(r: number, len: number, color: number, x = 0, y = 0, z = 0, parent?: THREE.Object3D): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 3, 8), mat(color));
-  m.position.set(x, y, z);
-  m.castShadow = true;
-  parent?.add(m);
-  return m;
-}
-function ball(r: number, color: number, x = 0, y = 0, z = 0, parent?: THREE.Object3D, sx = 1, sy = 1, sz = 1): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 9), mat(color));
-  m.position.set(x, y, z);
-  m.scale.set(sx, sy, sz);
-  m.castShadow = true;
-  parent?.add(m);
+/** Three-step light ramp that gives characters their cel-shaded look. */
+const RAMP = new THREE.DataTexture(new Uint8Array([165, 215, 255, 255]), 4, 1, THREE.RedFormat);
+RAMP.minFilter = RAMP.magFilter = THREE.NearestFilter;
+RAMP.needsUpdate = true;
+
+const toonCache = new Map<number, THREE.MeshToonMaterial>();
+function toon(color: number): THREE.MeshToonMaterial {
+  let m = toonCache.get(color);
+  if (!m) { m = new THREE.MeshToonMaterial({ color, gradientMap: RAMP }); toonCache.set(color, m); }
   return m;
 }
 
-/** Code-built stylised person with a full procedural rig. Front faces +z. */
+/** Ink outline: the mesh drawn again inside-out, pushed out along its normals. */
+const OUTLINE_WIDTH = 0.016;
+const OUTLINE = new THREE.MeshBasicMaterial({ color: 0x1b1630, side: THREE.BackSide });
+OUTLINE.onBeforeCompile = (shader) => {
+  shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `vec3 transformed = position + normalize(normal) * ${OUTLINE_WIDTH.toFixed(3)};`);
+};
+
+const INK = 0x241c2c;
+type Part = THREE.Mesh & { userData: { outline?: boolean } };
+
+function part(g: THREE.BufferGeometry, color: number, x: number, y: number, z: number, parent: THREE.Object3D, outline = true): Part {
+  const m = new THREE.Mesh(g, toon(color)) as Part;
+  m.position.set(x, y, z);
+  m.castShadow = outline;
+  m.userData.outline = outline;
+  parent.add(m);
+  return m;
+}
+const cap = (r: number, len: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D) =>
+  part(new THREE.CapsuleGeometry(r, len, 4, 12), color, x, y, z, parent);
+function ball(r: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D, sx = 1, sy = 1, sz = 1, outline = true): Part {
+  const m = part(new THREE.SphereGeometry(r, 16, 12), color, x, y, z, parent, outline);
+  m.scale.set(sx, sy, sz);
+  return m;
+}
+/** Small surface detail (belt, straps, brows): flat-sided, so it gets no outline. */
+const slab = (w: number, h: number, d: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D) =>
+  part(new THREE.BoxGeometry(w, h, d), color, x, y, z, parent, false);
+
+function addOutlines(root: THREE.Object3D): void {
+  const meshes: THREE.Mesh[] = [];
+  root.traverse((o) => { if ((o as Part).isMesh && (o as Part).userData.outline) meshes.push(o as THREE.Mesh); });
+  for (const m of meshes) m.add(new THREE.Mesh(m.geometry, OUTLINE));
+}
+
+/** Code-built cartoon person with a full procedural rig: big head, expressive face, cel shading and ink outlines. Front faces +z. */
 export class Figure {
   group = new THREE.Group();
   private hips = new THREE.Group();
   private torso = new THREE.Group();
   private head = new THREE.Group();
+  private eyes = new THREE.Group();
   private arm: THREE.Group[] = [new THREE.Group(), new THREE.Group()];
   private elbow: THREE.Group[] = [new THREE.Group(), new THREE.Group()];
   private leg: THREE.Group[] = [new THREE.Group(), new THREE.Group()];
@@ -78,82 +114,123 @@ export class Figure {
   pose: Pose = { carry: 0, fish: null, wave: false };
 
   constructor(o: FigureOpts) {
-    const skin = o.skin ?? 0xf0c8a0;
-    const boots = o.boots ?? 0x4a3a2c;
+    const skin = o.skin ?? 0xf6c9a0;
     this.group.add(this.hips);
     this.hips.position.y = 0.6;
     this.hips.add(this.torso);
-    // pelvis + torso
-    cap(0.19, 0.12, o.pants, 0, -0.02, 0, this.hips).scale.set(1.1, 1, 0.85);
-    cap(0.2, 0.3, o.shirt, 0, 0.32, 0, this.torso).scale.set(1.2, 1, 0.8);
-    box(0.44, 0.07, 0.3, 0x3a2c22, 0, 0.06, 0, this.torso);                      // belt
-    if (o.apron) box(0.4, 0.46, 0.05, o.apron, 0, 0.26, 0.17, this.torso);
-    // head
-    this.torso.add(this.head);
-    this.head.position.set(0, 0.66, 0);
-    cap(0.05, 0.04, skin, 0, 0.0, 0, this.head);
-    const hd = ball(0.22, skin, 0, 0.22, 0, this.head, 1, 1.05, 1);
-    ball(0.035, 0x241c18, -0.08, 0.25, 0.19, this.head);
-    ball(0.035, 0x241c18, 0.08, 0.25, 0.19, this.head);
-    ball(0.045, skin, 0, 0.2, 0.22, this.head);
-    ball(0.05, 0xe69a8a, -0.13, 0.17, 0.17, this.head, 1, 0.6, 0.4).material = flat(0xe9a090, 0.9);
-    ball(0.05, 0xe69a8a, 0.13, 0.17, 0.17, this.head, 1, 0.6, 0.4).material = flat(0xe9a090, 0.9);
-    ball(0.045, skin, -0.21, 0.22, 0, this.head, 0.6, 1, 0.8);
-    ball(0.045, skin, 0.21, 0.22, 0, this.head, 0.6, 1, 0.8);
-    if (o.hair !== undefined && o.hat !== 'cap' && o.hat !== 'straw') {
-      const h = new THREE.Mesh(new THREE.SphereGeometry(0.235, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6), mat(o.hair));
-      h.position.set(0, 0.24, -0.01);
-      h.castShadow = true;
-      this.head.add(h);
+    this.buildBody(o);
+    this.buildHead(o, skin);
+    this.buildHat(o);
+    this.buildLimbs(o, skin);
+    addOutlines(this.group);
+    if (o.scale) this.group.scale.setScalar(o.scale);
+  }
+
+  private buildBody(o: FigureOpts): void {
+    cap(0.2, 0.1, o.pants, 0, -0.02, 0, this.hips).scale.set(1.12, 1, 0.92);
+    cap(0.22, 0.26, o.shirt, 0, 0.32, 0, this.torso).scale.set(1.18, 1, 0.92);
+    slab(0.5, 0.07, 0.4, 0x3a2c22, 0, 0.07, 0, this.torso);                       // belt
+    slab(0.09, 0.08, 0.03, 0xe0b040, 0, 0.07, 0.2, this.torso);                   // buckle
+    if (o.overalls !== undefined) {
+      slab(0.3, 0.26, 0.05, o.overalls, 0, 0.26, 0.19, this.torso);               // bib
+      for (const s of [-1, 1]) {
+        slab(0.06, 0.32, 0.42, o.overalls, s * 0.14, 0.44, 0, this.torso);        // straps over the shoulders
+        ball(0.028, 0xe0b040, s * 0.12, 0.36, 0.22, this.torso, 1, 1, 0.5, false);
+      }
     }
-    if (o.beard !== undefined) {
-      const b = ball(0.18, o.beard, 0, 0.1, 0.1, this.head, 1.05, 0.9, 0.8);
-      b.castShadow = false;
+    if (o.apron) slab(0.42, 0.5, 0.05, o.apron, 0, 0.24, 0.2, this.torso);
+    if (o.scarf !== undefined) {
+      const ring = part(new THREE.TorusGeometry(0.15, 0.055, 8, 16), o.scarf, 0, 0.63, 0, this.torso);
+      ring.rotation.x = Math.PI / 2;
+      ball(0.06, o.scarf, 0.06, 0.58, 0.16, this.torso, 1, 1.3, 0.8);
     }
-    const hc = o.hatColor ?? 0xe6c35c;
+  }
+
+  private buildHead(o: FigureOpts, skin: number): void {
+    const h = this.head;
+    this.torso.add(h);
+    h.position.set(0, 0.66, 0);
+    cap(0.06, 0.04, skin, 0, 0, 0, h);                                            // neck
+    ball(0.29, skin, 0, 0.27, 0, h, 1, 0.94, 0.95);
+    for (const s of [-1, 1]) ball(0.06, skin, s * 0.285, 0.25, 0, h, 0.55, 1, 0.8); // ears
+    // face: big eyes with highlights, brows, button nose, smile, rosy cheeks
+    h.add(this.eyes);
+    this.eyes.position.set(0, 0.29, 0);
+    for (const s of [-1, 1]) {
+      ball(0.075, 0xffffff, s * 0.11, 0, 0.235, this.eyes, 0.85, 1.1, 0.5, false);
+      ball(0.046, INK, s * 0.108, -0.005, 0.262, this.eyes, 0.9, 1.15, 0.5, false);
+      ball(0.016, 0xffffff, s * 0.108 - 0.016, 0.02, 0.284, this.eyes, 1, 1, 0.5, false);
+      slab(0.1, 0.024, 0.02, o.beard ?? o.hair ?? 0x5a3d28, s * 0.11, 0.4, 0.245, h).rotation.z = -s * 0.16;
+      ball(0.055, 0xf09a8c, s * 0.19, 0.17, 0.2, h, 1, 0.6, 0.4, false);
+    }
+    ball(0.042, skin, 0, 0.22, 0.275, h, 1, 0.9, 0.9, false).material = toon(new THREE.Color(skin).multiplyScalar(0.9).getHex());
+    if (o.beard === undefined) {
+      const smile = part(new THREE.TorusGeometry(0.06, 0.013, 6, 12, Math.PI), 0x9a3b3b, 0, 0.175, 0.255, h, false);
+      smile.rotation.z = Math.PI;
+    } else {
+      ball(0.24, o.beard, 0, 0.12, 0.1, h, 1.05, 0.85, 0.85);
+    }
+    const hair = o.hair ?? (o.beard !== undefined ? o.beard : undefined);
+    if (hair !== undefined) {
+      const hatted = o.hat === 'cap' || o.hat === 'straw';
+      // Under a hat the hair shows as a fringe round the back and sides; without one it covers the crown.
+      const g = new THREE.SphereGeometry(0.3, 16, 10, 0, Math.PI * 2, 0, Math.PI * (hatted ? 0.6 : 0.56));
+      const top = part(g, hair, 0, 0.275, -0.012, h);
+      top.rotation.x = hatted ? -0.8 : -0.18;
+      top.scale.set(1.02, 0.96, 0.98);
+    }
+  }
+
+  private buildHat(o: FigureOpts): void {
+    const h = this.head;
+    const hc = o.hatColor ?? 0xf0cf62;
     if (o.hat === 'straw') {
-      const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.48, 0.04, 20), mat(hc));
-      brim.position.y = 0.4; brim.castShadow = true;
-      const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.17, 14), mat(hc));
-      crown.position.y = 0.49; crown.castShadow = true;
-      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.255, 0.255, 0.045, 14), mat(0xb5412f));
-      band.position.y = 0.43;
-      this.head.add(brim, crown, band);
+      part(new THREE.CylinderGeometry(0.5, 0.54, 0.045, 24), hc, 0, 0.46, 0, h);
+      part(new THREE.CylinderGeometry(0.22, 0.29, 0.2, 18), hc, 0, 0.57, 0, h);
+      part(new THREE.CylinderGeometry(0.297, 0.3, 0.06, 18), 0xd6453a, 0, 0.5, 0, h, false);
     } else if (o.hat === 'cap') {
-      const c = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(hc));
-      c.position.y = 0.26; c.castShadow = true;
-      this.head.add(c);
-      box(0.32, 0.03, 0.2, hc, 0, 0.27, 0.22, this.head);
+      part(new THREE.SphereGeometry(0.305, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), hc, 0, 0.31, 0, h).scale.set(1, 0.9, 1);
+      const visor = part(new THREE.CylinderGeometry(0.2, 0.2, 0.03, 16, 1, false, -Math.PI / 2, Math.PI), hc, 0, 0.32, 0.2, h);
+      visor.rotation.y = Math.PI / 2;
+      ball(0.035, hc, 0, 0.59, 0, h);
     }
-    void hd;
-    // arms: shoulder -> upper arm -> elbow -> forearm + hand
+  }
+
+  private buildLimbs(o: FigureOpts, skin: number): void {
+    const boots = o.boots ?? 0x4a3a2c;
+    // arms: shoulder -> upper arm -> elbow -> forearm + mitten hand
     for (let i = 0; i < 2; i++) {
       const s = i === 0 ? -1 : 1;
       const sh = this.arm[i];
-      sh.position.set(s * 0.37, 0.56, 0);
+      sh.position.set(s * 0.36, 0.56, 0);
       this.torso.add(sh);
-      cap(0.07, 0.2, o.shirt, 0, -0.15, 0, sh);
+      ball(0.1, o.shirt, 0, 0, 0, sh);
+      cap(0.085, 0.18, o.shirt, 0, -0.15, 0, sh);
       const el = this.elbow[i];
       el.position.y = -0.31;
       sh.add(el);
-      cap(0.062, 0.18, o.shirt, 0, -0.13, 0, el);
-      ball(0.075, skin, 0, -0.29, 0, el);
+      cap(0.078, 0.16, o.shirt, 0, -0.12, 0, el);
+      slab(0.18, 0.05, 0.18, new THREE.Color(o.shirt).multiplyScalar(0.8).getHex(), 0, -0.22, 0, el); // cuff
+      ball(0.095, skin, 0, -0.3, 0, el);
+      ball(0.04, skin, -s * 0.06, -0.28, 0.06, el, 1, 1, 1, false);                // thumb
       if (i === 1) { this.hand.position.set(0, -0.3, 0); el.add(this.hand); }
     }
-    // legs
+    // legs: thigh -> knee -> shin + rounded boot
     for (let i = 0; i < 2; i++) {
       const s = i === 0 ? -1 : 1;
       const lg = this.leg[i];
-      lg.position.set(s * 0.12, -0.02, 0);
+      lg.position.set(s * 0.13, -0.02, 0);
       this.hips.add(lg);
-      cap(0.09, 0.2, o.pants, 0, -0.18, 0, lg);
+      cap(0.105, 0.18, o.pants, 0, -0.18, 0, lg);
       const kn = this.knee[i];
       kn.position.y = -0.36;
       lg.add(kn);
-      cap(0.08, 0.2, o.pants, 0, -0.17, 0, kn);
-      box(0.15, 0.1, 0.26, boots, 0, -0.36, 0.05, kn);
+      cap(0.095, 0.16, o.pants, 0, -0.15, 0, kn);
+      cap(0.105, 0.06, boots, 0, -0.27, 0, kn);                                    // boot shaft
+      const foot = cap(0.1, 0.14, boots, 0, -0.34, 0.06, kn);
+      foot.rotation.x = Math.PI / 2;
+      foot.scale.set(1.1, 1, 0.8);
     }
-    if (o.scale) this.group.scale.setScalar(o.scale);
   }
 
   /** Where the right hand is in world space (used to attach the fishing rod). */
@@ -245,7 +322,7 @@ export class Figure {
     this.pitch += (this.lookPitch - this.pitch) * k(7);
     this.head.rotation.set(this.pitch - this.lean * 0.6 + Math.sin(this.idle * 1.2) * 0.02 * still, this.yaw + Math.sin(this.idle * 0.7) * 0.05 * still, 0);
     this.blink -= dt;
-    this.head.scale.y = this.blink > 0 && this.blink < 0.09 ? 0.97 : 1;
+    this.eyes.scale.y = this.blink > 0 && this.blink < 0.09 ? 0.12 : 1;
     if (this.blink < -3.5) this.blink = 0.1;
   }
 }

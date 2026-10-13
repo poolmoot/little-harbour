@@ -23,7 +23,7 @@ export class Player {
   private hand = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, private world: World) {
-    this.figure = new Figure({ shirt: 0x3f7fbf, pants: 0x4a4a5a, hat: 'straw', boots: 0x5a4330 });
+    this.figure = new Figure({ shirt: 0xf2efe6, pants: 0x3f6fb8, overalls: 0x3f6fb8, scarf: 0xd6453a, hat: 'straw', hair: 0x7a4a24, boots: 0x6a4a2c });
     this.group.add(this.figure.group, this.carryGroup);
     // Fishing rod: three tapered segments that bend towards the tip.
     this.rod.rotation.order = 'YXZ';

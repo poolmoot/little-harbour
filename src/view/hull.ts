@@ -49,5 +49,23 @@ export function gunwale(hw = 0.8, H = 0.72, side = 1, r = 0.04): THREE.BufferGeo
   return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 30, r, 6, false);
 }
 
+/** Flat cap across the hull opening, gunwale to gunwale. Drawn depth-only so the sea is never painted inside the boat. */
+export function hullLid(hw = 0.8, H = 0.72, nu = 22): THREE.BufferGeometry {
+  const pos: number[] = [], idx: number[] = [];
+  for (let i = 0; i <= nu; i++) {
+    const u = i / nu;
+    const w = widthAt(u, hw), y = topAt(u, H), z = Z0 + u * LEN;
+    pos.push(-w, y, z, w, y, z);
+  }
+  for (let i = 0; i < nu; i++) {
+    const a = i * 2;
+    idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  return g;
+}
+
 export function gunwaleY(u: number, H = 0.72): number { return topAt(u, H); }
 export function hullWidth(u: number, hw = 0.8): number { return widthAt(u, hw); }
