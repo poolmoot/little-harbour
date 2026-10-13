@@ -1,6 +1,7 @@
 import { decayCrates, discardSpoiled } from './crates';
 import { resetRestaurant, stepSmokehouse } from './buildings';
 import { stepContracts } from './contracts';
+import { stepBookRewards } from './fishbook';
 import { stepGoals } from './goals';
 import { stepIncome } from './income';
 import { stepRepairs } from './storm';
@@ -34,6 +35,8 @@ export { moneyPerMinute } from './income';
 export { rankOf } from './rank';
 export { fireCaptain, fireDockhand, hireCaptain, hireDockhand, setBoatTarget, setHaulPolicy } from './staff';
 
+export { bookCompletion, crateSize, crateStars, starsFor, sizeMult, midSize, zoneFish } from './fishbook';
+export { renameBoat, setHarbourName, checkName } from './names';
 export { phaseOf } from './time';
 
 /** Start-of-game setup: post the first orders. */
@@ -70,6 +73,7 @@ export function step(state: GameState, dt: number, rng: Rng): Ev[] {
   evs.push(...stepContracts(state, rng));
   stepIncome(state, dt);
   evs.push(...stepRank(state));
+  evs.push(...stepBookRewards(state));
   evs.push(...stepGoals(state));
   return evs;
 }

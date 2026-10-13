@@ -38,7 +38,7 @@ describe('captains', () => {
     const s = initialState();
     refreshCandidates(s, rng());
     expect(hireCaptain(s, s.candidates[0].id, 1)[0].type).toBe('denied');
-    s.lifetime = 3000;
+    s.lifetime = 3300;
     expect(canHireCaptain(s, 1).ok).toBe(true);
     const c = s.candidates[0];
     expect(hireCaptain(s, c.id, 1)[0].type).toBe('hired');
@@ -58,7 +58,7 @@ describe('captains', () => {
     expect(rareMult(b)).toBeCloseTo(1.25);
     b.captain = cap('careful');
     expect(holdSize(b)).toBe(5);
-    s.lifetime = 3000;
+    s.lifetime = 3300;
     b.captain = null;
     s.candidates = [{ id: 50, name: 'Thr', trait: 'thrifty', wage: 28 }];
     hireCaptain(s, 50, 1);
@@ -67,7 +67,7 @@ describe('captains', () => {
     expect(holdSize(b)).toBe(4);
   });
   it('sails by itself: unloads, re-sends, and only in daylight', () => {
-    const s = ranked(3000);
+    const s = ranked(3300);
     const r = rng();
     s.boats[0].captain = { id: 5, name: 'Ansel', trait: 'swift', wage: 40 };
     s.money = 1000;
@@ -87,7 +87,7 @@ describe('captains', () => {
     expect(s.boats[0].status).toBe('docked');
   });
   it('sails to its assigned zone and cannot be assigned beyond the hull', () => {
-    const s = ranked(3000);
+    const s = ranked(3300);
     s.boats[0].hull = 1;
     expect(setBoatTarget(s, 1, 'opensea')[0].type).toBe('denied');
     setBoatTarget(s, 1, 'reef');
@@ -99,7 +99,7 @@ describe('captains', () => {
 
 describe('wages', () => {
   it('are paid at 06:00 and counted in the ledger', () => {
-    const s = ranked(3000);
+    const s = ranked(3300);
     s.boats[0].captain = { id: 5, name: 'A', trait: 'swift', wage: CAPTAIN_WAGE };
     s.dockhands = [{ id: 6, name: 'Pip', slot: 0, job: null }];
     s.money = 500;
@@ -113,7 +113,7 @@ describe('wages', () => {
     expect(s.money).toBe(500 - CAPTAIN_WAGE - DOCKHAND_WAGE);
   });
   it('unpaid staff do not work that day, there is no debt, and they work again once paid', () => {
-    const s = ranked(3000);
+    const s = ranked(3300);
     s.boats[0].captain = { id: 5, name: 'A', trait: 'swift', wage: CAPTAIN_WAGE };
     s.dockhands = [{ id: 6, name: 'Pip', slot: 0, job: null }];
     s.money = 50; // enough for the captain only

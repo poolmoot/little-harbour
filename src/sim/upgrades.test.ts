@@ -29,11 +29,11 @@ describe('harbour upgrades', () => {
     const s = initialState();
     s.money = 20000;
     expect(buyUpgrade(s, 'stall1')[0].type).toBe('denied'); // rank 0
-    s.lifetime = 3000;
+    s.lifetime = 3300;
     expect(buyUpgrade(s, 'stall2')[0].type).toBe('denied'); // needs stall I (and rank 3)
     expect(buyUpgrade(s, 'stall1')[0].type).toBe('upgradeBought');
     expect(stallLevel(s)).toBe(1);
-    s.lifetime = 15000;
+    s.lifetime = 18000;
     buyUpgrade(s, 'stall2');
     expect(stallLevel(s)).toBe(2);
     const c = addCrate(s, 'herring', 'hand');
@@ -45,7 +45,7 @@ describe('harbour upgrades', () => {
 describe('per-boat upgrades', () => {
   it('each track changes that boat only', () => {
     const s = initialState();
-    s.lifetime = 3000;
+    s.lifetime = 3300;
     s.money = 100000;
     expect(buyBoat(s)[0].type).toBe('boatBought');
     expect(s.boats).toHaveLength(2);
@@ -67,9 +67,9 @@ describe('per-boat upgrades', () => {
     expect(buyBoatUpgrade(s, 1, 'hull')[0].type).toBe('boatUpgraded');
     expect(zoneUnlocked(s, 'reef')).toBe(true);
     expect(buyBoatUpgrade(s, 1, 'hull')[0].type).toBe('denied'); // cutter needs rank 2
-    s.lifetime = 3000;
+    s.lifetime = 3300;
     buyBoatUpgrade(s, 1, 'hull');
-    s.lifetime = 15000;
+    s.lifetime = 18000;
     buyBoatUpgrade(s, 1, 'hull');
     expect(s.boats[0].hull).toBe(3);
     expect(zoneUnlocked(s, 'deep')).toBe(true);
@@ -87,7 +87,7 @@ describe('per-boat upgrades', () => {
     const s = initialState();
     s.money = 100000;
     expect(canBuyBoat(s).ok).toBe(false);
-    for (const [life, n] of [[500, 2], [3000, 3], [15000, 4]] as const) {
+    for (const [life, n] of [[500, 2], [3300, 3], [18000, 4]] as const) {
       s.lifetime = life;
       buyBoat(s);
       expect(s.boats).toHaveLength(n);

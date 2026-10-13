@@ -4,6 +4,7 @@ import {
 import type { Species } from './config';
 import { freshnessMultiplier, handCrates, isSpoiled, removeCrate } from './crates';
 import type { Crate, Ev, GameState } from './state';
+import { crateWorth } from './fishbook';
 import { earnSale } from './ledger';
 import { creditOrder, matchingOrder } from './orders';
 import { creditContract } from './contracts';
@@ -22,7 +23,7 @@ export function smokedPrice(state: GameState, species: Species): number {
 export function crateValue(state: GameState, c: Crate): number {
   if (isSpoiled(c)) return 0;
   if (c.king) return 0;
-  const base = c.smoked ? smokedPrice(state, c.species) : unitPrice(state, c.species, c.freshness);
+  const base = (c.smoked ? smokedPrice(state, c.species) : unitPrice(state, c.species, c.freshness)) * crateWorth(c);
   return Math.round(matchingOrder(state, c.species) ? base * ORDER_CRATE_MULT : base);
 }
 

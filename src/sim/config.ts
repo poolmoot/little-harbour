@@ -96,7 +96,7 @@ export const TIER_COST_MULT = [1, 1.6, 2.6, 4];
 export const BOAT_COST = [0, 700, 2200, 6000];
 
 // ---- Rank ---------------------------------------------------------------
-export const RANK_THRESHOLDS = [0, 500, 3000, 15000, 60000];
+export const RANK_THRESHOLDS = [0, 500, 3300, 18000, 72000];
 export const TOP_RANK = RANK_THRESHOLDS.length - 1;
 
 // ---- Staff --------------------------------------------------------------
@@ -208,6 +208,32 @@ export const CONTRACT_SAIL_HOURS = 14;
 export const KING_CHANCE = 0.02;
 export const RATE_SAMPLE_SECONDS = 5;
 export const RATE_WINDOW_SECONDS = 120;
+
+// ---- Names ----------------------------------------------------------------------------------
+export const DEFAULT_HARBOUR_NAME = 'Little Harbour';
+export const NAME_MIN = 1;
+export const NAME_MAX = 16;
+/** Letters, digits, spaces and a few simple marks. */
+export const NAME_PATTERN = /^[\p{L}\p{N} '.,!&-]+$/u;
+
+// ---- Fish sizes, stars and golden fish ---------------------------------------------
+/** Length range in cm for each fish. Sizes are rolled between these, with middle sizes most common. */
+export const FISH_SIZE: Record<Species, [number, number]> = {
+  herring: [15, 30], mackerel: [20, 45], flounder: [25, 50], seabass: [30, 80], snapper: [30, 90], lobster: [20, 50],
+  cod: [40, 120], tuna: [80, 250], swordfish: [150, 450], anglerfish: [30, 100], squid: [30, 120], sturgeon: [100, 300],
+};
+/** Price change for the smallest and the biggest fish; a middle-sized fish pays the normal price. */
+export const SIZE_PRICE_MIN = -0.1;
+export const SIZE_PRICE_MAX = 0.2;
+/** Share of the size range (from the bottom) where 2 and 3 stars begin. The top 10% is 3 stars. */
+export const STAR2_FROM = 0.6;
+export const STAR3_FROM = 0.9;
+export const GOLDEN_CHANCE = 0.02; // per crate, before Nets and a Lucky captain
+export const GOLDEN_CHANCE_MAX = 0.2;
+export const GOLDEN_MULT = 5;
+/** One-time cash rewards per zone: every fish of the zone caught, and 3 stars on every fish of the zone. */
+export const BOOK_REWARD_CAUGHT: Record<ZoneId, number> = { shallows: 25, reef: 75, opensea: 200, deep: 500 };
+export const BOOK_REWARD_STARS: Record<ZoneId, number> = { shallows: 100, reef: 300, opensea: 800, deep: 2000 };
 
 // ---- Earnings while away ---------------------------------------------------------
 export const AWAY_MIN_SECONDS = 60; // shorter absences are ignored

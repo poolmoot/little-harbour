@@ -29,7 +29,7 @@ const claimed = (state: GameState, c: Crate): boolean => c.carrier !== undefined
 /** Where this fresh dock crate should go, by the worker rules. */
 export function destFor(state: GameState, c: Crate): Dest {
   if (!c.smoked && restaurantWants(state, c) && roomFor(state, 'restaurant') > 0) return 'restaurant';
-  if (!c.smoked && state.smokeList.includes(c.species) && roomFor(state, 'smoke') > 0) return 'smoke';
+  if (!c.smoked && !c.golden && state.smokeList.includes(c.species) && roomFor(state, 'smoke') > 0) return 'smoke';
   if (state.haulPolicy === 'ice') {
     if (roomFor(state, 'cold') > 0) return 'cold';
     if (roomFor(state, 'ice') > 0) return 'ice';

@@ -1,8 +1,10 @@
 import { BOAT_NAMES, BUILDING_IDS, LAYOUT, SPECIES, ZONE_IDS } from './config';
 import { applyAway } from './away';
 import type { AwayResult } from './away';
+import { catchUpBookRewards, midSize } from './fishbook';
+import { checkName } from './names';
 import { catchUpGoals } from './goals';
-import { recordCaught, rollBoatCatch } from './boats';
+import { recordBoatCatch, rollBoatCatch } from './boats';
 import { rankIndex } from './rank';
 import { resetDockhands } from './staff';
 import type { Rng } from './rng';
@@ -33,6 +35,8 @@ function migrate(raw: unknown): GameState | null {
   s.demand = { ...base.demand, ...(d.demand ?? {}) };
   s.book = { ...base.book, ...(d.book ?? {}) };
   for (const sp of SPECIES) s.book[sp] = { ...base.book[sp], ...s.book[sp] };
+  s.bookClaims = { ...base.bookClaims, ...(d.bookClaims ?? {}) };
+  for (const z of ZONE_IDS) s.bookClaims[z] = { ...base.bookClaims[z], ...s.bookClaims[z] };
   s.stats = { ...base.stats, ...(d.stats ?? {}) };
   s.stats.income = { ...base.stats.income, ...(d.stats?.income ?? {}) };
   s.stats.best = { ...base.stats.best, ...(d.stats?.best ?? {}) };
@@ -53,6 +57,9 @@ function migrate(raw: unknown): GameState | null {
   s.orderCooldowns = Array.isArray(d.orderCooldowns) ? d.orderCooldowns : [];
   s.dockhands = Array.isArray(d.dockhands) ? d.dockhands : [];
   s.candidates = Array.isArray(d.candidates) ? d.candidates : [];
+  // ---- fish book and sizes (version 5): crates from older saves get a middle size and are never golden
+  for (const c of s.crates) if (c.size === undefined) c.size = midSize(c.species);
+  if ((d.version ?? 0) < 5) catchUpBookRewards(s);
   if (old) {
     // Lifetime earnings were not tracked: use what was spent on upgrades plus the money in hand as a floor.
     const spent = (d.upgrades?.icebox ? 120 : 0) + (d.upgrades?.handcart ? 200 : 0) + (holdLvl >= 1 ? 150 : 0) + (holdLvl >= 2 ? 400 : 0) + (hullLvl ? 500 : 0) + (d.upgrades?.boat2 ? 800 : 0);
@@ -66,6 +73,8 @@ function migrate(raw: unknown): GameState | null {
   s.restaurant = { ...base.restaurant, ...(d.restaurant ?? {}) };
   s.contracts = { ...base.contracts, ...(d.contracts ?? {}) };
   s.king = { ...base.king, ...(d.king ?? {}) };
+  if (typeof d.harbourName !== 'string' || checkName(d.harbourName).ok === false) s.harbourName = base.harbourName;
+  else s.harbourName = checkName(d.harbourName).name!;
   s.incomeLog = Array.isArray(d.incomeLog) ? d.incomeLog : [];
   s.tally = { ...emptyTally(), ...(d.tally ?? {}), zoneSent: { ...emptyTally().zoneSent, ...(d.tally?.zoneSent ?? {}) } };
   if ((d.version ?? 0) < 4) {
@@ -95,7 +104,7 @@ function settleLoaded(state: GameState, rng: Rng): void {
       b.status = 'returned';
       b.progress = b.tripTime;
       b.catch = rollBoatCatch(state, b, rng);
-      for (const sp of b.catch) recordCaught(state, sp);
+      recordBoatCatch(state, b);
     }
     b.berth = Math.min(b.berth, LAYOUT.berths.length - 1);
   }
