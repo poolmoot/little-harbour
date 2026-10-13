@@ -1,9 +1,16 @@
 /* Windows float over the harbour: the dim is light and the sides stay clear so the world remains in view. */
 .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(8, 20, 60, 0.26); pointer-events: auto; opacity: 0; visibility: hidden; transition: opacity 0.18s ease, visibility 0s linear 0.18s; }
 .overlay.open { opacity: 1; visibility: visible; transition: opacity 0.18s ease, visibility 0s; }
-.win { display: flex; flex-direction: column; width: min(700px, 62vw); max-height: 84vh; overflow: hidden; border-radius: var(--r-lg); transform: translateY(18px) scale(0.9); opacity: 0; transition: transform 0.26s var(--ease-pop), opacity 0.16s ease; }
-.overlay.open .win { transform: none; opacity: 1; }
-@media (max-width: 1000px) { .win { width: min(700px, 94vw); } }
+.win-wrap { position: relative; width: min(700px, 62vw); transform: translateY(18px) scale(0.9); opacity: 0; transition: transform 0.26s var(--ease-pop), opacity 0.16s ease; }
+.overlay.open .win-wrap { transform: none; opacity: 1; }
+@media (max-width: 1000px) { .win-wrap { width: min(700px, 94vw); } }
+.win { display: flex; flex-direction: column; width: 100%; max-height: 84vh; overflow: hidden; border-radius: var(--r-lg); }
+/* The shopkeeper's head and shoulders stand behind the window's top-left corner, as if leaning over it. */
+.win-host { display: none; position: absolute; left: 6px; top: -92px; width: 132px; height: 132px; pointer-events: none; filter: drop-shadow(0 3px 0 var(--ink-soft)); transform-origin: 50% 100%; }
+.has-host .win-host { display: block; animation: host-pop 0.4s var(--ease-pop) 0.12s backwards; }
+.has-host .win-title { padding-left: 128px; }
+.has-host .win-title .ic { display: none; }
+@keyframes host-pop { from { transform: translateY(46px) scale(0.7); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .win-head { display: flex; align-items: center; gap: 12px; padding: 7px 9px 7px 14px; background: var(--well-2); border-bottom: var(--line); }
 .win-title { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xl); white-space: nowrap; }

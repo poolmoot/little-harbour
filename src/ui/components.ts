@@ -46,6 +46,10 @@ export function stars(level: number, max: number, size = 14): string {
   return `<span class="stars">${h}</span>`;
 }
 
+/** A person's portrait (an image URL from the 3D figures); draws nothing if no picture is available. */
+export const face = (url: string, size: number): string =>
+  url ? `<img class="face" src="${url}" width="${size}" height="${size}" alt="">` : '';
+
 export const price = (text: string): string => `<span class="price ol">${icon('coin', 18)}${text}</span>`;
 export const chip = (html: string): string => `<span class="chip">${html}</span>`;
 export const section = (title: string): string => `<h3 class="section ol">${title}</h3>`;

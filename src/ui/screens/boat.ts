@@ -7,7 +7,9 @@ import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import type { Boat, GameState } from '../../sim/state';
 import { isNight, phaseOf } from '../../sim/time';
 import { hex, SPECIES_COLOUR } from '../../palette';
-import { button, card, cards, chip, empty, item, money, mult, priceLabel, stars } from '../components';
+import { button, card, cards, chip, empty, face, item, money, mult, priceLabel, stars } from '../components';
+import { captainLook } from '../../view/people';
+import { portrait as facePicture } from '../../view/portraits';
 import type { CardTone } from '../components';
 import { fishIcon, HULL_ICONS, icon } from '../icons';
 import type { IconName } from '../icons';
@@ -68,7 +70,7 @@ function captain(s: GameState, boat: Boat): string {
   if (!cap) return empty(rankOf(s) >= CAPTAINS_RANK ? 'No captain. A captain sails the boat for you. Hire one at the inn.' : `Captains come at rank ${RANK_NAME[CAPTAINS_RANK]}.`);
   const info = TRAIT[cap.trait];
   return item({
-    art: icon(cap.trait, 40),
+    art: face(facePicture(captainLook(cap.id, cap.trait)), 56) || icon(cap.trait, 40),
     title: `${cap.name} · ${info.name}`,
     sub: `${info.desc} · $${cap.wage} a day${cap.unpaid ? ' · <span class="bad">not paid, no work today</span>' : ' · sails by day and pays the trip cost'}`,
     right: button({ label: LABEL.endJob, act: 'firecap', a: boat.id, tone: 'danger', size: 'sm' }),

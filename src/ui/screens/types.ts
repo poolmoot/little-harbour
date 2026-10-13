@@ -23,6 +23,8 @@ export interface ScreenView {
   tabs?: TabDef[];
   /** Id of the tab being shown. */
   tab?: string;
+  /** Portrait of the person who runs this place; their head peeks over the top of the window. */
+  host?: string;
   /** One line of context under the header. */
   note?: string;
   body: string;

@@ -5,6 +5,8 @@ import type { GameState } from '../../sim/state';
 import { hex, SPECIES_COLOUR } from '../../palette';
 import { button, chip, empty, freshMeter, item, money, price } from '../components';
 import { fishIcon, icon } from '../icons';
+import { NPC_LOOK } from '../../view/people';
+import { portrait } from '../../view/portraits';
 import { FISH_NAME } from '../text';
 import { pickTab } from './types';
 import type { Screen, TabDef } from './types';
@@ -53,6 +55,7 @@ export const marketScreen: Screen = (ctx) => {
   return {
     title: 'Fish Market',
     icon: icon('stall', 28),
+    host: portrait(NPC_LOOK.fishmonger),
     tabs: TABS,
     tab,
     body: tab === 'sell' ? sell(s) : prices(s),

@@ -62,6 +62,8 @@ function frame(v: ScreenView): string {
 /** The window manager: owns which screen is open, draws it in a floating window and routes button presses to game actions. */
 export class Panels {
   private overlay = document.createElement('div');
+  private wrap = document.createElement('div');
+  private host = document.createElement('img');
   private win = document.createElement('div');
   private kind: PanelKind | null = null;
   private arg = 0;
@@ -74,8 +76,12 @@ export class Panels {
 
   constructor(root: HTMLElement, private actions: PanelActions, private getState: () => GameState) {
     this.overlay.className = 'overlay';
+    this.wrap.className = 'win-wrap';
+    this.host.className = 'win-host';
+    this.host.alt = '';
     this.win.className = 'win pn';
-    this.overlay.appendChild(this.win);
+    this.wrap.append(this.host, this.win);
+    this.overlay.appendChild(this.wrap);
     root.appendChild(this.overlay);
     this.overlay.addEventListener('pointerdown', (e) => {
       const t = e.target as HTMLElement;
@@ -170,7 +176,10 @@ export class Panels {
   private render(force: boolean): void {
     if (!this.kind) return;
     this.lastUpdate = performance.now() / 1000;
-    const html = frame(SCREENS[this.kind]({ state: this.getState(), arg: this.arg, tab: this.tab, confirmReset: this.confirmReset, quality: this.actions.getQuality(), summary: this.summary }));
+    const view = SCREENS[this.kind]({ state: this.getState(), arg: this.arg, tab: this.tab, confirmReset: this.confirmReset, quality: this.actions.getQuality(), summary: this.summary });
+    const html = frame(view);
+    this.wrap.classList.toggle('has-host', !!view.host);
+    if (view.host && this.host.getAttribute('src') !== view.host) this.host.src = view.host;
     if (!force && html === this.last) return;
     this.last = html;
     // Keep the reader's place when live data re-renders the list.
