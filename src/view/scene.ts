@@ -205,7 +205,7 @@ export class SceneRig {
     s.light = dayAmt;
     s.night = 1 - Math.min(1, Math.max(0, (s.sunI - 0.55) / 0.9));
     // Foam picks up the light colour.
-    s.foam.set(0xffffff).lerp(tmpA.copy(s.sunColor), 0.3).multiplyScalar(0.45 + 0.55 * dayAmt);
+    s.foam.set(0xffffff).lerp(tmpA.copy(s.sunColor), 0.3).multiplyScalar(0.3 + 0.7 * dayAmt);
 
     // Sun travels east (+x) at dawn to west (-x) at dusk; at night it becomes a high pale moon.
     const day = Math.min(1, Math.max(0, (h - 6) / 12));
@@ -233,7 +233,7 @@ export class SceneRig {
     const g = this.grade.uniforms;
     (g.uTint.value as THREE.Color).setRGB(1 + warm * 0.06, 1 + warm * 0.005, 1 - warm * 0.05 + s.night * 0.04);
     g.uSat.value = 1.18 - s.night * 0.1;
-    this.bloom.strength = 0.28 + s.night * 0.4;
+    this.bloom.strength = 0.28 + s.night * 0.12;
   }
 
   render(): void {

@@ -119,7 +119,7 @@ void main() {
     vec2 dl = p - uLamp[i];
     lamp += exp(-dot(dl * vec2(0.55, 0.38), dl * vec2(0.55, 0.38))) * (0.6 + 0.8 * noise(p * 3.0 + vec2(t * 0.8, t * 0.5)));
   }
-  col += vec3(1.0, 0.7, 0.32) * lamp * uLantern * 0.55;
+  col += vec3(1.0, 0.7, 0.32) * lamp * uLantern * 0.32 * (1.0 - 0.6 * fm);
 
   float fog = smoothstep(uFogNear, uFogFar, length(cameraPosition - vWorld));
   col = mix(col, uFog, fog);

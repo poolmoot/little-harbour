@@ -373,8 +373,8 @@ export class World {
     lampMat.emissiveIntensity = n * 3.2;
     for (const l of this.lamps) {
       const fl = 1 + Math.sin(t * 9 + l.phase) * 0.04 + Math.sin(t * 23 + l.phase * 3) * 0.03;
-      if (l.light) l.light.intensity = n * 42 * fl;
-      (l.halo.material as THREE.SpriteMaterial).opacity = n * 0.55 * fl;
+      if (l.light) l.light.intensity = n * 15 * fl;
+      (l.halo.material as THREE.SpriteMaterial).opacity = n * 0.4 * fl;
     }
     for (const s of this.signs) s.m.rotation.z = Math.sin(t * 1.1 + s.phase) * 0.03;
     for (const sm of this.smokes) sm.update(t, pxScale, sky.light);

@@ -84,6 +84,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
     dummy.position.set(x, gy(x, z) - 0.02, z);
     dummy.rotation.set(0, r() * 6.28, 0);
     dummy.scale.set(1, 0.7 + r() * 1.0, 1).multiplyScalar(0.9 + r() * 0.8);
+    if (inBed(x, z)) dummy.scale.multiplyScalar(0.42);   // a trimmed town lawn, not a meadow
     dummy.updateMatrix();
     grass.setMatrixAt(i, dummy.matrix);
     grass.setColorAt(i, col.set(pal[Math.floor(r() * pal.length)]));
