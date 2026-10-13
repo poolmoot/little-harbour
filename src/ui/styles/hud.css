@@ -1,0 +1,55 @@
+.hud-tl { position: absolute; left: 12px; top: 12px; display: flex; align-items: center; }
+.hud-shield { position: relative; z-index: 1; width: 48px; height: 48px; }
+.hud-shield > span { position: absolute; inset: 9px 0 0; text-align: center; font-size: 21px; }
+.hud-rank { margin-left: -8px; }
+.hud-rank-name { padding-left: 14px; font-size: var(--fs-md); }
+.hud-rank .meter { width: 176px; border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+
+.hud-tr { position: absolute; right: 12px; top: 12px; display: flex; align-items: center; gap: 22px; padding-right: 10px; }
+.hud-money.tick { animation: bump 0.3s var(--ease-out) infinite; }
+
+.hud-left { position: absolute; left: 12px; top: 76px; width: 214px; }
+.hud-orders-row { display: flex; align-items: center; gap: 8px; padding: 6px 9px 4px; }
+.hud-orders-row:last-child { padding-bottom: 10px; }
+.hud-orders-row.urgent .hud-orders-text { color: var(--gold-hi); animation: pulse 0.35s infinite alternate; transform-origin: left center; }
+
+.hud-right { position: absolute; right: 12px; top: 60px; width: 190px; display: flex; flex-direction: column; align-items: flex-end; gap: 9px; pointer-events: none; }
+.hud-tiles { display: flex; gap: 9px; pointer-events: auto; }
+.hud-boats { width: 100%; display: flex; flex-direction: column; gap: 7px; }
+.hud-boat { display: flex; align-items: center; gap: 8px; padding: 4px 9px 7px; }
+.hud-boat.back { background: linear-gradient(110deg, var(--gold-hi) 0 40%, #fff6c0 50%, var(--gold-lo) 60% 100%); background-size: 220% 100%; animation: shine 1.6s linear infinite; }
+.hud-boat .meter { height: 10px; margin-top: 2px; }
+
+.hud-bl { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 5px; }
+.hud-slots { display: flex; gap: 7px; }
+.slot { width: 50px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: 9px; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.3); font-size: var(--fs-xs); }
+.slot.full { background: linear-gradient(#2f9ae8, #1c6fc4); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3), var(--lift-sm); }
+.slot.empty { color: #4f74c4; font-size: 22px; }
+.hud-hints { font-size: var(--fs-xs); color: var(--text); opacity: 0.9; }
+
+.prompt { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); pointer-events: none; }
+.prompt .btn { animation: bob 0.7s ease-in-out infinite alternate; }
+.prompt .btn.hot { animation: pulse 0.3s infinite alternate; }
+.prompt .btn.dim { animation: none; opacity: 0.85; color: var(--text); }
+
+.toasts { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 7px; width: 460px; max-width: 90vw; pointer-events: none; }
+.toast { padding: 6px 16px 9px; font-size: var(--fs-md); text-align: center; animation: pop-in 0.28s var(--ease-pop); transition: opacity 0.35s ease, transform 0.35s ease; }
+.toast.good { background: linear-gradient(#4fc23a, #2f9a22); }
+.toast.warn { background: linear-gradient(#ff8a4a, #e2502a); }
+.toast.out { opacity: 0; transform: translateY(-8px) scale(0.96); }
+
+.banner { position: absolute; top: 24%; left: 50%; transform: translate(-50%, 0); text-align: center; padding: 12px 40px 18px; pointer-events: none; z-index: 30;
+  background: linear-gradient(var(--gold-hi), var(--gold-lo)); border: 3px solid var(--ink); border-radius: 18px; box-shadow: inset 0 3px 0 var(--gold-gloss), inset 0 -6px 0 var(--gold-lip), 0 6px 0 var(--ink-soft); animation: banner 4.2s ease forwards; }
+.banner h2 { font-size: 32px; }
+.banner p { font-size: var(--fs-md); margin-top: 2px; }
+@keyframes banner { 0% { opacity: 0; transform: translate(-50%, -30px) scale(0.6) rotate(-4deg); } 9% { opacity: 1; transform: translate(-50%, 0) scale(1.1) rotate(1deg); } 15% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -20px) scale(0.95); } }
+
+.floaty { position: absolute; transform: translate(-50%, -50%); font-size: 30px; color: var(--gold-hi); pointer-events: none; z-index: 20; animation: floaty 1.4s ease-out forwards; }
+@keyframes floaty { 0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5); } 15% { opacity: 1; transform: translate(-50%, -60%) scale(1.25); } 30% { transform: translate(-50%, -80%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -260%) scale(1); } }
+
+/* Speech bubbles above townsfolk (positioned by the 3D view). */
+.bubble { position: absolute; display: none; transform: translate(-50%, -100%); max-width: 230px; padding: 5px 11px 7px; background: #fff; color: var(--ink); border: var(--line); border-radius: 12px; box-shadow: var(--lift-sm); font-size: var(--fs-sm); line-height: 1.25; }
+.bubble b { display: block; font-weight: 400; font-size: var(--fs-xs); color: var(--info-lo); }
+
+@media (max-width: 900px) { .prompt { bottom: 116px; } .hud-left { display: none; } .toasts { width: calc(100vw - 440px); min-width: 240px; } }
+@media (max-width: 640px) { .hud-clock { display: none; } .hud-boats { display: none; } .toasts { top: auto; bottom: 190px; width: calc(100vw - 24px); } }

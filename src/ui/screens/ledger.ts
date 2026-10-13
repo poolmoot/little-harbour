@@ -1,0 +1,36 @@
+import { FISH, RANK_NAMES, RANK_UNLOCKS, SPECIES } from '../../sim/config';
+import { netProfit } from '../../sim/ledger';
+import { rankOf, rankProgress } from '../../sim/rank';
+import { hex, SPECIES_COLOUR } from '../../palette';
+import { button, empty, meter, money, section, stat } from '../components';
+import { fishIcon, icon } from '../icons';
+import type { Screen } from './types';
+
+/** End-of-day summary shown at 06:00. */
+export const ledgerScreen: Screen = ({ state: s, summary }) => {
+  const ic = icon('ledger', 28);
+  if (!summary) return { title: 'Ledger', icon: ic, body: empty('No day to report yet.') };
+  const st = summary.stats;
+  const net = netProfit(st);
+  const sales = SPECIES.filter((sp) => st.income[sp] > 0)
+    .map((sp) => stat(`<span class="row-x">${fishIcon(hex(SPECIES_COLOUR[sp]), 14)}${FISH[sp].name}</span>`, `+$${money(st.income[sp])}`))
+    .join('');
+  const rp = rankProgress(s);
+  const rank = rankOf(s);
+  const body = section('Income') + (sales || stat('No sales', '$0'))
+    + stat(`Order bonuses (${st.filled} filled, ${st.missed} missed)`, `+$${money(st.bonus)}`)
+    + section('Costs') + stat('Wages', `-$${money(st.wages)}`) + stat('Upgrades and boats', `-$${money(st.spent)}`) + stat('Crates spoiled', `${st.spoiled}`)
+    + stat('Net profit', `<span class="${net >= 0 ? 'good' : 'bad'}">${net >= 0 ? '+' : '-'}$${money(Math.abs(net))}</span>`, true)
+    + stat('Best single sale', st.best.species ? `${FISH[st.best.species].name} $${money(st.best.price)}` : '-')
+    + section(`Rank: ${RANK_NAMES[rank]}`)
+    + (rp
+      ? `${meter(rp.frac, 'gold', `$${money(rp.have)} / $${money(rp.need)}`)}<p class="dim" style="margin-top:6px">Next rank, ${rp.next}, unlocks: ${RANK_UNLOCKS[rank + 1]}.</p>`
+      : '<p class="dim">Top rank reached. The weathervane is gold.</p>');
+  return {
+    title: `Day ${summary.day} ledger`,
+    icon: ic,
+    note: '06:00. A new day dawns over the harbour.',
+    body,
+    foot: `<span></span>${button({ label: 'Start the day', act: 'close' })}`,
+  };
+};

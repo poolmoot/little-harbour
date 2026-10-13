@@ -12,7 +12,7 @@ import { startGame, step } from './sim/sim';
 import { Hud } from './ui/hud';
 import type { Prompt } from './ui/hud';
 import { Panels } from './ui/panels';
-import { injectStyles } from './ui/styles';
+import './ui/styles/index.css';
 import { BoatsView } from './view/boatsView';
 import { StaffView } from './view/staffView';
 import { CameraRig } from './view/cameraRig';
@@ -78,7 +78,6 @@ export class Game {
   private frameMs = 16;
 
   constructor(app: HTMLElement, uiRoot: HTMLElement) {
-    injectStyles();
     const loaded = loadGame(localStorage, this.rng);
     this.state = loaded ?? initialState();
     startGame(this.state, this.rng);
@@ -95,7 +94,7 @@ export class Game {
     this.life = new Life(this.rig.scene, this.world, this.rig.camera, uiRoot);
     this.fishView = new FishingView(this.rig.scene, this.player);
     this.marker = new TargetMarker(this.rig.scene);
-    this.hud = new Hud(uiRoot);
+    this.hud = new Hud(uiRoot, (kind) => { this.audio.click(); this.panels.toggle(kind); });
     this.panels = new Panels(
       uiRoot,
       {

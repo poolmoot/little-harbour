@@ -1,0 +1,46 @@
+/* Design tokens: every colour, size and timing the UI uses. Components read these, never raw values. */
+:root {
+  --ink: #0b1a44;
+  --ink-soft: rgba(11, 26, 68, 0.85);
+  --text: #ffffff;
+  --text-dim: #a9cbff;
+  --text-mute: #7fa3e6;
+
+  --panel-hi: #2f6ad6;
+  --panel-lo: #1d4cab;
+  --well: #0c1f52;
+  --well-2: #0e2460;
+  --tile-hi: #17357f;
+  --tile-lo: #0e2460;
+
+  --go-hi: #8fea34; --go-lo: #52c916; --go-lip: #2f9a0c; --go-gloss: #d2ff8a;
+  --gold-hi: #ffd83a; --gold-lo: #ffb11a; --gold-lip: #d97f06; --gold-gloss: #fff3a0;
+  --info-hi: #5cc8ff; --info-lo: #1f8be6; --info-lip: #0f5fb4; --info-gloss: #bfe9ff;
+  --danger-hi: #ff6b5a; --danger-lo: #e23324; --danger-lip: #a81a10; --danger-gloss: #ffb0a6;
+  --ghost-hi: #7c8aa8; --ghost-lo: #5a6784; --ghost-lip: #3f4a63; --ghost-gloss: #a9b5cf;
+
+  --cyan: #39d3ff;
+  --green: #6fe03a;
+  --amber: #ffb11a;
+  --red: #ff5a3a;
+  --alert: #ff3b4e;
+
+  --r-sm: 7px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --line: 2px solid var(--ink);
+  --lift: 0 4px 0 var(--ink-soft);
+  --lift-sm: 0 3px 0 var(--ink-soft);
+
+  --font: 'Lilita One', 'Trebuchet MS', system-ui, sans-serif;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 19px;
+  --fs-xl: 24px;
+
+  --ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.35);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --t-fast: 0.12s;
+  --t-base: 0.22s;
+}

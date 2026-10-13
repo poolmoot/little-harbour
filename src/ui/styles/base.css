@@ -1,0 +1,27 @@
+#ui, #ui * { box-sizing: border-box; }
+#ui { font-family: var(--font); font-size: var(--fs-sm); letter-spacing: 0.3px; color: var(--text); user-select: none; -webkit-user-select: none; }
+#ui button { font: inherit; letter-spacing: inherit; color: inherit; }
+#ui p, #ui h2, #ui h3 { margin: 0; font-weight: 400; }
+
+/* Chunky outlined lettering, used on anything that sits on a bright or busy surface. */
+.ol { -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 2px 0 var(--ink); }
+.dim { color: var(--text-dim); }
+.warn { color: var(--gold-hi); }
+.bad { color: var(--danger-hi); }
+.good { color: var(--go-hi); }
+
+.ic { flex: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 2px 0 rgba(11, 26, 68, 0.55)); overflow: visible; }
+
+.row-x { display: flex; align-items: center; gap: 8px; }
+.col-y { display: flex; flex-direction: column; gap: 6px; }
+.grow { flex: 1; min-width: 0; }
+
+@keyframes pop-in { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.06); } }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.14); } 100% { transform: scale(1); } }
+@keyframes shine { from { background-position: -120% 0; } to { background-position: 220% 0; } }
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #ui *, #ui *::before, #ui *::after { animation-duration: 0.01s !important; animation-iteration-count: 1 !important; transition-duration: 0.01s !important; }
+}
