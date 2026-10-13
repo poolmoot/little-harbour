@@ -88,11 +88,11 @@ bar. A rank-up shows a banner.
 
 | Rank | Lifetime earnings | Unlocks |
 |---|---|---|
-| Dockside Fisher | 0 | MVP content |
+| Beginner | 0 | MVP content |
 | Boat Owner | 500 | Dockhands, second boat, Sloop hull |
-| Skipper & Co | 3,000 | Captains, third berth, Cutter hull, market stall I |
-| Fleet Master | 15,000 | Fourth berth, Trawler hull, market stall II |
-| Harbour Master | 60,000 | Title and a golden weathervane on the inn |
+| Small Company | 3,000 | Captains, third berth, Cutter hull, market stall I |
+| Fleet Boss | 15,000 | Fourth berth, Trawler hull, market stall II |
+| Harbour Boss | 60,000 | Title and a golden weathervane on the inn |
 
 ## End-of-day ledger
 
@@ -106,7 +106,7 @@ Costs are tuned against a scripted player. A test drives the pure simulation
 with a simple greedy bot (always buys the cheapest available thing that
 raises income, keeps boats sailing, hauls or lets dockhands haul) and
 reports the time to each rank. Targets for active play: Boat Owner about 5
-minutes, Skipper & Co about 15, Fleet Master about 35, Harbour Master about
+minutes, Small Company about 15, Fleet Boss about 35, Harbour Boss about
 70, each within 30%. Costs and prices are adjusted until the bot lands in
 those windows, and the final numbers are written back into this section's
 table by the builder.
@@ -114,8 +114,8 @@ table by the builder.
 ### Costs (tuned)
 
 Tuned against the scripted player (`src/sim/bot.ts`, run by `pacing.test.ts`).
-Median time to rank over eight seeds: Boat Owner 3.8 min, Skipper & Co 18.9,
-Fleet Master 39.1, Harbour Master 69.4 (targets 5 / 15 / 35 / 70). Fish
+Median time to rank over eight seeds: Boat Owner 3.8 min, Small Company 18.9,
+Fleet Boss 39.1, Harbour Boss 69.4 (targets 5 / 15 / 35 / 70). Fish
 prices are unchanged from the MVP except the Deep zone, which was too rich
 (an average Deep fish paid about 5 times an Open Sea fish) and is now about
 2.7 times. The Trawler was lowered from 10,000 to 4,500: at the old price the

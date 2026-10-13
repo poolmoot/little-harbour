@@ -33,6 +33,8 @@ npm install
 npm run dev      # game at http://localhost:5173 (see .claude/launch.json)
 npm test         # unit tests, including the pacing test
 npm run build    # type check, then production build into dist/
+npm run check    # type check + tests, the quick pre-commit check
+npm run tune     # scripted player on several seeds: prints minutes to each rank (scripts/tune.mjs)
 ```
 
 Tests and the build must pass before any commit.
@@ -48,16 +50,25 @@ The most important rule: **game rules and drawing are separate.**
   return events; they are the only way state changes.
 - `src/view/` — Three.js drawing. Reads state and reacts to events. Never
   changes game state directly.
-- `src/ui/` — the HTML HUD and panels drawn over the canvas.
+- `src/ui/` — the HTML HUD and panels drawn over the canvas. **All names and
+  repeated wording live in `src/ui/text.ts`** (fish, zones, ranks, boat sizes,
+  upgrade tracks, traits, townspeople lines, toasts, prompts). Edit wording
+  there. The sim keeps only ids, numbers and person/boat names, and gives short
+  plain "why not" reasons (plus a `needRank` number) that the UI words.
 - `src/audio.ts` — sounds made with Web Audio. No audio files.
-- `src/game.ts` — owns the state, steps the sim each frame, and passes
-  events to view, UI and audio.
+- `src/game.ts` — owns the state, steps the sim each frame, and wires view, UI
+  and audio together. Event routing is in `src/events.ts`, targeting and the
+  E-key action in `src/interaction.ts`, and the dev-only `__debug` hook in
+  `src/debug.ts`.
 - `src/main.ts` — start-up and the frame loop.
 
 See "Code map" at the bottom for a file-by-file list.
 
 ## Rules that keep the project healthy
 
+0. Sending a boat costs money (trip cost by zone, in `config.ts`); a new game
+   starts with 10 money and pier fishing is free, so the player cannot get
+   stuck. Captained boats pay automatically and wait if they cannot.
 1. New rules go in `src/sim/` with a unit test first. New numbers go in
    `config.ts`, not inline.
 2. No downloaded art or sound. Every model is built from Three.js shapes in
@@ -66,11 +77,20 @@ See "Code map" at the bottom for a file-by-file list.
    this.
 3. Keep it light: reuse geometry and materials, use instancing for repeated
    things, no allocation inside per-frame loops, and do the water and wind
-   movement in shaders rather than JavaScript.
+   movement in shaders rather than JavaScript. Picture quality has three levels
+   (High, Medium, Low; `src/view/quality.ts`): pixel ratio cap, shadow size or
+   off, anti-aliasing samples, bloom. Auto mode starts on High and steps down
+   (never up) when frames average over 22 ms for 3 seconds. The setting
+   (Auto/High/Medium/Low) is in the fish book panel and saved in `localStorage`
+   under its own key, apart from the game save. The HUD only rewrites the DOM
+   when its text changes, and rebuilds its panels about 8 times a second.
 4. Reuse the existing helpers (`view/kit.ts`, `view/figures.ts`,
    `view/textures.ts`, the panel code) before writing new ones.
 5. Changing the saved-state shape needs a version bump and a migration in
-   `src/sim/save.ts`, with a test that an old save still loads.
+   `src/sim/save.ts`, with a test that an old save still loads. (Now at
+   version 3: version 3 added the day report's trip-cost line.)
+5b. `src/sim/` must not import from `view`, `ui`, Three.js or the DOM; a test
+   (`src/sim/purity.test.ts`) scans the import lines and fails if it does.
 6. When prices, costs or timings change, run the pacing test. It drives the
    rules with a scripted player (`src/sim/bot.ts`) and checks how long each
    harbour rank takes. Retune until it passes rather than loosening it.
@@ -81,8 +101,9 @@ See "Code map" at the bottom for a file-by-file list.
 
 In development builds, `window.__debug` gives shortcuts from the browser
 console: set the hour, move the player, add money, skip time, jump rank, add
-boats, hire staff, open panels. It is defined in `src/game.ts`; read it there
-for the current list. A hidden browser tab stops drawing, so use
+boats, hire staff, open panels. It is defined in `src/debug.ts` (loaded only in
+dev builds); read it there for the current list. `__debug.stats()` gives frame
+time, draw calls and triangles. A hidden browser tab stops drawing, so use
 `__debug.skip(seconds)` instead of waiting.
 
 ## Design documents
@@ -93,7 +114,8 @@ In `docs/superpowers/specs/`, oldest first:
    walking, one boat, crates that spoil, market, orders, pier fishing.
 2. `2026-10-13-harbour-business-stage-design.md` — the business layer:
    per-boat upgrades, four boats, four sea zones, captains, workers, wages,
-   ranks, the daily report, and the tuned cost tables.
+   trip costs, ranks, the day report, and the tuned cost tables. (Some words
+   in that spec are the old jargon; the in-game words are in `src/ui/text.ts`.)
 
 Where they disagree, the newer one wins. Write a short spec like these
 before building any large new feature, and keep the cost tables in the spec
@@ -126,5 +148,68 @@ catch, a legendary fish as the end goal, music.
 
 <!-- Keep this list current when files are added, split or removed. -->
 
-_To be filled in by the next code change; until then, the folder summary
-above is accurate._
+Root: `index.html` page shell; `vite.config.ts` test settings; `scripts/tune.mjs`
+tuning run (not in the game bundle); `docs/superpowers/specs/` design notes.
+
+**src/**
+- `main.ts` — start-up: finds the page elements and starts the game.
+- `game.ts` — the Game class: owns state, builds the view/UI, runs the frame loop, saves.
+- `events.ts` — turns sim events into sounds, toasts, pop-ups and saves.
+- `interaction.ts` — what is near the player, the prompt text, and what E does.
+- `debug.ts` — dev-only `window.__debug` helpers (never in production builds).
+- `audio.ts` — sound effects made with Web Audio.
+- `input.ts` — keyboard state.
+- `palette.ts` — fish colours shared by view and UI.
+
+**src/sim/** (pure rules, all unit tested)
+- `config.ts` — every tunable number and table, plus the layout of the harbour.
+- `state.ts` — the saved-state shape, events, start state.
+- `sim.ts` — `step()` that advances everything, plus the public exports.
+- `time.ts` — day clock and phases (morning, day, evening, night).
+- `rng.ts` — seeded random numbers.
+- `catch.ts` — which fish a trip or the pier catches.
+- `boats.ts` — send a boat out (pays the trip cost), trips, unloading.
+- `fleet.ts` — per-boat upgrade tracks, boat prices, trip time and cost.
+- `fishing.ts` — pier fishing: cast, bite, hook.
+- `crates.ts` — crates on the dock, in hands and on ice; freshness.
+- `market.ts` — prices, price level (demand), selling.
+- `orders.ts` — notice-board orders and bonuses.
+- `rank.ts` — rank from lifetime earnings and what each rank allows.
+- `ledger.ts` — money in and out, kept for the day report.
+- `upgrades.ts` — harbour-wide purchases (ice box, handcart, stalls).
+- `staff.ts` — captains, workers, wages, and the workers' carrying jobs.
+- `save.ts` — save/load and migrations between save versions.
+- `bot.ts` — the scripted player used by the pacing test and `npm run tune`.
+
+**src/ui/**
+- `text.ts` — all names and wording the player reads.
+- `hud.ts` — money, clock, carrying, orders, boats, rank bar, prompt, toasts.
+- `panels.ts` — the panels: boat, hire, market, shipyard, notices, fish book, ice box, day report.
+- `styles.ts` — the CSS for the HUD and panels.
+
+**src/view/** (Three.js drawing)
+- `scene.ts` — renderer, sky, sun, post-processing, quality settings applied.
+- `quality.ts` — quality levels and the slow-frame governor.
+- `cameraRig.ts` — the angled follow camera.
+- `world.ts` — the harbour: builds it from the area files, animates lamps and flags, walkable test.
+- `worldParts.ts` — shared types for the area builders.
+- `worldGround.ts` — quay, pier, quay details.
+- `worldMarket.ts` — market stall, stall wings, weathervane.
+- `worldBuildings.ts` — shipyard, inn, notice board, ice box.
+- `worldLamps.ts` — lanterns.
+- `nature.ts` — hills, trees, grass, flowers.
+- `water.ts` — water shader, wakes.
+- `waves.ts` — the wave field shared by shader and boats.
+- `boatsView.ts` — the four boat models and their upgrades.
+- `hull.ts` — hull shape geometry.
+- `cratesView.ts` — crates on the dock, in hands, on ice.
+- `staffView.ts` — workers and captains.
+- `figures.ts` — people models.
+- `player.ts` — the player, fishing line and target marker.
+- `life.ts` — townspeople, speech bubbles, cat, gulls.
+- `kit.ts` — shared materials, geometry helpers and props.
+- `textures.ts` — canvas-drawn textures.
+- `fx.ts` — smoke, fireflies, wind, light halos.
+
+Tests sit next to the file they test (`*.test.ts`); `pacing.test.ts` checks
+times to each rank and that a Trawler is bought.
