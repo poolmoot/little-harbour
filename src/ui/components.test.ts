@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { button, card, freshMeter, item, meter, money, mult, percent, slider, stars } from './components';
+import { button, card, freshMeter, item, meter, money, mult, percent, slider, stars, tick } from './components';
 
 describe('ui components', () => {
   it('formats money and multipliers', () => {
@@ -66,5 +66,18 @@ describe('ui components', () => {
   it('dims a slider that is switched off', () => {
     expect(slider({ id: 'a', value: 0.2, label: 'A', off: true })).toContain('dim');
     expect(slider({ id: 'a', value: 0.2, label: 'A' })).not.toContain('dim');
+  });
+
+  it('draws a tick box as one button with an action and a tick when on', () => {
+    const on = tick({ label: 'Herring', on: true, act: 'smoke', a: 'herring' });
+    expect(on).toContain('data-act="smoke"');
+    expect(on).toContain('data-a="herring"');
+    expect(on).toContain('aria-checked="true"');
+    expect(on).toContain('class="tick ol on"');
+    expect(on).toContain('<svg');
+    const off = tick({ label: 'Cod', on: false, act: 'smoke', a: 'cod', off: true });
+    expect(off).toContain('aria-checked="false"');
+    expect(off).not.toContain('<svg');
+    expect(off).toContain('off');
   });
 });

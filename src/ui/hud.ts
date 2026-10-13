@@ -7,6 +7,8 @@ import { formatClock, isNight, phaseOf } from '../sim/time';
 import { hex, SPECIES_COLOUR } from '../palette';
 import { meter, money } from './components';
 import { fishIcon, HULL_ICONS, icon } from './icons';
+import { goalDoneHtml, goalHtml, rateHtml, weatherHtml } from './hudParts';
+import { HUD_TEXT } from './screenText';
 import { HINTS } from './menuText';
 import type { PanelKind } from './panels';
 import { FISH_NAME, LABEL, PHASE_NAME, RANK_NAME, boatType, crates } from './text';
@@ -18,6 +20,8 @@ const ORDER_METER_SECONDS = 60;
 const TOAST_MS = 3400;
 const TOAST_FADE_MS = 400;
 const MAX_TOASTS = 4;
+/** How long the "goal done" panel stays before the next goal is shown. */
+const GOAL_DONE_MS = 1800;
 /** The money counter and prompt follow every frame; the other panels change slowly and are rebuilt about 8 times a second. */
 const SLOW_REFRESH_MS = 120;
 
@@ -69,6 +73,8 @@ export class Hud {
   private rank: HTMLDivElement;
   private clock: HTMLDivElement;
   private money: HTMLDivElement;
+  private goal: HTMLDivElement;
+  private weather: HTMLDivElement;
   private orders: HTMLDivElement;
   private tiles: HTMLDivElement;
   private boats: HTMLDivElement;
@@ -78,13 +84,19 @@ export class Hud {
   private shownMoney = -1;
   private lastTick = performance.now();
   private lastSlow = -1000;
+  /** After a goal is finished the panel shows "Goal done" for a moment before the next goal appears. */
+  private goalDoneUntil = 0;
+  private goalDoneReward = 0;
 
   constructor(private root: HTMLElement, onOpen: (kind: PanelKind) => void) {
     this.rank = div('hud-tl', root);
     const tr = div('hud-tr', root);
     this.clock = div('well pill hud-clock ol', tr);
+    this.weather = div('well pill hud-weather', tr);
     this.money = div('well pill hud-money ol', tr);
-    this.orders = div('pn hud-left', root);
+    const left = div('hud-left', root);
+    this.goal = div('pn hud-goal', left);
+    this.orders = div('pn hud-orders', left);
     const right = div('hud-right', root);
     this.tiles = div('hud-tiles', right);
     this.boats = div('hud-boats', right);
@@ -109,6 +121,13 @@ export class Hud {
     this.lastSlow = now;
     set(this.clock, `${formatClock(state.dayTime)} · ${PHASE_NAME[phaseOf(state.dayTime)]}${icon(isNight(state) ? 'moon' : 'sun', 34)}`);
 
+    const w = weatherHtml(state);
+    set(this.weather, w.html);
+    this.weather.title = w.tip.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+    const done = now < this.goalDoneUntil;
+    this.goal.classList.toggle('done', done);
+    set(this.goal, done ? goalDoneHtml(this.goalDoneReward) : goalHtml(state));
+
     const rp = rankProgress(state);
     set(this.rank, `<div class="hud-shield">${icon('shield', 48)}<span class="ol">${rankOf(state) + 1}</span></div>
       <div class="hud-rank"><div class="hud-rank-name ol">${RANK_NAME[rankOf(state)]} · Day ${state.day}</div>${meter(rp?.frac ?? 1, 'cyan', rp ? `$${money(rp.have)} / $${money(rp.need)}` : LABEL.topRank)}</div>`);
@@ -125,7 +144,7 @@ export class Hud {
     let slots = '';
     for (let i = 0; i < cap; i++) {
       const c = hand[i];
-      slots += c ? `<div class="slot full ol">${fishIcon(hex(SPECIES_COLOUR[c.species]), 18)}${Math.round(c.freshness)}%</div>` : '<div class="slot empty">+</div>';
+      slots += c ? `<div class="slot full ol">${fishIcon(hex(SPECIES_COLOUR[c.species]), 18)}${c.king ? HUD_TEXT.carryKing : c.smoked ? HUD_TEXT.carrySmoked : `${Math.round(c.freshness)}%`}</div>` : '<div class="slot empty">+</div>';
     }
     set(this.carry, `<div class="ol">Carrying ${hand.length} / ${cap}</div><div class="hud-slots">${slots}</div>`);
   }
@@ -144,7 +163,14 @@ export class Hud {
       this.shownMoney = state.money;
     }
     this.money.classList.toggle('tick', diff > 0.5);
-    set(this.money, `${money(this.shownMoney)}${icon('coin', 34)}`);
+    set(this.money, `${rateHtml(state)}${money(this.shownMoney)}${icon('coin', 34)}`);
+  }
+
+  /** Shows "Goal done" in the goal panel for a moment. */
+  goalDone(reward: number): void {
+    this.goalDoneReward = reward;
+    this.goalDoneUntil = performance.now() + GOAL_DONE_MS;
+    this.lastSlow = -1000;
   }
 
   /** Big centred banner (rank-ups). */

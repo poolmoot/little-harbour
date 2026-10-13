@@ -8,7 +8,20 @@
 .hud-tr { position: absolute; right: 12px; top: 12px; display: flex; align-items: center; gap: 22px; padding-right: 10px; }
 .hud-money.tick { animation: bump 0.3s var(--ease-out) infinite; }
 
-.hud-left { position: absolute; left: 12px; top: 76px; width: 214px; }
+.hud-left { position: absolute; left: 12px; top: 76px; width: 214px; display: flex; flex-direction: column; gap: 8px; }
+.hud-goal { padding: 5px 10px 9px; }
+.hud-goal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-sm); color: var(--gold-hi); }
+.hud-goal-head .ic { vertical-align: middle; margin-right: 4px; }
+.hud-goal-reward { display: inline-flex; align-items: center; gap: 3px; color: var(--text); }
+.hud-goal-text { margin-top: 2px; font-size: var(--fs-sm); line-height: 1.25; }
+.hud-goal .meter { margin-top: 6px; }
+.hud-goal.done { background: linear-gradient(var(--gold-hi), var(--gold-lo)); color: var(--ink); animation: goalpop 0.55s var(--ease-pop); }
+.hud-goal.done .hud-goal-head { color: var(--ink); font-size: var(--fs-md); justify-content: center; padding: 6px 0; }
+@keyframes goalpop { 0% { transform: scale(0.85); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.hud-weather { display: flex; align-items: center; gap: 6px; padding-top: 2px; padding-bottom: 3px; white-space: nowrap; cursor: help; }
+.hud-weather-text { display: flex; flex-direction: column; line-height: 1.1; }
+.hud-weather-text small { font-size: var(--fs-xs); color: var(--text-dim); }
+.hud-rate { margin-right: 10px; font-size: var(--fs-xs); color: var(--text-dim); }
 .hud-orders-row { display: flex; align-items: center; gap: 8px; padding: 6px 9px 4px; }
 .hud-orders-row:last-child { padding-bottom: 10px; }
 .hud-orders-row.urgent .hud-orders-text { color: var(--gold-hi); animation: pulse 0.35s infinite alternate; transform-origin: left center; }
@@ -51,5 +64,7 @@
 .bubble { position: absolute; display: none; transform: translate(-50%, -100%); max-width: 230px; padding: 5px 11px 7px; background: #fff; color: var(--ink); border: var(--line); border-radius: 12px; box-shadow: var(--lift-sm); font-size: var(--fs-sm); line-height: 1.25; }
 .bubble b { display: block; font-weight: 400; font-size: var(--fs-xs); color: var(--info-lo); }
 
-@media (max-width: 900px) { .prompt { bottom: 116px; } .hud-left { display: none; } .toasts { width: calc(100vw - 440px); min-width: 240px; } }
+@media (max-width: 900px) { .prompt { bottom: 116px; } .hud-orders { display: none; } .toasts { width: calc(100vw - 440px); min-width: 240px; } }
 @media (max-width: 640px) { .hud-clock { display: none; } .hud-boats { display: none; } .toasts { top: auto; bottom: 190px; width: calc(100vw - 24px); } }
+@media (max-width: 820px) { .hud-tr { gap: 10px; } .hud-weather-text small, .hud-rate { display: none; } }
+@media (max-width: 640px) { .hud-left { width: 180px; } .hud-goal-text { font-size: var(--fs-xs); } }

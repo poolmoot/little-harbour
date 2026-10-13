@@ -1,4 +1,5 @@
 /** All wording for the title screen, pause menu, settings and how-to-play page. Kept apart from text.ts. */
+import { ORDER_BONUS, ORDER_CRATE_MULT } from '../sim/config';
 
 export const GAME_NAME = 'Little Harbour';
 export const GAME_TAGLINE = 'A cosy harbour of your own.';
@@ -66,7 +67,7 @@ export const HOWTO = {
     ['rowboat', 'Send your boats out to sea. Farther trips can bring better fish.'],
     ['crate', 'When a boat comes back, unload it at the pier.'],
     ['stall', 'Sell your fish at the market before it goes bad.'],
-    ['note', 'Fill orders from the notice board. You get extra money for them.'],
+    ['note', `Fill orders from the notice board. Each crate for an order sells for ${ORDER_CRATE_MULT === 2 ? 'double' : `${ORDER_CRATE_MULT} times the price`}, and a finished order pays ${Math.round(ORDER_BONUS * 100)}% extra.`],
     ['hammer', 'Buy upgrades at the shipyard. Faster, bigger boats earn more.'],
     ['dockhand', 'Hire people. Captains sail boats for you and workers carry crates.'],
   ] as const,
