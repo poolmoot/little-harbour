@@ -11,6 +11,8 @@ export interface Crate {
   z?: number;
   layer?: number;
   carrier?: number; // dockhand id that has claimed (or is carrying) this crate
+  size?: number; // length in cm, rolled when caught
+  golden?: boolean; // rare golden fish: sells for much more, never smoked by workers
   smoked?: boolean; // finished smoked fish: sells for more, ignores freshness, never spoils
   smokeLeft?: number; // seconds left in the smokehouse (loc 'smoke'); 0 when ready to collect
   king?: boolean; // the King Fish: never sold, never spoils, goes to the inn
@@ -95,6 +97,7 @@ export interface DayStats {
   wages: number;
   tripCosts: number; // food and supplies paid when boats leave
   rewards: number; // goal rewards (not part of earned)
+  away: number; // earnings while the player was away (not part of earned)
   spent: number; // upgrades, boats and market stall
   best: { species: Species | null; price: number };
 }
@@ -167,6 +170,7 @@ export interface GameState {
   king: { found: boolean; delivered: boolean; day: number };
   incomeLog: number[]; // lifetime earnings sampled every few seconds (for money per minute)
   incomeTimer: number;
+  savedAt: number; // wall-clock milliseconds when last saved, given by the caller (0 = unknown)
 }
 
 export interface Forecast {
@@ -217,6 +221,7 @@ export type Ev =
   | { type: 'contractFailed'; contractId: number }
   | { type: 'kingFishFound'; boatId: number }
   | { type: 'endingReached'; days: number; earned: number; fishCaught: number; boats: number }
+  | { type: 'awayEarnings'; seconds: number; earned: number; perMinute: number }
   | { type: 'denied'; reason: string; needRank?: number };
 
 /** Result of a "can the player do this" check. needRank is set when only a higher rank is missing. */
@@ -227,7 +232,7 @@ export interface Check {
   cost?: number;
 }
 
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 5;
 
 function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
@@ -236,7 +241,7 @@ function perSpecies<T>(f: () => T): Record<Species, T> {
 }
 
 export function emptyStats(): DayStats {
-  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, tripCosts: 0, rewards: 0, spent: 0, best: { species: null, price: 0 } };
+  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, tripCosts: 0, rewards: 0, away: 0, spent: 0, best: { species: null, price: 0 } };
 }
 
 export function emptyTally(): Tally {
@@ -286,6 +291,7 @@ export function initialState(): GameState {
     king: { found: false, delivered: false, day: 0 },
     incomeLog: [],
     incomeTimer: 0,
+    savedAt: 0,
   };
 }
 

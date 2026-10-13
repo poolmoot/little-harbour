@@ -1,11 +1,13 @@
 import { BOAT_NAMES, BUILDING_IDS, LAYOUT, SPECIES, ZONE_IDS } from './config';
+import { applyAway } from './away';
+import type { AwayResult } from './away';
 import { catchUpGoals } from './goals';
 import { recordCaught, rollBoatCatch } from './boats';
 import { rankIndex } from './rank';
 import { resetDockhands } from './staff';
 import type { Rng } from './rng';
 import { STATE_VERSION, emptyTally, initialState, newBoat } from './state';
-import type { GameState } from './state';
+import type { Ev, GameState } from './state';
 
 export const SAVE_KEY = 'harbour-game-save';
 
@@ -100,8 +102,10 @@ function settleLoaded(state: GameState, rng: Rng): void {
   state.fishing = { phase: 'idle', timer: 0 };
 }
 
-export function saveGame(state: GameState, storage: StorageLike): boolean {
+/** `now` is the wall-clock time in milliseconds, given by the caller; it is stored so a later load can work out how long the player was away. */
+export function saveGame(state: GameState, storage: StorageLike, now?: number): boolean {
   try {
+    if (now !== undefined) state.savedAt = now;
     storage.setItem(SAVE_KEY, serialize(state));
     return true;
   } catch {
@@ -120,6 +124,17 @@ export function loadGame(storage: StorageLike, rng: Rng): GameState | null {
   } catch {
     return null;
   }
+}
+
+export interface LoadedGame { state: GameState; away: AwayResult | null; events: Ev[] }
+
+/** Load, and credit what the harbour earned while the player was away. `now` is the wall-clock time in milliseconds. */
+export function loadGameWithAway(storage: StorageLike, rng: Rng, now: number): LoadedGame | null {
+  const state = loadGame(storage, rng);
+  if (!state) return null;
+  const secs = state.savedAt > 0 ? (now - state.savedAt) / 1000 : 0;
+  const { result, events } = applyAway(state, secs, rng);
+  return { state, away: result, events };
 }
 
 export function clearSave(storage: StorageLike): void {

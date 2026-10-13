@@ -4,6 +4,10 @@ export class Rng {
   constructor(seed: number = Date.now()) {
     this.s = seed >>> 0;
   }
+  /** A copy that continues from the same point, so a what-if run leaves this one untouched. */
+  clone(): Rng {
+    return new Rng(this.s);
+  }
   next(): number {
     this.s = (this.s + 0x6d2b79f5) >>> 0;
     let t = this.s;
