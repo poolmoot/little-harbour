@@ -95,14 +95,14 @@ export const MAX_BOATS = 4;
 export const BOAT_NAMES = ['Gull', 'Wren', 'Marigold', 'Albatross'];
 /** Cost to reach level i of each track (index 0 unused). Hold, Gear and Sails are multiplied by TIER_COST_MULT[hull]. */
 export const TRACK_COST: Record<Track, number[]> = {
-  hull: [0, 500, 3000, 12000],
-  hold: [0, 150, 400, 1100],
-  gear: [0, 300, 900],
-  sails: [0, 250, 700],
+  hull: [0, 400, 2500, 10000],
+  hold: [0, 300, 450, 1200],
+  gear: [0, 350, 950],
+  sails: [0, 350, 800],
 };
 export const TIER_COST_MULT = [1, 1.6, 2.6, 4];
 /** Price of the nth boat (index = boats already owned). Bought as a rowboat. */
-export const BOAT_COST = [0, 800, 2500, 7000];
+export const BOAT_COST = [0, 700, 2200, 6000];
 
 // ---- Rank ---------------------------------------------------------------
 export const RANK_NAMES = ['Dockside Fisher', 'Boat Owner', 'Skipper & Co', 'Fleet Master', 'Harbour Master'];

@@ -111,6 +111,29 @@ minutes, Skipper & Co about 15, Fleet Master about 35, Harbour Master about
 those windows, and the final numbers are written back into this section's
 table by the builder.
 
+### Costs (tuned)
+
+Tuned against the scripted player (`src/sim/bot.ts`, run by `pacing.test.ts`).
+Median time to rank over six seeds: Boat Owner 3.9 min, Skipper & Co 18.9,
+Fleet Master 39.6, Harbour Master 69.9 (targets 5 / 15 / 35 / 70). Fish
+prices are unchanged from the MVP and this spec's zone table.
+
+| Item | Cost |
+|---|---|
+| Hull: Sloop / Cutter / Trawler | 400 / 2,500 / 10,000 |
+| Hold II / III / IV (rowboat prices) | 300 / 450 / 1,200 |
+| Gear I / II (rowboat prices) | 350 / 950 |
+| Sails I / II (rowboat prices) | 350 / 800 |
+| Hold, Gear, Sails multiplier by hull: Rowboat / Sloop / Cutter / Trawler | ×1 / ×1.6 / ×2.6 / ×4 |
+| Boat 2 / 3 / 4 (bought as a rowboat) | 700 / 2,200 / 6,000 |
+| Ice box / Handcart | 120 / 200 |
+| Market stall I / II | 2,000 / 9,000 |
+| Captain wage (Thrifty) / dockhand wage, per day | 40 (28) / 25 |
+| Hiring fee | none |
+
+Per-boat upgrades can be bought while the boat is at sea or in harbour, so a
+captained boat, which is almost never idle at the berth, can still be upgraded.
+
 ## Out of scope
 
 Processing buildings (smokehouse, warehouse), contracts and reputation,

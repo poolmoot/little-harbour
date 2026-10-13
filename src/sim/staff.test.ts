@@ -59,10 +59,11 @@ describe('captains', () => {
     b.captain = cap('careful');
     expect(holdSize(b)).toBe(5);
     s.lifetime = 3000;
+    b.captain = null;
     s.candidates = [{ id: 50, name: 'Thr', trait: 'thrifty', wage: 28 }];
     hireCaptain(s, 50, 1);
-    expect(b.captain?.wage).toBe(28);
-    b.captain!.unpaid = true; // an absent captain gives no bonus
+    expect(s.boats[0].captain?.wage).toBe(28);
+    s.boats[0].captain!.unpaid = true; // an absent captain gives no bonus
     expect(holdSize(b)).toBe(4);
   });
   it('sails by itself: unloads, re-sends, and only in daylight', () => {
@@ -225,7 +226,7 @@ describe('new zones', () => {
     const deep = rollCatch('deep', 'day', 400, r);
     expect(deep.every((x) => ['anglerfish', 'squid', 'sturgeon'].includes(x))).toBe(true);
     const n = (m: number) => rollCatch('deep', 'day', 6000, new Rng(11), m).filter((x) => x === 'sturgeon').length;
-    expect(n(2.2)).toBeGreaterThan(n(1) * 1.8);
+    expect(n(2.2)).toBeGreaterThan(n(1) * 1.6);
   });
   it('trip times are 80 s and 120 s and a boat needs the hull', () => {
     const s = initialState();

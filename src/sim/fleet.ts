@@ -49,7 +49,6 @@ export function canUpgradeBoat(state: GameState, boatId: number, track: Track): 
   if (!b) return { ok: false, reason: 'No such boat' };
   const cost = trackCost(b, track);
   if (cost === null) return { ok: false, reason: 'Maxed' };
-  if (b.status !== 'docked') return { ok: false, reason: 'Boat must be in harbour', cost };
   if (track === 'hull' && b.hull + 1 > maxHullTier(rankOf(state))) {
     return { ok: false, reason: `Needs rank: ${['', 'Boat Owner', 'Skipper & Co', 'Fleet Master'][b.hull + 1]}`, cost };
   }

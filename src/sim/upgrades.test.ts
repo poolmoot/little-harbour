@@ -75,14 +75,13 @@ describe('per-boat upgrades', () => {
     expect(zoneUnlocked(s, 'deep')).toBe(true);
     expect(buyBoatUpgrade(s, 1, 'hull')[0].type).toBe('denied'); // maxed
   });
-  it('upgrade costs rise with the hull tier and a boat must be in harbour', () => {
+  it('upgrade costs rise with the hull tier', () => {
     const s = initialState();
     const base = trackCost(s.boats[0], 'hold')!;
     s.boats[0].hull = 2;
     expect(trackCost(s.boats[0], 'hold')!).toBeGreaterThan(base);
     s.money = 100000;
-    s.boats[0].status = 'out';
-    expect(buyBoatUpgrade(s, 1, 'hold')[0].type).toBe('denied');
+    expect(buyBoatUpgrade(s, 1, 'hold')[0].type).toBe('boatUpgraded');
   });
   it('boat count is gated by rank and capped at four', () => {
     const s = initialState();
