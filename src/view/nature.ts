@@ -52,39 +52,57 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   const col = new THREE.Color();
 
   // --- grass clumps
-  const blades: number[] = [], bcol: number[] = [];
-  const BL = 5;
-  for (let b = 0; b < BL; b++) {
-    const a = (b / BL) * Math.PI * 2 + r();
-    const lean = 0.25 + r() * 0.3, hgt = 0.45 + r() * 0.35;
-    const cx = Math.cos(a), cz = Math.sin(a);
-    const ox = cx * 0.06, oz = cz * 0.06;
-    blades.push(ox - cz * 0.045, 0, oz + cx * 0.045, ox + cz * 0.045, 0, oz - cx * 0.045, ox + cx * lean, hgt, oz + cz * lean);
-    bcol.push(0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.15, 1.15, 1.15);
-  }
-  const gg = new THREE.BufferGeometry();
-  gg.setAttribute('position', new THREE.Float32BufferAttribute(blades, 3));
-  gg.setAttribute('color', new THREE.Float32BufferAttribute(bcol, 3));
-  const nrm: number[] = [];
-  for (let i = 0; i < blades.length / 3; i++) nrm.push(0, 1, 0);
-  gg.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  // Meadow tufts are five single-triangle blades. Bed tufts are fewer in number, so they can afford
+  // broad three-triangle leaves (base, shoulder, tip) that read as soft cartoon grass close up.
+  const tuft = (n: number, leaf: boolean): THREE.BufferGeometry => {
+    const pos: number[] = [], vcol: number[] = [], nrm: number[] = [];
+    const lo = 0.78, hi = 1.2;   // root and tip brightness: roots sit close to the lawn colour, never near black
+    for (let b = 0; b < n; b++) {
+      const a = (b / n) * Math.PI * 2 + r();
+      const cx = Math.cos(a), cz = Math.sin(a);
+      if (!leaf) {
+        const lean = 0.25 + r() * 0.3, hgt = 0.45 + r() * 0.35;
+        const ox = cx * 0.06, oz = cz * 0.06;
+        pos.push(ox - cz * 0.045, 0, oz + cx * 0.045, ox + cz * 0.045, 0, oz - cx * 0.045, ox + cx * lean, hgt, oz + cz * lean);
+        vcol.push(lo, lo, lo, lo, lo, lo, hi, hi, hi);
+        continue;
+      }
+      const lean = 0.07 + r() * 0.1, hgt = 0.2 + r() * 0.13, w = 0.036 + r() * 0.012;
+      const ox = cx * 0.05, oz = cz * 0.05;
+      const sx = ox + cx * lean * 0.4, sz = oz + cz * lean * 0.4, sy = hgt * 0.66, sw = w * 0.82;   // shoulder
+      const l0 = [ox - cz * w, 0, oz + cx * w], r0 = [ox + cz * w, 0, oz - cx * w];
+      const l1 = [sx - cz * sw, sy, sz + cx * sw], r1 = [sx + cz * sw, sy, sz - cx * sw];
+      const tip = [ox + cx * lean, hgt, oz + cz * lean];
+      pos.push(...l0, ...r0, ...r1, ...l0, ...r1, ...l1, ...l1, ...r1, ...tip);
+      const mid = lo + (hi - lo) * 0.7;
+      vcol.push(lo, lo, lo, lo, lo, lo, mid, mid, mid, lo, lo, lo, mid, mid, mid, mid, mid, mid, mid, mid, mid, mid, mid, mid, hi, hi, hi);
+    }
+    for (let i = 0; i < pos.length / 3; i++) nrm.push(0, 1, 0);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(vcol, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+    return g;
+  };
   const gm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide });
   addWind(gm, 'grass', 0.55, 1.0);
+  // Blades are lit like the ground they grow from. A two-sided material turns the normal over on back
+  // faces, which pointed half the blades at the ground and left them near black; keep it pointing up.
+  const windCompile = gm.onBeforeCompile;
+  gm.onBeforeCompile = (shader, renderer) => {
+    windCompile.call(gm, shader, renderer);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize(vNormal);');
+  };
   const spots: [number, number][] = [];
   const tryAdd = (x: number, z: number) => { if (onGround(x, z)) spots.push([x, z]); };
   for (let i = 0; i < 7000; i++) tryAdd((r() - 0.5) * 100, 14.4 + Math.pow(r(), 1.5) * 38);
   for (let i = 0; i < 2600; i++) tryAdd((r() < 0.5 ? -1 : 1) * (22.3 + r() * 24), -7.6 + r() * 21.5);
-  for (const b of beds) {
-    const n = Math.round((b[1] - b[0]) * (b[3] - b[2]) * 7);
-    for (let i = 0; i < n; i++) spots.push([b[0] + 0.15 + r() * (b[1] - b[0] - 0.3), b[2] + 0.15 + r() * (b[3] - b[2] - 0.3)]);
-  }
-  const grass = new THREE.InstancedMesh(gg, gm, spots.length);
+  const grass = new THREE.InstancedMesh(tuft(5, false), gm, spots.length);
   const pal = [0x3f8f3a, 0x5aa83e, 0x78bf45, 0x92cf55, 0x4a9a52];
   spots.forEach(([x, z], i) => {
     dummy.position.set(x, gy(x, z) - 0.02, z);
     dummy.rotation.set(0, r() * 6.28, 0);
     dummy.scale.set(1, 0.7 + r() * 1.0, 1).multiplyScalar(0.9 + r() * 0.8);
-    if (inBed(x, z)) dummy.scale.multiplyScalar(0.42);   // a trimmed town lawn, not a meadow
     dummy.updateMatrix();
     grass.setMatrixAt(i, dummy.matrix);
     grass.setColorAt(i, col.set(pal[Math.floor(r() * pal.length)]));
@@ -92,6 +110,27 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   grass.receiveShadow = true;
   grass.frustumCulled = false;
   scene.add(grass);
+
+  // The quay beds: a trimmed town lawn, not a meadow. Short, broad, bright tufts.
+  const bedSpots: [number, number][] = [];
+  for (const b of beds) {
+    const n = Math.round((b[1] - b[0]) * (b[3] - b[2]) * 9);
+    for (let i = 0; i < n; i++) bedSpots.push([b[0] + 0.12 + r() * (b[1] - b[0] - 0.24), b[2] + 0.12 + r() * (b[3] - b[2] - 0.24)]);
+  }
+  if (bedSpots.length) {
+    const lawn = new THREE.InstancedMesh(tuft(6, true), gm, bedSpots.length);
+    const bpal = [0x63b544, 0x78c44a, 0x8fd257, 0xa4dc62, 0x6dbd50];
+    bedSpots.forEach(([x, z], i) => {
+      dummy.position.set(x, gy(x, z) - 0.01, z);
+      dummy.rotation.set(0, r() * 6.28, 0);
+      dummy.scale.setScalar(0.8 + r() * 0.5);
+      dummy.updateMatrix();
+      lawn.setMatrixAt(i, dummy.matrix);
+      lawn.setColorAt(i, col.set(bpal[Math.floor(r() * bpal.length)]));
+    });
+    lawn.receiveShadow = true;
+    scene.add(lawn);
+  }
 
   // --- flowers
   const centres: [number, number, number][] = [[-16, 16.5, 2.4], [-6, 17.5, 2], [4, 16.2, 2.6], [13, 17.5, 2.2], [20, 16, 2], [-24, 20, 2.5], [9, 22, 2.5], [-31, 6, 2.2], [31, 5, 2.4], [28, 11, 2], [-28, 11, 2]];
@@ -106,7 +145,8 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   const headG = new THREE.SphereGeometry(0.1, 7, 5); headG.scale(1, 0.55, 1); headG.translate(0, 0.52, 0);
   const stemM = new THREE.MeshStandardMaterial({ color: 0x4e9a45, roughness: 1 });
   const headM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
-  addWind(stemM, 'flstem', 0.9, 2.0); addWind(headM, 'flhead', 0.9, 2.0);
+  // A gentle nod: more than this lays the stems flat and shears the heads into long streaks.
+  addWind(stemM, 'flstem', 0.14, 2.0); addWind(headM, 'flhead', 0.14, 2.0);
   const stems = new THREE.InstancedMesh(stemG, stemM, fl.length);
   const heads = new THREE.InstancedMesh(headG, headM, fl.length);
   const fpal = [0xffe14a, 0xffffff, 0xff7aa8, 0xb48cf0, 0xff9a3c, 0xfff2b0];

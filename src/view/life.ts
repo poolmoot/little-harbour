@@ -266,6 +266,9 @@ class Cat {
   }
 }
 
+/** Gulls on the wing stay at least this far from the camera (the player is about 20 away). */
+const KEEP_OFF = 16;
+
 class Gull {
   group = new THREE.Group();
   private wing: { sh: THREE.Group; el: THREE.Group }[] = [];
@@ -306,15 +309,31 @@ class Gull {
   }
 
   private circle = new THREE.Vector3();
-  circlePoint(t: number): THREE.Vector3 {
+  private step = new THREE.Vector3();
+  /** Where this gull should be on its lazy circle over the pier. The circle bends around the camera
+   *  (which hangs above and behind the player), so a gull never fills the screen as a white-and-grey blur. */
+  circlePoint(t: number, cam: THREE.Vector3 | null = null): THREE.Vector3 {
     const dir = this.idx % 2 ? -1 : 1;
     const a = t * 0.45 * dir + this.idx * 1.7;
     const r = 7 + this.idx * 1.6;
-    return this.circle.set(Math.cos(a) * r, 8 + (this.idx % 3) * 1.2 + Math.sin(t + this.idx) * 0.4, -11 + Math.sin(a) * r * 0.8);
+    const p = this.circle.set(Math.cos(a) * r, 8 + (this.idx % 3) * 1.2 + Math.sin(t + this.idx) * 0.4, -11 + Math.sin(a) * r * 0.8);
+    if (cam) {
+      // Slide the point level out to sea until it is KEEP_OFF from the camera.
+      const dy = p.y - cam.y;
+      if (Math.abs(dy) < KEEP_OFF) {
+        const need = Math.sqrt(KEEP_OFF * KEEP_OFF - dy * dy);
+        const dx = p.x - cam.x, dz = p.z - cam.z;
+        const d = Math.hypot(dx, dz);
+        if (d < need) {
+          if (d > 0.01) { p.x = cam.x + (dx / d) * need; p.z = cam.z + (dz / d) * need; } else p.z = cam.z - need;
+        }
+      }
+    }
+    return p;
   }
 
-  update(dt: number, t: number, landing: THREE.Vector3 | null, playerNear: boolean): void {
-    const circle = this.circlePoint(t);
+  update(dt: number, t: number, landing: THREE.Vector3 | null, playerNear: boolean, cam: THREE.Vector3): void {
+    const circle = this.circlePoint(t, cam);
     if (this.mode === 'circle' && landing && this.idx === 0) {
       this.landWait += dt;
       if (this.landWait > 3) this.mode = 'landing';
@@ -339,7 +358,7 @@ class Gull {
       const vx = this.pos.x - this.prev.x, vz = this.pos.z - this.prev.z;
       if (vx * vx + vz * vz > 1e-6) this.heading = Math.atan2(vx, vz);
     } else if (this.mode !== 'perched') {
-      const v = target.clone().sub(this.pos);
+      const v = this.step.copy(target).sub(this.pos);
       const d = v.length();
       if (d > 0.01) {
         this.pos.addScaledVector(v, Math.min(d, speed * dt) / d);
@@ -449,7 +468,7 @@ export class Life {
     const fresh = dockCrates.find((c) => c.freshness > 0);
     const land = fresh ? this.landing.set(fresh.x ?? 0, 0.46 + (fresh.layer ?? 0) * 0.42, fresh.z ?? 0) : null;
     for (const g of this.gulls) {
-      g.update(dt, now, g.idx === 0 ? land : null, Math.hypot(player.x - g.pos.x, player.z - g.pos.z) < 1.8 && g.mode === 'perched');
+      g.update(dt, now, g.idx === 0 ? land : null, Math.hypot(player.x - g.pos.x, player.z - g.pos.z) < 1.8 && g.mode === 'perched', this.camera.position);
     }
   }
 }
