@@ -4,8 +4,8 @@ import { homePos, jobPose } from '../sim/staff';
 import type { GameState } from '../sim/state';
 import { bx, cy, flat } from './kit';
 import { Figure } from './figures';
+import { dockhandLook } from './people';
 
-const SHIRTS = [0x5a8a6a, 0xb5883a, 0x7a6aa8, 0x4a7aa8];
 
 function buildCart(): THREE.Group {
   const g = new THREE.Group();
@@ -39,7 +39,7 @@ export class StaffView {
       seen.add(d.id);
       let e = this.entries.get(d.id);
       if (!e) {
-        const fig = new Figure({ shirt: SHIRTS[d.id % 4], pants: 0x4a4038, hat: d.id % 2 ? 'straw' : 'cap', hatColor: 0xc9a24a, scale: 0.95, hair: 0x4a3626 });
+        const fig = new Figure(dockhandLook(d.id));
         const c = buildCart();
         c.visible = false;
         fig.group.add(c);

@@ -1,18 +1,18 @@
 import * as THREE from 'three';
 import { LAYOUT, ZONE_IDS } from '../sim/config';
-import type { Species, Trait } from '../sim/config';
+import type { Species } from '../sim/config';
 import { activeCaptain, holdSize } from '../sim/fleet';
-import type { Boat, GameState } from '../sim/state';
+import type { Boat, Captain, GameState } from '../sim/state';
 import { SPECIES_COLOUR } from '../palette';
 import { cy, flat, net, put, tex } from './kit';
 import { boards } from './textures';
 import { BOAT_TIERS, buildBoat } from './boatModels';
 import type { BoatBuild } from './boatModels';
 import { Figure } from './figures';
+import { captainLook } from './people';
 import { SEA_Y, waveAt } from './waves';
 import type { BoatFoam, Wake } from './water';
 
-const TRAIT_HAT: Record<Trait, number> = { swift: 0x4aa3d8, lucky: 0x4f9a5a, careful: 0xd9a53a, thrifty: 0x9a6ab0 };
 const deckY = (t: number) => BOAT_TIERS[t].deckY;
 const halfBeam = (t: number) => BOAT_TIERS[t].shape.hw;
 /** Boat length relative to the rowboat: sizes the foam ring, the wake and where the hull samples the waves. */
@@ -202,13 +202,13 @@ class BoatModel {
     if (this.tops.instanceColor) this.tops.instanceColor.needsUpdate = true;
   }
 
-  private setCaptain(trait: Trait | null): void {
-    const k = trait ?? '';
+  private setCaptain(cap: Captain | null): void {
+    const k = cap ? `${cap.id}|${cap.trait}` : '';
     if (k === this.captainKey) return;
     this.captainKey = k;
     if (this.captain) { this.inner.remove(this.captain.group); this.captain = null; }
-    if (!trait) return;
-    this.captain = new Figure({ shirt: 0xf0e8d8, pants: 0x2f3b47, hat: 'cap', hatColor: TRAIT_HAT[trait], scale: 0.8, beard: 0x8a7a6a });
+    if (!cap) return;
+    this.captain = new Figure(captainLook(cap.id, cap.trait));
     this.captain.group.rotation.y = Math.PI;
     this.inner.add(this.captain.group);
   }
@@ -223,7 +223,7 @@ class BoatModel {
       this.key.load = key;
       this.layoutCrates(b.status === 'returned' ? b.catch.length : holdSize(b), b.status === 'returned' ? b.catch : []);
     }
-    this.setCaptain(cap ? cap.trait : null);
+    this.setCaptain(cap);
     if (this.captain) this.captain.group.position.set(0, deckY(this.tier), BOAT_TIERS[this.tier].captainZ);
   }
 
