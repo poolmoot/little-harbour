@@ -14,8 +14,9 @@ import { canHireCaptain, canHireDockhand, dailyWages } from '../sim/staff';
 import { netProfit } from '../sim/ledger';
 import { CAPTAINS_RANK, rankOf, rankProgress } from '../sim/rank';
 import { hex, SPECIES_COLOUR } from '../palette';
+import type { QualityMode } from '../view/quality';
 import {
-  FISH_NAME, LABEL, RANK_NAME, RANK_UNLOCKS, TRACK_NAME, TRAIT, UPGRADE, ZONE_NAME, boatType, crates, denyText, needsRank, trackNext, trackNow,
+  FISH_NAME, LABEL, QUALITY_CHOICES, QUALITY_NOTE, QUALITY_TITLE, RANK_NAME, RANK_UNLOCKS, TRACK_NAME, TRAIT, UPGRADE, ZONE_NAME, boatType, crates, denyText, needsRank, trackNext, trackNow,
   zoneNeeds,
 } from './text';
 
@@ -42,6 +43,8 @@ export interface PanelActions {
   setPolicy(p: HaulPolicy): void;
   store(id: number): void;
   take(id: number): void;
+  getQuality(): QualityMode;
+  setQuality(m: QualityMode): void;
   resetGame(): void;
   onClose(): void;
 }
@@ -138,6 +141,7 @@ export class Panels {
       case 'openboat': this.open('boat', Number(a)); break;
       case 'store': this.actions.store(Number(a)); break;
       case 'take': this.actions.take(Number(a)); break;
+      case 'quality': this.actions.setQuality(a as QualityMode); break;
       case 'reset': this.confirmReset = true; this.render(true); break;
       case 'resetno': this.confirmReset = false; this.render(true); break;
       case 'resetyes': this.actions.resetGame(); break;
@@ -317,7 +321,10 @@ export class Panels {
         ? `<div class="fcard">${fishSvg(hex(SPECIES_COLOUR[sp]), 34)}<br><b>${FISH_NAME[sp]}</b><br>Caught: ${r.caught}<br>Best sale: ${r.bestSale ? '$' + r.bestSale : '-'}</div>`
         : `<div class="fcard unknown">${fishSvg('', 34, true)}<br><b>???</b><br>Not caught yet</div>`;
     }
-    h += '</div><div class="center">';
+    h += '</div>';
+    const q = this.actions.getQuality();
+    h += `<h3>${QUALITY_TITLE}</h3><div class="row"><div class="grow"><small>${QUALITY_NOTE}</small></div>${QUALITY_CHOICES.map(([k, name]) => `<button class="btn ${q === k ? 'good' : 'ghost'}" data-act="quality" data-a="${k}">${name}</button>`).join(' ')}</div>`;
+    h += '<div class="center">';
     h += this.confirmReset
       ? '<b>Delete your save and start again?</b><br><br><button class="btn warn" data-act="resetyes">Yes, start again</button> <button class="btn ghost" data-act="resetno">No</button>'
       : '<button class="btn ghost" data-act="reset">Start again</button>';

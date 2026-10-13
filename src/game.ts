@@ -22,6 +22,7 @@ import { CameraRig } from './view/cameraRig';
 import { CratesView } from './view/cratesView';
 import { Life } from './view/life';
 import { FishingView, Player, TargetMarker } from './view/player';
+import { Quality } from './view/quality';
 import { SceneRig } from './view/scene';
 import { World } from './view/world';
 import { Water, Wake } from './view/water';
@@ -58,6 +59,7 @@ export class Game {
   private started = false;
   private holdHour: number | null = null;
   private frameMs = 16;
+  private quality: Quality;
 
   constructor(app: HTMLElement, uiRoot: HTMLElement) {
     injectStyles();
@@ -66,6 +68,7 @@ export class Game {
     startGame(this.state, this.rng);
 
     this.rig = new SceneRig(app);
+    this.quality = new Quality(this.rig, localStorage);
     this.world = new World(this.rig.scene);
     this.water = new Water(this.rig.scene);
     this.wake = new Wake(this.rig.scene);
@@ -103,6 +106,8 @@ export class Game {
         setPolicy: (p) => this.run(setHaulPolicy(this.state, p)),
         store: (id) => this.run(storeInIce(this.state, id)),
         take: (id) => this.run(takeFromIce(this.state, id)),
+        getQuality: () => this.quality.mode,
+        setQuality: (m) => { this.quality.setMode(m); this.panels.refresh(); },
         resetGame: () => this.reset(),
         onClose: () => this.audio.click(),
       },
@@ -214,6 +219,7 @@ export class Game {
     this.events.handle(step(s, dt, this.rng));
     if (this.holdHour !== null) s.dayTime = (((this.holdHour - START_HOUR) % 24) + 24) % 24 * HOUR_SECONDS;
     this.frameMs += (dt * 1000 - this.frameMs) * 0.05;
+    this.quality.sample(dt);
     this.cameraRig.pitchGoal = 55 - 15 * Math.min(1, Math.max(0, -this.player.pos.z / 10));
 
     this.target = frozen ? null : findTarget(s, this.player.pos);
