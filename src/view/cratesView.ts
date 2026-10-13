@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
+import { coldStorePos, smokeRackPos } from './tycoonView';
 import type { Species } from '../sim/config';
 import type { Crate, GameState } from '../sim/state';
 import { SPECIES_COLOUR } from '../palette';
@@ -77,7 +78,7 @@ export class CratesView {
   sync(state: GameState, now: number, dt: number): void {
     const seen = this.seen;
     seen.clear();
-    let hand = 0, ice = 0;
+    let hand = 0, ice = 0, smoke = 0;
     for (const c of state.crates) {
       seen.add(c.id);
       let e = this.entries.get(c.id);
@@ -114,6 +115,12 @@ export class CratesView {
         if (h) tgtPos.copy(h);
         else tgtPos.set(c.x ?? 0, 0.05, c.z ?? 0);
         ts = 0.55;
+      } else if (c.loc === 'smoke') {
+        smokeRackPos(smoke++, tgtPos);
+        ts = 0.5;
+      } else if (c.loc === 'cold') {
+        coldStorePos(tgtPos);
+        ts = 0.01;
       } else if (c.loc === 'ice') {
         tgtPos.copy(this.icePos(ice++));
         ry = e.spin * 0.2;

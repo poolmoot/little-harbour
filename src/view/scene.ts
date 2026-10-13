@@ -30,6 +30,9 @@ const KEYS: Key[] = [
 const tmpA = new THREE.Color(), tmpB = new THREE.Color();
 const mix = (a: number, b: number, t: number, out: THREE.Color) => out.set(a).lerp(tmpB.set(b), t);
 
+const OVERCAST_SKY = 0x7f8b96, OVERCAST_SEA = 0x3f6272;
+const FOG_NEAR = 38, FOG_FAR = 140;
+
 export interface SkyState {
   sky: THREE.Color;       // horizon / fog colour
   zenith: THREE.Color;
@@ -111,12 +114,13 @@ export class SceneRig implements QualityTarget {
     sky: new THREE.Color(), zenith: new THREE.Color(), shallow: new THREE.Color(), mid: new THREE.Color(), deep: new THREE.Color(),
     foam: new THREE.Color(), sunColor: new THREE.Color(), sunDir: new THREE.Vector3(0, 1, 0), sunI: 1, lantern: 0, night: 0, light: 1,
   };
-  readonly fog = new THREE.Fog(0x9fd6ef, 38, 140);
+  readonly fog = new THREE.Fog(0x9fd6ef, FOG_NEAR, FOG_FAR);
   private sky: THREE.Mesh;
   private skyU: Record<string, THREE.IUniform>;
   private composer: EffectComposer;
   private bloom: UnrealBloomPass;
   private grade: ShaderPass;
+  private weather = { dim: 0, mist: 0, flash: 0 };
   private dprCap = 1.75;
 
   constructor(container: HTMLElement) {
@@ -198,6 +202,13 @@ export class SceneRig implements QualityTarget {
     this.grade.uniforms.uAspect.value = this.camera.aspect;
   }
 
+  /** Weather for the next frames: `dim` darkens and greys the day, `mist` pulls the fog in, `flash` is a lightning burst (each 0 to 1). */
+  setWeather(dim: number, mist: number, flash: number): void {
+    this.weather.dim = dim;
+    this.weather.mist = mist;
+    this.weather.flash = flash;
+  }
+
   /** Blend sun, sky and sea by the in-game hour; keep the shadow box centred on the focus point. */
   update(dayTime: number, focus: THREE.Vector3, t: number): void {
     const h = hourOf(dayTime);
@@ -219,6 +230,16 @@ export class SceneRig implements QualityTarget {
     mix(a.hemiSky, b.hemiSky, k, this.hemi.color);
     mix(a.hemiGnd, b.hemiGnd, k, this.hemi.groundColor);
     this.renderer.toneMappingExposure = a.expo + (b.expo - a.expo) * k;
+    // Weather: overcast greys the sky and sea and weakens the sun; mist brings the fog close; lightning flashes it all white.
+    const wx = this.weather, grey = wx.dim * 0.75;
+    s.sky.lerp(tmpA.set(OVERCAST_SKY), grey);
+    s.zenith.lerp(tmpA.set(OVERCAST_SKY).multiplyScalar(0.7), grey);
+    for (const c of [s.shallow, s.mid, s.deep]) c.lerp(tmpA.set(OVERCAST_SEA), grey * 0.8);
+    s.sunI *= 1 - wx.dim * 0.6;
+    this.sun.intensity = s.sunI;
+    this.hemi.intensity = this.hemi.intensity * (1 - wx.dim * 0.3) + wx.flash * 2.5;
+    this.fog.near = FOG_NEAR * (1 - wx.mist * 0.8);
+    this.fog.far = FOG_FAR * (1 - wx.mist * 0.62);
     (this.scene.background as THREE.Color).copy(s.sky);
     this.fog.color.copy(s.sky);
 

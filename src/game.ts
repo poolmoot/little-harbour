@@ -22,6 +22,7 @@ import { BoatsView } from './view/boatsView';
 import { StaffView } from './view/staffView';
 import { CameraRig } from './view/cameraRig';
 import { CratesView } from './view/cratesView';
+import { TycoonView } from './view/tycoonView';
 import { Life } from './view/life';
 import { FishingView, Player, TargetMarker } from './view/player';
 import { Quality } from './view/quality';
@@ -56,6 +57,7 @@ export class Game {
   private cameraRig: CameraRig;
   private boatsView: BoatsView;
   private cratesView: CratesView;
+  private tycoonView: TycoonView;
   private staffView: StaffView;
   private stallShown = -1;
   private vaneShown = false;
@@ -94,6 +96,7 @@ export class Game {
     this.cameraRig = new CameraRig(this.rig.camera, this.player.pos);
     this.boatsView = new BoatsView(this.rig.scene, this.wake);
     this.cratesView = new CratesView(this.rig.scene, this.player);
+    this.tycoonView = new TycoonView(this.rig, this.world);
     this.staffView = new StaffView(this.rig.scene, this.cratesView.haul);
     this.life = new Life(this.rig.scene, this.world, this.rig.camera, uiRoot);
     this.fishView = new FishingView(this.rig.scene, this.player);
@@ -322,6 +325,7 @@ export class Game {
 
     // view
     this.cameraRig.update(dt, this.player.pos);
+    this.tycoonView.sync(s, this.now, sdt);
     this.rig.update(s.dayTime, this.cameraRig.focus, this.now);
     const pxScale = this.rig.renderer.domElement.height * 0.5 / Math.tan((this.rig.camera.fov * Math.PI) / 360);
     this.world.update(this.now, this.rig.skyState, pxScale);
