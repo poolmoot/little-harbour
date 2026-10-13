@@ -6,7 +6,7 @@ import { hex, SPECIES_COLOUR } from '../../palette';
 import { button, empty, meter, money, section, stat } from '../components';
 import { fishIcon, icon } from '../icons';
 import { REPORT_TEXT, WEATHER_ICON } from '../screenText';
-import { FISH_NAME, LABEL, RANK_NAME, RANK_UNLOCKS, WEATHER, specialDesc, specialName } from '../text';
+import { AWAY, FISH_NAME, LABEL, RANK_NAME, RANK_UNLOCKS, WEATHER, specialDesc, specialName } from '../text';
 import type { Screen } from './types';
 
 /** Tomorrow's weather and special day, from the forecast the new day has just rolled. */
@@ -32,6 +32,7 @@ export const ledgerScreen: Screen = ({ state: s, summary }) => {
   const body = forecast(s) + section(LABEL.moneyIn) + (sales || stat('No sales', '$0'))
     + stat(`Order bonuses (${st.filled} done, ${st.missed} late)`, `+$${money(st.bonus)}`)
     + (st.rewards > 0 ? stat(REPORT_TEXT.rewards, `+$${money(st.rewards)}`) : '')
+    + (st.away > 0 ? stat(AWAY.statsLine, `+$${money(st.away)}`) : '')
     + section(LABEL.moneyOut) + stat('Pay for workers and captains', `-$${money(st.wages)}`) + stat('Trip costs', `-$${money(st.tripCosts)}`)
     + stat('Upgrades and boats', `-$${money(st.spent)}`) + stat('Crates that went bad', `${st.spoiled}`)
     + stat('Profit for the day', `<span class="${net >= 0 ? 'good' : 'bad'}">${net >= 0 ? '+' : '-'}$${money(Math.abs(net))}</span>`, true)

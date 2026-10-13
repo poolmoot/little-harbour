@@ -315,3 +315,14 @@ describe('ending screen', () => {
     expect(v.foot).toContain('data-act="close"');
   });
 });
+
+describe('day report: money earned while away', () => {
+  const summary = (away: number) => ({ day: 3, stats: { ...initialState().stats, away } });
+  it('shows a line only when there was some', () => {
+    const s = initialState();
+    expect(ledgerScreen(ctx(s, { summary: summary(0) })).body).not.toContain('While you were away');
+    const v = ledgerScreen(ctx(s, { summary: summary(480) }));
+    expect(v.body).toContain('While you were away');
+    expect(v.body).toContain('+$480');
+  });
+});

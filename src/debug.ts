@@ -15,7 +15,7 @@ import { BUILDING_NAME, GOAL_TEXT, WEATHER, contractProgress, contractText, spec
 import type { Special } from './sim/state';
 import type { Rng } from './sim/rng';
 import type { Hud } from './ui/hud';
-import type { Panels } from './ui/panels';
+import type { PanelKind, Panels } from './ui/panels';
 import type { CameraRig } from './view/cameraRig';
 import type { Player } from './view/player';
 import type { SceneRig } from './view/scene';
@@ -71,7 +71,11 @@ export function installDebug(g: DebugHost): void {
       b.captain = { id: g.state.nextId++, name: 'Debug', trait, wage: 40 };
       b.target = bestZone(b);
     },
-    panel: (kind: 'boat' | 'hire' | 'shipyard' | 'summary', boat = 0) => g.panels.open(kind, g.state.boats[boat]?.id ?? 0),
+    /** Open a window. For boat windows the second argument is the boat's place in the fleet; for 'plot' it is the building ('smokehouse') or its place in the list (0-3). */
+    panel: (kind: PanelKind, which: number | BuildingId = 0) => {
+      if (kind === 'plot') g.panels.open('plot', typeof which === 'string' ? Math.max(0, BUILDING_IDS.indexOf(which)) : which);
+      else g.panels.open(kind, g.state.boats[which as number]?.id ?? 0);
+    },
     /** Override the camera: cam(pitchDeg, distance); cam() clears. */
     cam: (pitch?: number, dist = 20) => { g.cameraRig.override = pitch === undefined ? null : { pitch, dist }; },
     popup: (text = '+$12') => g.hud.floatText(text, window.innerWidth / 2, window.innerHeight / 2),
