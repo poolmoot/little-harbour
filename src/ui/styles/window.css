@@ -46,3 +46,9 @@
 .board td:first-child { border-left: var(--line); border-radius: var(--r-sm) 0 0 var(--r-sm); width: 44px; }
 .board td:last-child { border-right: var(--line); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
 .board tr.unknown td { opacity: 0.5; }
+
+/* Welcome-back window: the money earned while away, big and gold. */
+.away-line { font-size: var(--fs-lg); text-align: center; margin-bottom: 6px; }
+.away-hero { margin: 10px 0 14px; padding: 12px 10px 14px; text-align: center; background: var(--well); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.3); }
+.away-money { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 44px; line-height: 1.1; color: var(--gold-hi); }
+.away-tip { margin: 10px 0; padding: 10px 14px 12px; background: var(--well-2); border: var(--line); border-radius: var(--r-md); }

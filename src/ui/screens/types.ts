@@ -2,6 +2,9 @@ import type { AudioSettings } from '../../audio/settings';
 import type { DayStats, GameState } from '../../sim/state';
 import type { QualityMode } from '../../view/quality';
 
+/** What the welcome-back window shows (the sim's AwayResult). */
+export interface AwayInfo { seconds: number; earned: number; perMinute: number }
+
 export interface TabDef { id: string; label: string }
 
 /** Everything a screen may read to draw itself. Screens never mutate state; buttons carry action ids instead. */
@@ -21,6 +24,10 @@ export interface ScreenCtx {
   confirmNew: boolean;
   /** Current volumes and mute switch (settings screen). */
   audio: Readonly<AudioSettings>;
+  /** What the harbour earned while the player was away (welcome-back window). */
+  away?: AwayInfo | null;
+  /** Seconds since this window opened (lets a number count up). */
+  age?: number;
 }
 
 export interface ScreenView {

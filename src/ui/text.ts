@@ -102,7 +102,6 @@ export const LABEL = {
   moneyOut: 'Money out',
   rank: 'Rank',
   topRank: 'Top rank',
-  hints: 'WASD walk  ·  E use  ·  L fish book  ·  Esc close',
 };
 
 /** Why a button is greyed out (the sim gives a short reason, and a rank when only that is missing). */
@@ -376,20 +375,29 @@ export const FISH_BOOK = {
 
 // ---- welcome back (earnings while away) ---------------------------------------------------------
 
+/** Time away in plain words: "1 minute", "45 minutes", "1 hour", "2 hours 10 minutes". Whole minutes, at least 1. */
+export function durationText(seconds: number): string {
+  const total = Math.max(1, Math.round(seconds / 60));
+  const unit = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
+  if (total < 60) return unit(total, 'minute');
+  const h = Math.floor(total / 60), m = total % 60;
+  return m ? `${unit(h, 'hour')} ${unit(m, 'minute')}` : unit(h, 'hour');
+}
+
 export const AWAY = {
   title: 'Welcome back!',
   note: 'Your captains kept fishing while you were gone.',
   earned: (n: number): string => `Your harbour earned $${n.toLocaleString('en')} while you were away.`,
-  away: (seconds: number): string => {
-    const m = Math.round(seconds / 60);
-    if (m < 60) return `You were away for ${m} ${m === 1 ? 'minute' : 'minutes'}.`;
-    const h = Math.floor(m / 60), r = m % 60;
-    return `You were away for ${h} ${h === 1 ? 'hour' : 'hours'}${r ? ` and ${r} minutes` : ''}.`;
-  },
+  away: (seconds: number): string => `You were away for ${durationText(seconds)}.`,
+  earnedLabel: 'Money earned',
   rate: (perMinute: number): string => `Your boats make about $${Math.round(perMinute).toLocaleString('en')} a minute.`,
   capped: 'Only the first 8 hours count.',
   half: 'You earn half as much when you are not here.',
+  workLine: 'Boats with captains keep working while you are away, at half speed, for up to 8 hours.',
   nothing: 'Hire a captain and your boats will fish even when you are away.',
+  tipTitle: 'A tip',
+  tip: 'Hire a captain at the inn, and your harbour will earn money even while you are away.',
+  go: 'Back to the harbour',
   statsLine: 'While you were away',
 };
 
