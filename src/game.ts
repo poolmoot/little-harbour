@@ -1,10 +1,11 @@
 import { Vector3 } from 'three';
 import { GameAudio } from './audio';
 import { Input } from './input';
-import { BOAT_RANGE, CRATE_RANGE, FISH, HOUR_SECONDS, INTERACT_RANGE, LAYOUT, START_HOUR, UPGRADES, ZONES } from './sim/config';
-import type { ZoneId } from './sim/config';
+import { BOAT_RANGE, CRATE_RANGE, FISH, HOUR_SECONDS, INTERACT_RANGE, LAYOUT, RANK_NAMES, RANK_UNLOCKS, START_HOUR, UPGRADES, ZONES } from './sim/config';
+import type { Track, Trait, ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
+import { buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy, bestZone } from './sim/sim';
 import { buyUpgrade, carryCapacity, castLine, cancelCast, dispatchBoat, dockCrates, handCrates, hook, initialState, pickUp, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce, unloadBoat } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
@@ -13,6 +14,7 @@ import type { Prompt } from './ui/hud';
 import { Panels } from './ui/panels';
 import { injectStyles } from './ui/styles';
 import { BoatsView } from './view/boatsView';
+import { StaffView } from './view/staffView';
 import { CameraRig } from './view/cameraRig';
 import { CratesView } from './view/cratesView';
 import { Life } from './view/life';
@@ -21,7 +23,7 @@ import { SceneRig } from './view/scene';
 import { World } from './view/world';
 import { Water, Wake } from './view/water';
 
-type TargetKind = 'crate' | 'boat' | 'market' | 'shipyard' | 'board' | 'icebox' | 'fishing';
+type TargetKind = 'crate' | 'boat' | 'market' | 'shipyard' | 'board' | 'icebox' | 'fishing' | 'inn';
 interface Target {
   kind: TargetKind;
   id: number;
@@ -35,6 +37,7 @@ const STATIONS: Record<Exclude<TargetKind, 'crate' | 'boat'>, { x: number; z: nu
   shipyard: { x: LAYOUT.shipyard.x, z: LAYOUT.shipyard.z + 2.8, range: INTERACT_RANGE },
   board: { x: LAYOUT.noticeBoard.x, z: LAYOUT.noticeBoard.z + 0.5, range: INTERACT_RANGE },
   icebox: { x: LAYOUT.iceBox.x, z: LAYOUT.iceBox.z + 1.1, range: INTERACT_RANGE },
+  inn: { x: LAYOUT.inn.x + 0.8, z: LAYOUT.inn.z + 3.6, range: INTERACT_RANGE },
   fishing: { x: LAYOUT.fishingSpot.x, z: LAYOUT.fishingSpot.z, range: 3.2 },
 };
 const SAVE_EVERY = 10;
@@ -53,6 +56,11 @@ export class Game {
   private cameraRig: CameraRig;
   private boatsView: BoatsView;
   private cratesView: CratesView;
+  private staffView: StaffView;
+  private stallShown = -1;
+  private vaneShown = false;
+  private staffSold = 0;
+  private lastStaffPop = 0;
   private life: Life;
   private fishView: FishingView;
   private marker: TargetMarker;
@@ -83,6 +91,7 @@ export class Game {
     this.cameraRig = new CameraRig(this.rig.camera, this.player.pos);
     this.boatsView = new BoatsView(this.rig.scene, this.wake);
     this.cratesView = new CratesView(this.rig.scene, this.player);
+    this.staffView = new StaffView(this.rig.scene, this.cratesView.haul);
     this.life = new Life(this.rig.scene, this.world, this.rig.camera, uiRoot);
     this.fishView = new FishingView(this.rig.scene, this.player);
     this.marker = new TargetMarker(this.rig.scene);
@@ -94,6 +103,14 @@ export class Game {
         sellAll: () => this.run(sellAll(this.state)),
         sellCrate: (id) => this.run(sellCrate(this.state, id)),
         buy: (id) => this.run(buyUpgrade(this.state, id)),
+        setTarget: (id, z) => this.run(setBoatTarget(this.state, id, z)),
+        upgradeBoat: (id, t) => this.run(buyBoatUpgrade(this.state, id, t)),
+        buyBoat: () => this.run(buyBoat(this.state)),
+        hireCaptain: (c, b) => this.run(hireCaptain(this.state, c, b)),
+        fireCaptain: (b) => this.run(fireCaptain(this.state, b)),
+        hireDockhand: () => this.run(hireDockhand(this.state, this.rng)),
+        fireDockhand: (id) => this.run(fireDockhand(this.state, id)),
+        setPolicy: (p) => this.run(setHaulPolicy(this.state, p)),
         store: (id) => this.run(storeInIce(this.state, id)),
         take: (id) => this.run(takeFromIce(this.state, id)),
         resetGame: () => this.reset(),
@@ -130,8 +147,31 @@ export class Game {
         this.cameraRig.focus.set(x, 0, z);
       },
       money: (n: number) => { this.state.money += n; },
-      upgrade: (id: keyof GameState['upgrades']) => { this.state.upgrades[id] = true; },
-      send: (boat = 0, zone: ZoneId = 'shallows') => this.dispatch(this.state.boats[boat]?.id ?? 0, zone),
+      /** Harbour upgrade (icebox, handcart, stall1, stall2) or a boat track: upgrade('hull', 2, boatIndex) sets that track level. */
+      upgrade: (id: keyof GameState['upgrades'] | Track, level = 1, boat = 0) => {
+        if (id in this.state.upgrades) { this.state.upgrades[id as keyof GameState['upgrades']] = true; return; }
+        const b = this.state.boats[boat];
+        if (b) b[id as Track] = level;
+      },
+      send: (boat = 0, zone?: ZoneId) => this.dispatch(this.state.boats[boat]?.id ?? 0, zone ?? this.state.boats[boat]?.target ?? 'shallows'),
+      /** Step the simulation forward (a hidden tab pauses animation frames). */
+      skip: (seconds: number) => {
+        const n = Math.ceil(seconds / 0.25);
+        for (let i = 0; i < n; i++) this.handle(step(this.state, 0.25, this.rng));
+        this.panels.refresh();
+      },
+      /** Jump to a rank (0-4) by setting lifetime earnings. */
+      rank: (r: number) => { this.state.lifetime = Math.max(this.state.lifetime, [0, 500, 3000, 15000, 60000][r] ?? 0); },
+      /** Add boats (as rowboats) until there are n. */
+      fleet: (n: number) => { this.state.lifetime = Math.max(this.state.lifetime, 15000); this.state.money += 20000; while (this.state.boats.length < n) buyBoat(this.state); },
+      hireDockhands: (n = 1) => { this.state.lifetime = Math.max(this.state.lifetime, 500); for (let i = 0; i < n; i++) hireDockhand(this.state, this.rng); },
+      captain: (boat = 0, trait: Trait = 'swift') => {
+        const b = this.state.boats[boat];
+        if (!b) return;
+        b.captain = { id: this.state.nextId++, name: 'Debug', trait, wage: 40 };
+        b.target = bestZone(b);
+      },
+      panel: (kind: 'boat' | 'hire' | 'shipyard' | 'summary', boat = 0) => this.panels.open(kind, this.state.boats[boat]?.id ?? 0),
       /** Override the camera: cam(pitchDeg, distance); cam() clears. */
       cam: (pitch?: number, dist = 20) => { this.cameraRig.override = pitch === undefined ? null : { pitch, dist }; },
       popup: (text = '+$12') => this.hud.floatText(text, window.innerWidth / 2, window.innerHeight / 2),
@@ -183,15 +223,15 @@ export class Game {
       case 'boat': {
         const b = s.boats.find((x) => x.id === t.id);
         if (!b) break;
-        if (b.status === 'docked') this.panels.open('dispatch', b.id);
-        else if (b.status === 'returned') this.run(unloadBoat(s, b.id));
-        else this.hud.toast('That boat is still out at sea.', 'info');
+        if (b.status === 'returned' && !b.captain) this.run(unloadBoat(s, b.id));
+        else this.panels.open('boat', b.id);
         break;
       }
       case 'market': this.panels.open('market'); break;
       case 'shipyard': this.panels.open('shipyard'); break;
       case 'board': this.panels.open('board'); break;
       case 'icebox': this.panels.open('ice'); break;
+      case 'inn': this.panels.open('hire'); break;
       case 'fishing': {
         if (s.fishing.phase === 'idle') this.run(castLine(s, this.rng));
         else this.run(hook(s, this.rng));
@@ -235,14 +275,17 @@ export class Game {
     for (const e of evs) {
       switch (e.type) {
         case 'boatDispatched':
+          if (e.auto) break;
           a.click();
           h.toast(`The boat heads out to the ${ZONES[e.zone].name}.`);
           break;
         case 'boatReturned':
+          if (e.auto) break;
           a.bell();
           h.toast(`A boat is back with ${NOUN(e.count)}! Unload it at the pier.`, 'good');
           break;
         case 'boatUnloaded':
+          if (e.auto) break;
           a.pop();
           h.toast(`Unloaded ${NOUN(e.count)} onto the dock. They start spoiling now!`);
           break;
@@ -250,6 +293,7 @@ export class Game {
         case 'crateStored':
         case 'crateTaken': a.pop(); break;
         case 'crateSold':
+          if (e.staff) { this.staffSold += e.price; break; }
           soldCount++;
           soldTotal += e.price;
           saveNow = true;
@@ -291,6 +335,26 @@ export class Game {
           h.toast(`Bought: ${UPGRADES[e.id].name}.`, 'good');
           saveNow = true;
           break;
+        case 'boatUpgraded':
+          a.coin();
+          h.toast(`${this.state.boats.find((b) => b.id === e.boatId)?.name ?? 'Boat'}: upgraded.`, 'good');
+          saveNow = true;
+          break;
+        case 'boatBought':
+          a.coin();
+          h.toast('A new rowboat joins the fleet!', 'good');
+          saveNow = true;
+          break;
+        case 'hired': a.pop(); h.toast(`${e.name} is hired as ${e.role === 'captain' ? 'a captain' : 'a dockhand'}.`, 'good'); saveNow = true; break;
+        case 'fired': h.toast(`${e.name} was let go.`); saveNow = true; break;
+        case 'wagesPaid':
+          if (e.unpaid > 0) h.toast(`Could not pay ${e.unpaid} crew member${e.unpaid === 1 ? '' : 's'}: they sit today out.`, 'warn');
+          break;
+        case 'rankUp':
+          a.chime();
+          h.banner(RANK_NAMES[e.rank], `Rank up! Unlocked: ${RANK_UNLOCKS[e.rank]}`);
+          saveNow = true;
+          break;
         case 'phaseChanged':
           if (e.phase === 'dawn') a.chime();
           if (e.phase === 'night') h.toast('Night falls. Boats cannot sail until dawn.');
@@ -309,6 +373,11 @@ export class Game {
       this.popAt(LAYOUT.market.x, 2.9, LAYOUT.market.z + 1.2, `+$${soldTotal}`);
       a.coin();
       h.toast(`Sold ${NOUN(soldCount)} for $${soldTotal}.`, 'good');
+    }
+    if (this.staffSold > 0 && this.now - this.lastStaffPop > 1.2) {
+      this.popAt(LAYOUT.market.x, 2.9, LAYOUT.market.z + 1.2, `+$${this.staffSold}`);
+      this.staffSold = 0;
+      this.lastStaffPop = this.now;
     }
     if (saveNow) {
       this.save();
@@ -356,14 +425,13 @@ export class Game {
       case 'boat': {
         const b = s.boats.find((x) => x.id === t.id);
         if (!b) return null;
-        const n = s.boats.indexOf(b) + 1;
-        if (b.status === 'docked') return { text: `Send out Boat ${n}`, key: true };
-        if (b.status === 'returned') return { text: `Unload Boat ${n} (${NOUN(b.catch.length)})`, key: true, hot: true };
-        return { text: `Boat ${n} is at sea (${Math.max(0, Math.ceil(b.tripTime - b.progress))}s)`, key: false, dim: true };
+        if (b.status === 'returned' && !b.captain) return { text: `Unload ${b.name} (${NOUN(b.catch.length)})`, key: true, hot: true };
+        return { text: `${b.name}: manage boat${b.status === 'out' ? ` (at sea, ${Math.max(0, Math.ceil(b.tripTime - b.progress))}s)` : ''}`, key: true };
       }
       case 'market': return { text: 'Sell fish at the market', key: true };
       case 'shipyard': return { text: 'Visit the shipyard', key: true };
       case 'board': return { text: 'Read the notice board', key: true };
+      case 'inn': return { text: 'Hire crew at the inn', key: true };
       case 'icebox': return { text: s.upgrades.icebox ? 'Use the ice box' : 'Ice box (buy at the shipyard)', key: true };
       case 'fishing':
         if (s.fishing.phase === 'idle') return { text: 'Cast your line', key: true };
@@ -407,7 +475,12 @@ export class Game {
     this.water.update(this.now, this.rig.skyState, this.rig.fog.near, this.rig.fog.far, this.boatsView.foam, this.fishView.ripples);
     this.wake.update(dt, this.now, this.rig.skyState.foam);
     this.boatsView.sync(s, this.now, dt);
+    this.staffView.sync(s, dt);
     this.cratesView.sync(s, this.now, dt);
+    const stall = s.upgrades.stall2 ? 2 : s.upgrades.stall1 ? 1 : 0;
+    if (stall !== this.stallShown) { this.stallShown = stall; this.world.setStall(stall); }
+    const vane = rankOf(s) >= 4;
+    if (vane !== this.vaneShown) { this.vaneShown = vane; this.world.setWeathervane(vane); }
     this.fishView.update(dt, this.now, s.fishing);
     this.marker.update(this.now, this.target ? { x: this.target.x, z: this.target.z } : null);
     const hand = handCrates(s);

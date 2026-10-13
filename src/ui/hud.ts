@@ -1,6 +1,8 @@
 import { FISH, HOUR_SECONDS } from '../sim/config';
 import { carryCapacity, handCrates } from '../sim/crates';
-import { holdSize } from '../sim/state';
+import { holdSize } from '../sim/fleet';
+import { rankName, rankProgress } from '../sim/rank';
+import { HULL_NAMES } from '../sim/config';
 import type { GameState } from '../sim/state';
 import { formatClock, phaseOf } from '../sim/time';
 import { hex, SPECIES_COLOUR } from '../palette';
@@ -25,7 +27,8 @@ export class Hud {
   private clock = this.el('card hud-clock');
   private carry = this.el('card');
   private orders = this.el('card');
-  private boats = this.el('card');
+  private boats = this.el('card btrack');
+  private rank = this.el('card hud-rank');
   private prompt = this.el('card prompt');
   private hints = this.el('card hints');
   private toasts = this.el('toasts');
@@ -36,7 +39,7 @@ export class Hud {
     const right = document.createElement('div');
     right.className = 'hud-right';
     right.append(this.carry, this.orders, this.boats);
-    root.append(this.money, this.clock, right, this.prompt, this.hints, this.toasts);
+    root.append(this.money, this.clock, this.rank, right, this.prompt, this.hints, this.toasts);
     this.hints.textContent = 'WASD walk  ·  E interact  ·  L logbook  ·  Esc close';
     this.prompt.style.display = 'none';
   }
@@ -86,14 +89,17 @@ export class Hud {
     }
     set(this.orders, orders);
 
-    let boats = `<h4>Boats (hold ${holdSize(state)})</h4>`;
-    state.boats.forEach((b, i) => {
-      const txt =
-        b.status === 'docked' ? 'in the harbour'
-          : b.status === 'returned' ? `<b>back! unload ${b.catch.length} crates</b>`
-            : `at sea, back in ${Math.max(0, Math.ceil(b.tripTime - b.progress))}s`;
-      boats += `<div class="line">Boat ${i + 1}: ${txt}</div>`;
-    });
+    const rp = rankProgress(state);
+    set(this.rank, `<b>${rankName(state)}</b><div class="rankbar"><i style="width:${Math.round((rp?.frac ?? 1) * 100)}%"></i></div><small>${rp ? `$${rp.have.toLocaleString()} / $${rp.need.toLocaleString()}` : 'Top rank'}</small>`);
+
+    let boats = `<h4>Boats</h4>`;
+    for (const b of state.boats) {
+      const cap = b.captain && !b.captain.unpaid ? ' ⚓' : '';
+      let cls = '', fill = 0, txt = 'in harbour';
+      if (b.status === 'out') { fill = Math.min(100, (b.progress / b.tripTime) * 100); txt = `${Math.max(0, Math.ceil(b.tripTime - b.progress))}s`; }
+      else if (b.status === 'returned') { cls = 'back'; txt = `back! unload ${b.catch.length}`; }
+      boats += `<div class="brow ${cls}" title="${HULL_NAMES[b.hull]}, hold ${holdSize(b)}"><span class="tier" style="background:${['#c89c62', '#6f9ac4', '#6fae7e', '#c4584c'][b.hull]}"></span><span class="bn">${b.name}${cap}</span><span class="bst"><i style="width:${fill}%"></i><em>${txt}</em></span></div>`;
+    }
     set(this.boats, boats);
 
     if (prompt) {
@@ -103,6 +109,15 @@ export class Hud {
     } else {
       this.prompt.style.display = 'none';
     }
+  }
+
+  /** Big centred banner (rank-ups). */
+  banner(title: string, sub: string): void {
+    const b = document.createElement('div');
+    b.className = 'banner';
+    b.innerHTML = `<h2>${title}</h2><p>${sub}</p>`;
+    this.toasts.parentElement?.appendChild(b);
+    setTimeout(() => b.remove(), 4300);
   }
 
   toast(text: string, kind: 'info' | 'good' | 'warn' = 'info'): void {

@@ -54,6 +54,8 @@ const wp = new THREE.Vector3();
 
 export class CratesView {
   private entries = new Map<number, Entry>();
+  /** Where dockhands are carrying each hauled crate (filled by StaffView each frame). */
+  readonly haul = new Map<number, THREE.Vector3>();
   constructor(private scene: THREE.Scene, private player: Player) {}
 
   /** Positions of ice-box crates sit on top of the box, in a 3x2 grid. */
@@ -96,6 +98,11 @@ export class CratesView {
       if (c.loc === 'dock') {
         tgtPos.set(c.x ?? 0, 0.05 + (c.layer ?? 0) * 0.42, c.z ?? 0);
         ry = e.spin * 0.25;
+      } else if (c.loc === 'haul') {
+        const h = this.haul.get(c.id);
+        if (h) tgtPos.copy(h);
+        else tgtPos.set(c.x ?? 0, 0.05, c.z ?? 0);
+        ts = 0.55;
       } else if (c.loc === 'ice') {
         tgtPos.copy(this.icePos(ice++));
         ry = e.spin * 0.2;

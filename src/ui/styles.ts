@@ -62,6 +62,17 @@ export const CSS = `
 .fcard.unknown { opacity:.8; }
 .stat { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed #cdbf9d; font-size:15px; }
 .center { text-align:center; margin-top:14px; }
+.row.sel { outline:2px solid var(--good); }
+.pips { display:inline-flex; gap:3px; vertical-align:middle; margin:0 6px; } .pip { width:10px; height:10px; border-radius:50%; background:#d8cdb0; border:1px solid var(--edge); } .pip.on { background:var(--gold); }
+.stat.sub1 { font-size:14px; padding:2px 0 2px 10px; } .stat.sub1 span { display:flex; align-items:center; gap:6px; }
+.stat.total { font-size:19px; font-weight:700; border-top:2px solid var(--edge); border-bottom:0; margin-top:4px; padding-top:6px; } .stat.total.up b { color:var(--good); } .stat.total.down b { color:var(--warn); }
+.rankbar { height:12px; background:#d8cdb0; border:1px solid var(--edge); border-radius:7px; overflow:hidden; margin:4px 0; } .rankbar i { display:block; height:100%; background:linear-gradient(90deg,#e0a82e,#f2d36b); }
+.hud-rank { position:absolute; top:84px; left:12px; width:178px; padding:6px 10px; } .hud-rank b { font-size:13px; } .hud-rank small { display:block; font-size:11px; opacity:.7; } .hud-rank .rankbar { height:8px; margin:3px 0 2px; }
+.btrack .brow { display:flex; align-items:center; gap:6px; font-size:12px; margin:3px 0; } .btrack .bn { width:68px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; } .btrack .tier { width:9px; height:9px; border-radius:2px; flex:none; border:1px solid var(--ink); }
+.btrack .bst { flex:1; min-width:0; position:relative; height:14px; background:#e6dcc0; border-radius:7px; overflow:hidden; } .btrack .bst i { position:absolute; inset:0 auto 0 0; background:#9ac0d4; } .btrack .bst em { position:relative; font-style:normal; padding-left:6px; font-size:11px; line-height:14px; white-space:nowrap; }
+.btrack .brow.back .bst i { background:#ffd966; width:100%!important; } .btrack .brow.back em { font-weight:700; }
+.banner { position:absolute; top:26%; left:50%; transform:translate(-50%,0); text-align:center; padding:14px 34px; background:linear-gradient(#fff4c8,#f2d36b); border:3px solid #b8860b; border-radius:16px; box-shadow:0 5px 0 rgba(60,40,20,.4); animation: bannerin 4.2s ease forwards; pointer-events:none; z-index:30; } .banner h2 { margin:0; font-size:28px; } .banner p { margin:4px 0 0; font-size:14px; }
+@keyframes bannerin { 0% { opacity:0; transform:translate(-50%,-30px) scale(.7); } 10% { opacity:1; transform:translate(-50%,0) scale(1.08); } 16% { transform:translate(-50%,0) scale(1); } 85% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-20px) scale(.95); } }
 table.board { width:100%; border-collapse:collapse; font-size:13px; } table.board td, table.board th { padding:3px 6px; text-align:left; } table.board th { opacity:.65; font-weight:400; }
 `;
 

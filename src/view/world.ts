@@ -26,6 +26,10 @@ export class World {
   private smokes: Smoke[] = [];
   private fireflies!: Fireflies;
   private flag!: THREE.Mesh;
+  private stallWings: THREE.Group[] = [];
+  private stallSolid!: Rect;
+  private vane = new THREE.Group();
+  private vaneArrow = new THREE.Group();
 
   constructor(scene: THREE.Scene) {
     scene.add(this.group);
@@ -38,6 +42,7 @@ export class World {
     this.buildBoardAndIce();
     this.buildQuayDetail();
     this.buildLanterns();
+    this.buildVane();
     bake(this.stat);
     const n = buildNature(this.group, (x, z) => {
       if (z < -8) return false;
@@ -170,11 +175,85 @@ export class World {
     cy(0.2, 0.2, 0.04, flat(0xb89a5a, 0.4), x + 1.2, 1.14, z - 0.5, s, 10);
     for (const dx of [-0.6, 0, 0.6]) put(new THREE.CylinderGeometry(0.2, 0.15, 0.2, 8), flat(0xb08a4a, 0.95), x + dx, 1.2, z - 0.55, s);
     this.solid({ x0: x - 2.2, x1: x + 2.2, z0: z - 1.1, z1: z + 1.1 });
-    barrel(s, x + 3.0, z + 0.6);
-    barrel(s, x + 3.6, z + 0.1);
-    crateBox(s, x + 3.3, 0, z - 0.4, 0.7, 0.3);
-    crateBox(s, x + 3.3, 0.7, z - 0.4, 0.55, 0.9);
-    this.solid({ x0: x + 2.5, x1: x + 4.1, z0: z - 0.7, z1: z + 1.1 });
+    this.stallSolid = { x0: x - 2.2, x1: x + 2.2, z0: z - 1.1, z1: z + 1.1 };
+    this.solid(this.stallSolid);
+    this.buildStallWings();
+  }
+
+  /** Market stall upgrades: a wing on each side per level, shown by setStall(). */
+  private buildStallWings(): void {
+    const { x, z } = LAYOUT.market, M = this.M;
+    const stripe = [0xd24a3a, 0xf6efe0];
+    const species = ['cod', 'tuna', 'seabass', 'snapper'] as const;
+    for (let lvl = 1; lvl <= 2; lvl++) {
+      const g = new THREE.Group();
+      g.visible = false;
+      const w = lvl === 1 ? 1.0 : 0.8;
+      const off = lvl === 1 ? 2.1 + w / 2 : 2.1 + 1.0 + w / 2;
+      for (const side of [-1, 1]) {
+        const cx = x + side * off;
+        tBox(w, 1.0, 2.0, M.wood, 1.6, cx, 0.5, z, g);
+        tBox(w + 0.1, 0.1, 2.3, M.crate, 1.4, cx, 1.05, z, g);
+        for (const dz of [-0.95, 0.95]) cy(0.07, 0.08, 2.9, M.dark, cx + side * (w / 2 - 0.05), 1.45, z + dz, g, 6);
+        for (let i = 0; i < 2; i++) {
+          const sl = bx(w / 2, 0.07, 2.9, flat(stripe[(i + lvl) % 2], 0.95), cx - w / 4 + i * (w / 2), 2.9, z + 0.1, g);
+          sl.rotation.x = 0.18;
+          const v = bx(w / 2, 0.3, 0.04, flat(stripe[(i + lvl) % 2], 0.95), cx - w / 4 + i * (w / 2), 2.64, z + 1.5, g);
+          v.rotation.x = 0.1;
+        }
+        bx(w - 0.1, 0.12, 0.56, flat(0xdde9f0, 0.5), cx, 1.17, z + 0.3, g);
+        bx(w - 0.2, 0.06, 0.46, flat(0xb9d8e8, 0.3), cx, 1.23, z + 0.3, g);
+        for (let k = 0; k < 3; k++) {
+          const f = put(fishGeo(), flat(SPECIES_COLOUR[species[(k + lvl + (side > 0 ? 1 : 0)) % 4]], 0.45), cx - 0.22 + k * 0.22, 1.33, z + 0.3 + (k % 2 ? 0.1 : -0.1), g);
+          f.scale.setScalar(0.4);
+          f.rotation.set(0, Math.PI / 2 + (k - 1) * 0.2, k * 0.1);
+        }
+        // crates, barrel and a hanging catch behind the counter
+        crateBox(g, cx, 0, z - 0.4, 0.55, 0.3 + side);
+        if (lvl === 2) barrel(g, cx + side * (w / 2 + 0.35), z - 0.1);
+        bx(w, 0.03, 0.03, M.rope, cx, 2.45, z + 1.3, g);
+        const f = put(fishGeo(), flat(SPECIES_COLOUR[species[(lvl + side + 1) % 4]], 0.45), cx, 2.2, z + 1.3, g);
+        f.scale.setScalar(0.5);
+        f.rotation.set(0, 0, Math.PI / 2);
+      }
+      this.stallWings.push(g);
+      this.group.add(g);
+    }
+  }
+
+  /** Show the market stall at upgrade level 0..2 (wider, with more trays). */
+  setStall(level: number): void {
+    this.stallWings.forEach((g, i) => (g.visible = i < level));
+    const reach = [2.2, 3.4, 4.4][level] ?? 2.2;
+    this.stallSolid.x0 = LAYOUT.market.x - reach;
+    this.stallSolid.x1 = LAYOUT.market.x + reach;
+  }
+
+  /** Golden weathervane on the inn (Harbour Master). */
+  setWeathervane(on: boolean): void {
+    this.vane.visible = on;
+  }
+
+  private buildVane(): void {
+    const { x, z } = LAYOUT.inn;
+    const gold = new THREE.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.28, metalness: 0.85, emissive: 0x6a4a00, emissiveIntensity: 0.35 });
+    this.vane.position.set(x - 2.9, 7.1, z);
+    this.vane.visible = false;
+    put(new THREE.CylinderGeometry(0.03, 0.04, 1.5, 6), gold, 0, 0.75, 0, this.vane);
+    put(new THREE.SphereGeometry(0.1, 10, 8), gold, 0, 1.5, 0, this.vane);
+    // compass cross
+    for (const r of [0, Math.PI / 2]) bx(0.9, 0.04, 0.04, gold, 0, 1.15, 0, this.vane).rotation.y = r;
+    for (const [dx, dz] of [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]]) put(new THREE.SphereGeometry(0.05, 6, 5), gold, dx, 1.15, dz, this.vane);
+    // the vane itself: an arrow with a fish-shaped tail, pivoting on the pole
+    this.vaneArrow.position.set(0, 1.5, 0);
+    bx(1.2, 0.05, 0.05, gold, 0, 0, 0, this.vaneArrow);
+    put(new THREE.ConeGeometry(0.1, 0.3, 6), gold, 0.7, 0, 0, this.vaneArrow).rotation.z = -Math.PI / 2;
+    const fin = put(new THREE.ConeGeometry(0.25, 0.5, 4), gold, -0.75, 0, 0, this.vaneArrow);
+    fin.rotation.set(0, 0, Math.PI / 2);
+    fin.scale.set(1, 1, 0.12);
+    this.vane.add(this.vaneArrow);
+    this.vane.traverse((o) => { o.castShadow = true; });
+    this.group.add(this.vane);
   }
 
   // ---------------------------------------------------------------- shipyard
@@ -385,6 +464,7 @@ export class World {
       p.setZ(i, Math.sin(t * 5 - fx * 6) * 0.07 * fx);
     }
     p.needsUpdate = true;
+    if (this.vane.visible) this.vaneArrow.rotation.y = Math.sin(t * 0.35) * 1.2 + Math.sin(t * 0.9) * 0.2;
   }
 
   /** Is the point (with a small radius) standing on the quay or the pier? */
