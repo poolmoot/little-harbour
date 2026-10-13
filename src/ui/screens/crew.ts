@@ -5,7 +5,7 @@ import { carryCapacity, coldCrates, iceCrates } from '../../sim/crates';
 import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import { canHireCaptain, canHireDockhand, dailyWages } from '../../sim/staff';
 import type { Dockhand, GameState } from '../../sim/state';
-import { button, card, cards, empty, face, item, money, section, tick } from '../components';
+import { button, card, cards, empty, esc, face, item, money, section, tick } from '../components';
 import { captainLook, dockhandLook, NPC_LOOK } from '../../view/people';
 import { portrait } from '../../view/portraits';
 import type { CardTone } from '../components';
@@ -35,7 +35,7 @@ function hire(s: GameState): string {
     let actions: string;
     if (!captainsOpen) actions = button({ label: `${icon('lock', 14)}${RANK_NAME[CAPTAINS_RANK]}`, tone: 'ghost', size: 'sm', off: true });
     else if (free.length === 0) actions = button({ label: 'No free boat', tone: 'ghost', size: 'sm', off: true });
-    else actions = free.map((b) => button({ label: `Hire for ${b.name}`, act: 'hirecap', a: c.id, b: b.id, size: 'sm', off: !canHireCaptain(s, b.id).ok })).join('');
+    else actions = free.map((b) => button({ label: `Hire for ${esc(b.name)}`, act: 'hirecap', a: c.id, b: b.id, size: 'sm', off: !canHireCaptain(s, b.id).ok })).join('');
     list.push(card({
       tone: TRAIT_TONE[c.trait],
       tag: 'Captain',

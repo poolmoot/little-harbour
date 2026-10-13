@@ -6,7 +6,7 @@ import { canRepair, repairCost } from '../../sim/storm';
 import { rankOf } from '../../sim/rank';
 import type { GameState } from '../../sim/state';
 import { canBuy } from '../../sim/upgrades';
-import { button, card, cards, item, meter, priceLabel, section } from '../components';
+import { button, card, cards, esc, item, meter, priceLabel, section } from '../components';
 import type { CardTone } from '../components';
 import { HULL_ICONS, icon } from '../icons';
 import { NPC_LOOK } from '../../view/people';
@@ -31,12 +31,12 @@ export function repairs(s: GameState): string {
   return section(SHIPYARD_TEXT.brokenTitle) + broken.map((b) => {
     const cost = repairCost(b);
     if (b.repairLeft !== undefined) {
-      return item({ art: icon(HULL_ICONS[b.hull], 40), title: b.name, sub: BOAT_TEXT.fixing(Math.ceil(b.repairLeft)), extra: meter(1 - b.repairLeft / REPAIR_SECONDS, 'amber'), right: button({ label: 'Being fixed', tone: 'ghost', size: 'sm', off: true }) });
+      return item({ art: icon(HULL_ICONS[b.hull], 40), title: esc(b.name), sub: BOAT_TEXT.fixing(Math.ceil(b.repairLeft)), extra: meter(1 - b.repairLeft / REPAIR_SECONDS, 'amber'), right: button({ label: 'Being fixed', tone: 'ghost', size: 'sm', off: true }) });
     }
     const chk = canRepair(s, b.id);
     return item({
       art: icon(HULL_ICONS[b.hull], 40),
-      title: `${b.name} · ${BOAT_TEXT.broken}`,
+      title: `${esc(b.name)} · ${BOAT_TEXT.broken}`,
       sub: `${SHIPYARD_TEXT.fixCost(cost)} · ${SHIPYARD_TEXT.fixTime(REPAIR_SECONDS)}${b.status === 'docked' ? '' : ` · ${SHIPYARD_TEXT.unloadFirst}`}`,
       right: button({ label: `${SHIPYARD_TEXT.fix} ${priceLabel(cost)}`, act: 'repair', a: b.id, size: 'sm', off: !chk.ok }),
     });
@@ -57,7 +57,7 @@ function fleet(s: GameState): string {
   for (const b of s.boats) {
     h += item({
       art: icon(HULL_ICONS[b.hull], 40),
-      title: b.name,
+      title: esc(b.name),
       sub: `${boatType(b.hull)} · carries ${crates(holdSize(b))}${b.captain ? ` · captain ${b.captain.name}` : ''}`,
       right: button({ label: LABEL.open, act: 'openboat', a: b.id, tone: 'info', size: 'sm' }),
     });

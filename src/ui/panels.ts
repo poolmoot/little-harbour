@@ -2,7 +2,7 @@ import type { BuildingId, Species, Track, UpgradeId, ZoneId } from '../sim/confi
 import type { DayStats, GameState, HaulPolicy } from '../sim/state';
 import type { AudioSettings, VolumeKey } from '../audio/settings';
 import type { QualityMode } from '../view/quality';
-import { money } from './components';
+import { money, nameFeedback } from './components';
 import { isMenuKind } from './menuFlow';
 import { LABEL } from './text';
 import { awayScreen } from './screens/away';
@@ -68,6 +68,8 @@ export interface PanelActions {
   setSmoke(species: Species, on: boolean): void;
   setStayHome(boatId: number, stay: boolean): void;
   repair(boatId: number): void;
+  renameBoat(boatId: number, name: string): void;
+  setHarbourName(name: string): void;
   acceptContract(contractId: number): void;
   getQuality(): QualityMode;
   setQuality(m: QualityMode): void;
@@ -150,6 +152,24 @@ export class Panels {
       if (val) val.textContent = `${pct}%`;
       this.actions.setVolume(id as VolumeKey, pct / 100);
     });
+    // Name fields: check as you type, Enter saves, Esc puts the old name back. (The game's own keys ignore text fields: see input.ts.)
+    this.overlay.addEventListener('input', (e) => {
+      const el = e.target as HTMLInputElement;
+      if (el.dataset.field) this.checkField(el);
+    });
+    this.overlay.addEventListener('keydown', (e) => {
+      const el = e.target as HTMLInputElement;
+      if (!el.dataset?.field) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (nameFeedback(el.value).ok) this.act(el.dataset.save ?? '', el.dataset.a ?? '', el.dataset.b ?? '');
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        el.value = el.dataset.orig ?? '';
+        this.checkField(el);
+        el.blur();
+      }
+    });
     // Let go of a slider: hand the keyboard back to the game (so M works) and redraw.
     window.addEventListener('pointerup', () => {
       const a = document.activeElement as HTMLElement | null;
@@ -168,6 +188,7 @@ export class Panels {
   }
 
   open(kind: PanelKind, arg = 0): void {
+    this.focusedField()?.blur();
     this.kind = kind;
     this.arg = arg;
     this.tab = '';
@@ -185,6 +206,7 @@ export class Panels {
   }
 
   close(): void {
+    this.focusedField()?.blur();
     if (!this.kind) return;
     this.kind = null;
     this.overlay.classList.remove('open');
@@ -225,7 +247,31 @@ export class Panels {
     if (this.kind) this.render(true);
   }
 
+  /** The name field that has the keyboard, if any. */
+  private focusedField(): HTMLInputElement | null {
+    const f = document.activeElement as HTMLInputElement | null;
+    return f && f.dataset?.field && this.win.contains(f) ? f : null;
+  }
+
+  /** Show the plain message for the typed name and grey out Save when it is not allowed. */
+  private checkField(el: HTMLInputElement): void {
+    const fb = nameFeedback(el.value);
+    const box = el.closest('.tf');
+    if (!box) return;
+    box.classList.toggle('bad', !fb.ok);
+    const msg = box.querySelector('.tf-msg');
+    if (msg) msg.textContent = fb.message;
+    box.querySelector('.btn')?.classList.toggle('off', !fb.ok);
+  }
+
   private act(act: string, a: string, b: string): void {
+    // A button press ends the typing: take what was typed, then hand the keyboard back so the window can redraw.
+    const typed = this.focusedField()?.value ?? '';
+    this.focusedField()?.blur();
+    switch (act) {
+      case 'renameboat': this.actions.renameBoat(Number(a), typed); return;
+      case 'renameharbour': this.actions.setHarbourName(typed); return;
+    }
     switch (act) {
       case 'close': this.close(); break;
       case 'tab': this.tab = a; this.render(true); this.playEntrance(); break;
@@ -285,6 +331,8 @@ export class Panels {
 
   private render(force: boolean): void {
     if (!this.kind) return;
+    // Never redraw under a name field that is being typed in.
+    if (this.focusedField()) return;
     this.lastUpdate = performance.now() / 1000;
     const view = SCREENS[this.kind]({
       state: this.getState(), arg: this.arg, tab: this.tab, confirmReset: this.confirmReset, quality: this.actions.getQuality(), summary: this.summary,

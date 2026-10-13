@@ -115,3 +115,15 @@
 .item.gold .item-sub { color: #ffeeb0; }
 .card.gold .tag { background: var(--gold-lo); color: var(--ink); -webkit-text-stroke: 0; }
 .card-line .stars { vertical-align: middle; }
+
+/* Name field: a sunken box like the meters, with a message line and a Save button. */
+.tf { display: inline-flex; flex-direction: column; gap: 3px; min-width: 0; max-width: 100%; }
+.tf-row { display: flex; align-items: center; gap: 7px; }
+.tf.stack .tf-row { flex-direction: column; align-items: stretch; }
+.textfield { flex: 1; min-width: 0; width: 190px; padding: 5px 10px 7px; color: var(--text); background: var(--well); border: var(--line); border-radius: var(--r-sm); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35), 0 2px 0 rgba(255, 255, 255, 0.14); font: inherit; font-size: var(--fs-md); outline: none; }
+.tf.stack .textfield { width: 100%; text-align: center; }
+.textfield:focus { box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 0 3px var(--gold-hi); }
+.tf.bad .textfield { border-color: var(--danger-lo); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 0 2px var(--danger-hi); }
+.tf-msg { min-height: 16px; font-size: var(--fs-xs); color: var(--danger-hi); }
+.rename { width: 100%; margin-top: 6px; }
+.rename-label { font-size: var(--fs-xs); color: var(--text-dim); }

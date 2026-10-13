@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { button, card, freshMeter, item, meter, money, mult, percent, slider, stars, tick } from './components';
+import { button, card, esc, freshMeter, item, meter, money, mult, nameFeedback, percent, slider, stars, textField, tick } from './components';
 
 describe('ui components', () => {
   it('formats money and multipliers', () => {
@@ -79,5 +79,47 @@ describe('ui components', () => {
     expect(off).toContain('aria-checked="false"');
     expect(off).not.toContain('<svg');
     expect(off).toContain('off');
+  });
+});
+
+describe('text field', () => {
+  const field = (value: string) => textField({ id: 'boatname', value, label: 'Boat name', save: 'renameboat', a: 7, saveLabel: 'Save name' });
+
+  it('draws a text input that carries its field id, save action, argument and the old name', () => {
+    const h = field('Spray');
+    expect(h).toContain('type="text"');
+    expect(h).toContain('data-field="boatname"');
+    expect(h).toContain('data-save="renameboat"');
+    expect(h).toContain('data-a="7"');
+    expect(h).toContain('data-orig="Spray"');
+    expect(h).toContain('value="Spray"');
+    expect(h).toContain('aria-label="Boat name"');
+  });
+
+  it('has a Save button wired to the same action, ready to press for a good name', () => {
+    const h = field('Spray');
+    expect(h).toContain('data-act="renameboat"');
+    expect(h).not.toMatch(/class="[^"]*\boff\b/);
+    expect(h).not.toContain(' bad');
+  });
+
+  it('greys out Save and shows the plain message for a name that is not allowed', () => {
+    const empty = field('   ');
+    expect(empty).toMatch(/class="btn[^"]*\boff\b/);
+    expect(empty).toContain('Please type a name.');
+    expect(field('A very very long boat name')).toContain('too long');
+    expect(field('Bad <name>')).toContain('Please use only letters, numbers and spaces.');
+  });
+
+  it('makes typed text safe to put in the page', () => {
+    expect(esc('Tom & "Jerry"')).toBe('Tom &amp; &quot;Jerry&quot;');
+    expect(field('Tom & Co')).toContain('value="Tom &amp; Co"');
+  });
+
+  it('checks names live with the same rule the game uses', () => {
+    expect(nameFeedback('Seagull Bay')).toEqual({ ok: true, message: '' });
+    expect(nameFeedback('').ok).toBe(false);
+    expect(nameFeedback('x'.repeat(17)).message).toContain('16');
+    expect(nameFeedback("Mum's boat!").ok).toBe(true);
   });
 });

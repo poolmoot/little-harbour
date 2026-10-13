@@ -1,5 +1,7 @@
 /** Reusable UI parts. Each is a pure function from data to an HTML string, so screens stay declarative and testable. */
+import { checkName } from '../sim/names';
 import { icon } from './icons';
+import { NAME_PROBLEM } from './text';
 
 export type Tone = 'go' | 'gold' | 'info' | 'danger' | 'ghost';
 export type MeterTone = 'cyan' | 'green' | 'amber' | 'red' | 'gold';
@@ -130,4 +132,36 @@ export interface TickOpts {
 export function tick(o: TickOpts): string {
   const data = ` data-act="${o.act}"${o.a !== undefined ? ` data-a="${o.a}"` : ''}${o.b !== undefined ? ` data-b="${o.b}"` : ''}`;
   return `<button class="${cls('tick ol', o.on && 'on', o.off && 'off')}" role="checkbox" aria-checked="${o.on}"${data}><span class="tick-box">${o.on ? icon('check', 18) : ''}</span>${o.art ?? ''}<span>${o.label}</span></button>`;
+}
+
+/** Live check of a typed name: whether it can be saved, and the plain message when it cannot. */
+export function nameFeedback(raw: string): { ok: boolean; message: string } {
+  const c = checkName(raw);
+  return c.ok ? { ok: true, message: '' } : { ok: false, message: NAME_PROBLEM[c.problem ?? 'chars'] };
+}
+
+export interface TextFieldOpts {
+  /** Which field this is; the window manager reads it from data-field. */
+  id: string;
+  value: string;
+  /** Screen-reader name. */
+  label: string;
+  /** Action id run by the Save button and by Enter. */
+  save: string;
+  a?: string | number;
+  b?: string | number;
+  saveLabel: string;
+  /** Put the Save button under the field instead of beside it (narrow places). */
+  stack?: boolean;
+}
+
+/**
+ * A name field in the kit's look, with its message line and Save button. The window manager does the rest: it checks the text
+ * as it is typed (with the same rule the game uses), greys out Save when the name is not allowed, saves on Enter, puts the old
+ * name back on Esc, and does not redraw the window while the field has the keyboard.
+ */
+export function textField(o: TextFieldOpts): string {
+  const fb = nameFeedback(o.value);
+  const data = `${o.a !== undefined ? ` data-a="${o.a}"` : ''}${o.b !== undefined ? ` data-b="${o.b}"` : ''}`;
+  return `<span class="${cls('tf', o.stack && 'stack', !fb.ok && 'bad')}"><span class="tf-row"><input class="textfield" type="text" data-field="${o.id}" data-save="${o.save}"${data} data-orig="${esc(o.value)}" value="${esc(o.value)}" maxlength="40" autocomplete="off" spellcheck="false" aria-label="${esc(o.label)}">${button({ label: o.saveLabel, act: o.save, a: o.a, b: o.b, size: 'sm', off: !fb.ok })}</span><span class="tf-msg" role="status">${fb.message}</span></span>`;
 }

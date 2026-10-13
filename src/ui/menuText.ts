@@ -40,6 +40,8 @@ export const SETTINGS = {
     ['ambience', 'Background', 'Waves, wind and gulls.'],
     ['effects', 'Effects', 'Clicks, splashes and coins.'],
   ] as const,
+  harbourTitle: 'Your harbour',
+  harbourNote: 'The name shows at the top of the screen. Press Enter to save.',
   resetTitle: 'Reset game',
   resetNote: 'Delete your save and start again from the beginning.',
   resetButton: 'Reset game',

@@ -13,6 +13,9 @@ import { restaurantRefusal, restaurantView } from './restaurant';
 import { smokehouseView } from './smokehouse';
 import type { ScreenCtx } from './types';
 import { slotHtml } from '../hud';
+import { boatScreen } from './boat';
+import { settingsScreen } from './settings';
+import { titleScreen } from './title';
 import { crateFacts, priceEffect } from '../fishParts';
 
 const ctx = (state: GameState, over: Partial<ScreenCtx> = {}): ScreenCtx => ({
@@ -141,5 +144,36 @@ describe('carry slots in the HUD', () => {
     expect(html).toContain('Golden Tuna');
     expect(html).toContain('3 stars');
     expect(slotHtml(addCrate(s, 'cod', 'hand', 0, { size: 80 }))).not.toContain('golden');
+  });
+});
+
+describe('names', () => {
+  it('has a rename field and Save button in the boat window', () => {
+    const s = initialState();
+    s.boats[0].name = 'Spray';
+    const v = boatScreen(ctx(s, { arg: s.boats[0].id }));
+    expect(v.body).toContain('data-field="boatname"');
+    expect(v.body).toContain('value="Spray"');
+    expect(v.body).toContain('data-act="renameboat"');
+    expect(v.title).toBe('Spray');
+  });
+
+  it('has a harbour name field in settings', () => {
+    const s = initialState();
+    s.harbourName = 'Seagull Bay';
+    const v = settingsScreen(ctx(s));
+    expect(v.body).toContain('data-field="harbourname"');
+    expect(v.body).toContain('value="Seagull Bay"');
+    expect(v.body).toContain('data-act="renameharbour"');
+    expect(v.body).toContain('Harbour name');
+  });
+
+  it('shows the harbour name on the title screen when there is a saved game, and keeps the saved money', () => {
+    const s = initialState();
+    s.harbourName = 'Seagull Bay';
+    s.money = 321;
+    const v = titleScreen(ctx(s, { hasSave: true }));
+    expect(v.body).toContain('Seagull Bay');
+    expect(v.body).toContain('$321');
   });
 });

@@ -7,14 +7,14 @@ import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import type { Boat, GameState } from '../../sim/state';
 import { isNight, phaseOf } from '../../sim/time';
 import { hex, SPECIES_COLOUR } from '../../palette';
-import { button, card, cards, chip, empty, face, item, money, mult, priceLabel, stars, tick } from '../components';
+import { button, card, cards, chip, empty, esc, face, item, money, mult, priceLabel, stars, textField, tick } from '../components';
 import { captainLook } from '../../view/people';
 import { portrait as facePicture } from '../../view/portraits';
 import type { CardTone } from '../components';
 import { fishIcon, HULL_ICONS, icon } from '../icons';
 import type { IconName } from '../icons';
 import { BOAT_TEXT } from '../screenText';
-import { FISH_NAME, LABEL, WEATHER_LABEL, RANK_NAME, TRACK_NAME, TRAIT, ZONE_NAME, boatType, crates, denyText, trackNext, trackNow, zoneNeeds } from '../text';
+import { FISH_NAME, LABEL, NAME_LABEL, WEATHER_LABEL, RANK_NAME, TRACK_NAME, TRAIT, ZONE_NAME, boatType, crates, denyText, trackNext, trackNow, zoneNeeds } from '../text';
 import { pickTab } from './types';
 import type { Screen, TabDef } from './types';
 
@@ -87,7 +87,8 @@ function portrait(boat: Boat): string {
   const zone = ZONES[boat.target];
   return `<div class="portrait">${icon(HULL_ICONS[boat.hull], 120)}${stars(boat.hull + 1, 4, 16)}
     <div class="portrait-name ol">${boatType(boat.hull)}</div>
-    <div class="chips">${boat.damaged ? chip(`<span class="bad">${BOAT_TEXT.broken}</span>`) : ''}${chip(`${icon('crate', 14)}${crates(holdSize(boat))}`)}${chip(`${icon('net', 14)}Rare fish ×${mult(rareMult(boat))}`)}${chip(`${icon('sail', 14)}Trip time ×${mult(tripTimeFor(boat, boat.target) / zone.trip)}`)}</div></div>`;
+    <div class="chips">${boat.damaged ? chip(`<span class="bad">${BOAT_TEXT.broken}</span>`) : ''}${chip(`${icon('crate', 14)}${crates(holdSize(boat))}`)}${chip(`${icon('net', 14)}Rare fish ×${mult(rareMult(boat))}`)}${chip(`${icon('sail', 14)}Trip time ×${mult(tripTimeFor(boat, boat.target) / zone.trip)}`)}</div>
+    <div class="rename"><div class="rename-label">${NAME_LABEL.boat}</div>${textField({ id: 'boatname', value: boat.name, label: NAME_LABEL.boat, save: 'renameboat', a: boat.id, saveLabel: NAME_LABEL.save, stack: true })}</div></div>`;
 }
 
 function foot(s: GameState, boat: Boat): string {
@@ -110,7 +111,7 @@ export const boatScreen: Screen = (ctx) => {
   const tab = pickTab(ctx, TABS);
   const pane = tab === 'upgrades' ? upgrades(s, boat) : tab === 'grounds' ? grounds(s, boat) : captain(s, boat);
   return {
-    title: boat.name,
+    title: esc(boat.name),
     icon: icon(HULL_ICONS[boat.hull], 28),
     tabs: TABS,
     tab,
