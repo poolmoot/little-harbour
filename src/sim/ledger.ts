@@ -25,6 +25,13 @@ export function earnReward(state: GameState, amount: number): void {
   state.stats.rewards += amount;
 }
 
+/** Earnings from the time the player was away: counts toward money and rank, with its own line in the day's ledger. */
+export function earnAway(state: GameState, amount: number): void {
+  state.money += amount;
+  state.lifetime += amount;
+  state.stats.away += amount;
+}
+
 export function spend(state: GameState, amount: number): void {
   state.money -= amount;
   state.stats.spent += amount;
@@ -36,6 +43,6 @@ export function spendOnTrip(state: GameState, amount: number): void {
   state.stats.tripCosts += amount;
 }
 
-export function netProfit(st: { earned: number; wages: number; tripCosts: number; spent: number; rewards?: number }): number {
-  return st.earned + (st.rewards ?? 0) - st.wages - st.tripCosts - st.spent;
+export function netProfit(st: { earned: number; wages: number; tripCosts: number; spent: number; rewards?: number; away?: number }): number {
+  return st.earned + (st.rewards ?? 0) + (st.away ?? 0) - st.wages - st.tripCosts - st.spent;
 }

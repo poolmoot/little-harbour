@@ -345,6 +345,25 @@ export const ENDING = {
 
 export const perMinute = (n: number): string => `$${Math.round(n).toLocaleString('en')} a minute`;
 
+// ---- welcome back (earnings while away) ---------------------------------------------------------
+
+export const AWAY = {
+  title: 'Welcome back!',
+  note: 'Your captains kept fishing while you were gone.',
+  earned: (n: number): string => `Your harbour earned $${n.toLocaleString('en')} while you were away.`,
+  away: (seconds: number): string => {
+    const m = Math.round(seconds / 60);
+    if (m < 60) return `You were away for ${m} ${m === 1 ? 'minute' : 'minutes'}.`;
+    const h = Math.floor(m / 60), r = m % 60;
+    return `You were away for ${h} ${h === 1 ? 'hour' : 'hours'}${r ? ` and ${r} minutes` : ''}.`;
+  },
+  rate: (perMinute: number): string => `Your boats make about $${Math.round(perMinute).toLocaleString('en')} a minute.`,
+  capped: 'Only the first 8 hours count.',
+  half: 'You earn half as much when you are not here.',
+  nothing: 'Hire a captain and your boats will fish even when you are away.',
+  statsLine: 'While you were away',
+};
+
 export const sayTycoon = {
   goalDone: (reward: number): string => `Goal done! Reward +$${reward}`,
   built: (id: BuildingId, level: number): string => (level === 1 ? `The ${BUILDING_NAME[id].toLowerCase()} is built!` : `The ${BUILDING_NAME[id].toLowerCase()} is now bigger.`),

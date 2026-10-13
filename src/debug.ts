@@ -1,6 +1,7 @@
 // Development-only helpers: window.__debug. Loaded only in dev builds (see game.ts), never shipped.
 import { BUILDING_IDS, GOALS, HOUR_SECONDS, START_HOUR } from './sim/config';
 import type { BuildingId, Track, Trait, WeatherId, ZoneId } from './sim/config';
+import { applyAway, awayEarnings } from './sim/away';
 import { acceptContract, buyBuilding, bestZone, buyBoat, currentGoal, deliverKingFish, hireDockhand, moneyPerMinute, repairBoat, step } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { makeOffer } from './sim/contracts';
@@ -118,6 +119,13 @@ export function installDebug(g: DebugHost): void {
     /** Break a boat as if a storm hurt it, then pay to fix it with repair(). */
     breakBoat: (boat = 0) => { const b = g.state.boats[boat]; if (b) { b.damaged = true; b.repairLeft = undefined; } },
     repair: (boat = 0) => g.handle(repairBoat(g.state, g.state.boats[boat]?.id ?? 0)),
+    /** Pretend you were away for N seconds: prints what the harbour would earn. away(seconds, true) also pays it. */
+    away: (seconds: number, pay = false): string => {
+      const r = pay ? applyAway(g.state, seconds, g.rng) : { result: awayEarnings(g.state, seconds, g.rng), events: [] };
+      if (pay) g.handle(r.events);
+      const x = r.result;
+      return x ? `Away ${Math.round(x.seconds)} s: earned $${x.earned} at $${x.perMinute.toFixed(1)} a minute${pay ? ' (paid)' : ' (not paid)'}` : 'Too short to count (under 60 seconds).';
+    },
     /** A short text summary of goals, buildings, weather, contracts, and money per minute. */
     summary: (): string => {
       const st = g.state;

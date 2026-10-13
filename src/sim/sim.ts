@@ -28,6 +28,8 @@ export { acceptContract } from './contracts';
 export { currentGoal, goalProgress } from './goals';
 export { repairBoat, canRepair, repairCost, setStayInStorms } from './storm';
 export { deliverKingFish, endingSummary } from './ending';
+export { applyAway, awayEarnings, measureAwayRate } from './away';
+export type { AwayResult } from './away';
 export { moneyPerMinute } from './income';
 export { rankOf } from './rank';
 export { fireCaptain, fireDockhand, hireCaptain, hireDockhand, setBoatTarget, setHaulPolicy } from './staff';

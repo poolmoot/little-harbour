@@ -209,6 +209,12 @@ export const KING_CHANCE = 0.02;
 export const RATE_SAMPLE_SECONDS = 5;
 export const RATE_WINDOW_SECONDS = 120;
 
+// ---- Earnings while away ---------------------------------------------------------
+export const AWAY_MIN_SECONDS = 60; // shorter absences are ignored
+export const AWAY_MAX_SECONDS = 8 * 3600; // time away counts for at most 8 hours
+export const AWAY_SHARE = 0.5; // the harbour earns half as much when you are not there
+export const AWAY_SIM_SECONDS = DAY_SECONDS; // one in-game day is simulated to measure the rate
+
 // ---- Goals -------------------------------------------------------------------
 export type GoalKind =
   | 'dispatched' | 'unloaded' | 'sold' | 'pier' | 'holdLevel' | 'orders' | 'rank' | 'dockhands' | 'boats'

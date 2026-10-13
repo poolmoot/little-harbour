@@ -72,7 +72,7 @@ describe('migration from the MVP save', () => {
     };
     st.setItem('harbour-game-save', JSON.stringify(old));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(4);
+    expect(l.version).toBe(5);
     expect(l.money).toBe(777);
     expect(l.boats).toHaveLength(2);
     for (const b of l.boats) {
@@ -127,7 +127,7 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     const st = memory();
     st.setItem('harbour-game-save', JSON.stringify(v3()));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(4);
+    expect(l.version).toBe(5);
     expect(l.money).toBe(4321);
     expect(l.day).toBe(12);
     expect(l.lifetime).toBe(9000);
