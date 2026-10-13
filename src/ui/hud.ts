@@ -34,6 +34,7 @@ export class Hud {
   private toasts = this.el('toasts');
   private shownMoney = -1;
   private lastTick = performance.now();
+  private lastFull = -1000;
 
   constructor(root: HTMLElement) {
     const right = document.createElement('div');
@@ -66,6 +67,12 @@ export class Hud {
       this.money.classList.remove('tick');
     }
     set(this.money, `<div class="big">$${Math.round(this.shownMoney)}</div><div class="sub">Day ${state.day}</div>`);
+    // The money counter follows every frame; the other panels change slowly, so they are rebuilt about 8 times a second.
+    if (now - this.lastFull < 120) {
+      this.showPrompt(prompt);
+      return;
+    }
+    this.lastFull = now;
     const ph = phaseOf(state.dayTime);
     set(this.clock, `<div class="t">${formatClock(state.dayTime)}</div><div class="p">${PHASE_NAME[ph]}</div>`);
 
@@ -102,11 +109,16 @@ export class Hud {
     }
     set(this.boats, boats);
 
+    this.showPrompt(prompt);
+  }
+
+  private showPrompt(prompt: Prompt | null): void {
     if (prompt) {
       this.prompt.style.display = '';
-      this.prompt.className = `card prompt${prompt.hot ? ' hot' : ''}${prompt.dim ? ' dim' : ''}`;
+      const cls = `card prompt${prompt.hot ? ' hot' : ''}${prompt.dim ? ' dim' : ''}`;
+      if (this.prompt.className !== cls) this.prompt.className = cls;
       set(this.prompt, `${prompt.key ? '<kbd>E</kbd>' : ''}${prompt.text}`);
-    } else {
+    } else if (this.prompt.style.display !== 'none') {
       this.prompt.style.display = 'none';
     }
   }

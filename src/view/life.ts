@@ -212,11 +212,12 @@ class Gull {
     this.prev.copy(this.pos);
   }
 
+  private circle = new THREE.Vector3();
   circlePoint(t: number): THREE.Vector3 {
     const dir = this.idx % 2 ? -1 : 1;
     const a = t * 0.45 * dir + this.idx * 1.7;
     const r = 7 + this.idx * 1.6;
-    return new THREE.Vector3(Math.cos(a) * r, 8 + (this.idx % 3) * 1.2 + Math.sin(t + this.idx) * 0.4, -11 + Math.sin(a) * r * 0.8);
+    return this.circle.set(Math.cos(a) * r, 8 + (this.idx % 3) * 1.2 + Math.sin(t + this.idx) * 0.4, -11 + Math.sin(a) * r * 0.8);
   }
 
   update(dt: number, t: number, landing: THREE.Vector3 | null, playerNear: boolean): void {
@@ -288,6 +289,7 @@ export class Life {
   private cat: Cat;
   private gulls: Gull[] = [];
   private tmp = new THREE.Vector3();
+  private landing = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, world: World, private camera: THREE.Camera, uiRoot: HTMLElement) {
     const defs: { role: Role; title: string; name: string; x: number; z: number; fig: ConstructorParameters<typeof Figure>[0] }[] = [
@@ -349,7 +351,7 @@ export class Life {
     }
     this.cat.update(dt, player.x, player.z, ctx.handSpecies.length > 0);
     const fresh = dockCrates.find((c) => c.freshness > 0);
-    const land = fresh ? new THREE.Vector3(fresh.x ?? 0, 0.46 + (fresh.layer ?? 0) * 0.42, fresh.z ?? 0) : null;
+    const land = fresh ? this.landing.set(fresh.x ?? 0, 0.46 + (fresh.layer ?? 0) * 0.42, fresh.z ?? 0) : null;
     for (const g of this.gulls) {
       g.update(dt, now, g.idx === 0 ? land : null, Math.hypot(player.x - g.pos.x, player.z - g.pos.z) < 1.8 && g.mode === 'perched');
     }
