@@ -215,7 +215,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `events.ts` — turns sim events into sounds, toasts, pop-ups and saves; also sets the rain, storm-wind and fog sound layers from the weather.
 - `interaction.ts` — what is near the player, the prompt text, and what E does (including the four plot doors and delivering the King Fish at the inn).
 - `debug.ts` — dev-only `window.__debug` helpers (never in production builds).
-- `input.ts` — keyboard state (sliders keep their own arrow keys).
+- `input.ts` — keyboard state (a text field owns every key; sliders keep their own arrow keys; `keyBelongsToField` is tested).
 - `palette.ts` — fish colours shared by view and UI.
 
 **src/sim/** (pure rules, all unit tested)
@@ -258,18 +258,19 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `buildingParts.ts` — shared pieces of the building windows (upgrade row, which carried crates fit).
 - `panels.ts` — the window manager: opens a screen, draws it, routes button and slider events to game actions (`PanelKind`, `SCREENS`, `Panels.act`).
 - `menuFlow.ts` — pure rules for title / play / paused and what Esc does in each.
-- `components.ts` — reusable HTML builders (button, meter, slider, card, item, chip, section, stat).
+- `components.ts` — reusable HTML builders (button, meter, slider, card, item, chip, section, stat, tick, `textField` for names with live `nameFeedback`, `esc` for typed text).
 - `icons.ts` — the chunky SVG icon set and fish icons.
 - `screens/types.ts` — `ScreenCtx` and `ScreenView`.
 - `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts`, `icebox.ts` — the in-game windows. `notices.ts` has the Orders and Contracts tabs; `crew.ts` holds the "Smoke these" ticks and the spare-crates choice; `boat.ts` has the "Stay home in storms" tick and the broken state; `shipyard.ts` has the Fix buttons.
 - `screens/plot.ts` — the window for a plot (For sale, or the right building window); `coldstore.ts`, `smokehouse.ts`, `restaurant.ts`, `lighthouse.ts` — the four building windows. `screens/ending.ts` — the King Fish ending.
-- `screens/logbook.ts` — the fish book. `screens/ledger.ts` — the day report.
-- `screens/title.ts` — the title screen. `screens/pause.ts` — the pause menu.
+- `screens/logbook.ts` — the fish book (completion meters, sea zones with their rewards, one card per fish). `screens/ledger.ts` — the day report (with the away-earnings line).
+- `screens/title.ts` — the title screen (shows the harbour name). `screens/pause.ts` — the pause menu. `screens/away.ts` — the welcome-back window (money counting up) and the one-time captain tip.
+- `awayFlow.ts` — pure rules for what the player sees on coming back (welcome, tip or nothing) and the counter easing (tested). `fishParts.ts` — shared crate pieces: golden art and name, size and stars, what the size does to the price.
 - `screens/settings.ts` — volumes, mute, picture quality, reset game.
 - `screens/howto.ts` — the how-to-play page.
 - `styles/index.css` — pulls in the other style files. `tokens.css` — every colour, size and timing. `base.css` — base text and animations.
 - `styles/components.css` — buttons, meters, sliders, cards, rows. `hud.css` — the HUD. `window.css` — windows. `menu.css` — title, pause, settings, how-to-play.
-- Tests: `components.test.ts`, `menus.test.ts` (menu screens), `menuFlow.test.ts`, `textTycoon.test.ts`, `hudParts.test.ts`, `screens/tycoon.test.ts` (the tycoon windows); `src/events.test.ts` covers the event sounds, weather layers and plot targets.
+- Tests: `components.test.ts`, `menus.test.ts` (menu screens), `menuFlow.test.ts`, `textTycoon.test.ts`, `hudParts.test.ts`, `screens/tycoon.test.ts` (the tycoon windows); `return.test.ts` and `awayFlow.test.ts` (fish book, crate windows, names, welcome-back); `src/input.test.ts` (keys and text fields); `src/events.test.ts` covers the event sounds, weather layers and plot targets.
 
 **src/audio/** (all through `GameAudio` in `index.ts`: `getSettings`, `setVolume`, `setMuted`, `toggleMute`, `settings.subscribe`)
 - `index.ts` — `GameAudio`, the one entry point; per-frame `update`, the M key, sound-effect calls.

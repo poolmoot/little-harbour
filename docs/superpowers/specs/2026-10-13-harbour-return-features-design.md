@@ -49,3 +49,10 @@ Actions: `setHarbourName(state, name)`, `renameBoat(state, boatId, name)`, `appl
 Events: `awayEarnings {seconds, earned, perMinute}`, `goldenCaught {species}`, `bookReward {zone, kind: 'caught'|'stars', amount}`, `harbourRenamed {name}`, `boatRenamed {boatId, name}`.
 
 To switch on earnings while away, in `src/game.ts`: pass `Date.now()` as the third argument of `saveGame(...)`, and load with `loadGameWithAway(storage, rng, Date.now())` instead of `loadGame(storage, rng)`, then send its `events` through the event handler and show `away` on a welcome-back screen when `away.earned > 0`.
+
+## Screens: done
+
+- Away money is credited when the player presses Continue on the title (`Game.creditAway` in `src/game.ts`, using `applyAway`), not at load, so the title still shows the saved money and the HUD counter and the welcome-back window count up in front of the player. The save is stamped again at once so the same time can never be paid twice. The window is `screens/away.ts`; a one-time tip about captains (flag `harbour-away-tip-seen` in `localStorage`, outside the save) shows after more than 10 minutes away with nothing earned, nobody hired and captains unlocked. Rules for this are in `src/ui/awayFlow.ts`.
+- Fish book (`screens/logbook.ts`), crate sizes / stars / golden in the HUD slots, market, ice box, cold store, smokehouse and restaurant (`src/ui/fishParts.ts`), events (`src/events.ts`), names (`textField` in `components.ts`; boat window and settings), day report line for `stats.away`.
+- Text fields own the keyboard (`keyBelongsToField` in `src/input.ts`); the M listener in `src/audio/` already ignores inputs, so audio was not touched.
+
