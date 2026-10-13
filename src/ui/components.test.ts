@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { button, card, freshMeter, item, meter, money, mult, stars } from './components';
+import { button, card, freshMeter, item, meter, money, mult, percent, slider, stars } from './components';
 
 describe('ui components', () => {
   it('formats money and multipliers', () => {
@@ -44,5 +44,27 @@ describe('ui components', () => {
     expect(card({ tone: 'blue', art: '', name: 'Sails', tag: 'New', foot: 'x' })).toContain('card-foot');
     expect(item({ title: 'Gull' })).not.toContain('item-sub');
     expect(item({ title: 'Gull', state: 'locked' })).toContain('locked');
+  });
+
+  it('draws a slider that reports its setting and shows a whole percent', () => {
+    const h = slider({ id: 'music', value: 0.5, label: 'Music' });
+    expect(h).toContain('type="range"');
+    expect(h).toContain('data-slider="music"');
+    expect(h).toContain('value="50"');
+    expect(h).toContain('--fill:50%');
+    expect(h).toContain('50%</span>');
+    expect(h).toContain('aria-label="Music"');
+  });
+
+  it('keeps slider values between 0 and 100', () => {
+    expect(percent(1.4)).toBe(100);
+    expect(percent(-2)).toBe(0);
+    expect(percent(0.334)).toBe(33);
+    expect(slider({ id: 'a', value: 9, label: 'A' })).toContain('value="100"');
+  });
+
+  it('dims a slider that is switched off', () => {
+    expect(slider({ id: 'a', value: 0.2, label: 'A', off: true })).toContain('dim');
+    expect(slider({ id: 'a', value: 0.2, label: 'A' })).not.toContain('dim');
   });
 });
