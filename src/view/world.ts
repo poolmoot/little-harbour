@@ -7,6 +7,9 @@ import { hullGeometry } from './hull';
 import { barrel, bake, bollard, bx, chimney, crateBox, cy, doorAt, fishGeo, flat, gableRoof, lampMat, mats, net, put, ropeCoil, signMesh, tBox, windowAt, windowMat } from './kit';
 import { buildNature, groundH, landPatch } from './nature';
 
+/** Planted beds on the quay as [x0, x1, z0, z1]. */
+const BEDS: [number, number, number, number][] = [[3.4, 9.4, 9.6, 13.4], [-9.4, -3.4, 9.6, 13.4]];
+
 export interface Rect {
   x0: number; x1: number; z0: number; z1: number;
 }
@@ -40,7 +43,7 @@ export class World {
       if (z < -8) return false;
       if (Math.abs(x) < 22.2 && z < 14.2) return false;
       return true;
-    });
+    }, BEDS);
     this.fireflies = new Fireflies(this.group, [...n.fireflies, [-1.85, 0, -4], [1.85, 0, -10.5], [-13, 0, 8.5], [13, 0, 9]], 5);
   }
 
@@ -57,6 +60,13 @@ export class World {
     // flagstone avenue from the pier to the green, and a worn forecourt in front of each building
     tBox(5.2, 0.03, 14, M.lip, 2, 0, 0.012, 7, s).castShadow = false;
     for (const [bx0, bz0, bw, bd] of [[-8, 4.6, 6, 3.2], [-15, 3.6, 8, 5], [10.5, 3.6, 8.4, 5.4]] as const) tBox(bw, 0.02, bd, M.lip, 2, bx0, 0.01, bz0 + 1.5, s).castShadow = false;
+    // planted beds on the quay: a stone surround, a lawn, and a tree trunk to walk around
+    for (const [x0, x1, z0, z1] of BEDS) {
+      const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+      tBox(x1 - x0 + 0.5, 0.05, z1 - z0 + 0.5, M.lip, 2, cx, 0.02, cz, s).castShadow = false;
+      tBox(x1 - x0, 0.05, z1 - z0, M.grass, 3, cx, 0.045, cz, s).castShadow = false;
+      this.solid({ x0: cx - 0.3, x1: cx + 0.3, z0: cz - 0.3, z1: cz + 0.3 });
+    }
     // retaining wall between quay and the green verge
     tBox(L.quayMaxX - L.quayMinX, 0.5, 0.35, M.wall, 1.6, 0, 0.1, L.quayMaxZ + 0.15, s);
     tBox(L.quayMaxX - L.quayMinX + 0.3, 0.1, 0.55, M.lip, 2, 0, 0.38, L.quayMaxZ + 0.15, s);

@@ -43,7 +43,7 @@ function cached(key: string, f: () => THREE.CanvasTexture): THREE.CanvasTexture 
 }
 
 /** Rounded stones in staggered rows. 1 tile ~ 2 m. */
-export function stones(key: string, palette: number[][], rows = 8, per = 5, grout = [92, 84, 72]): THREE.CanvasTexture {
+export function stones(key: string, palette: number[][], rows = 8, per = 5, grout = [92, 84, 72], vary = 16): THREE.CanvasTexture {
   return cached(key, () => make(512, (g, s) => {
     const r = rng(key.length * 77 + rows);
     g.fillStyle = `rgb(${grout.join(',')})`;
@@ -58,7 +58,7 @@ export function stones(key: string, palette: number[][], rows = 8, per = 5, grou
         const x = i * w + off + (r() - 0.5) * 4, y = row * rh + (r() - 0.5) * 2;
         const sw = w - 5 - r() * 4, sh = rh - 4 - r() * 3;
         for (const ox of [0, s, -s]) {
-          g.fillStyle = jitter(base, r, 16);
+          g.fillStyle = jitter(base, r, vary);
           g.beginPath();
           g.roundRect(x + 2 + ox, y + 2, sw, sh, 7);
           g.fill();
@@ -72,7 +72,7 @@ export function stones(key: string, palette: number[][], rows = 8, per = 5, grou
     speckle(g, s, r, 2600);
   }));
 }
-export const cobble = () => stones('cobble', [[212, 200, 172], [196, 184, 156], [222, 211, 184], [184, 176, 156], [205, 190, 160]], 8, 5);
+export const cobble = () => stones('cobble', [[208, 197, 171], [201, 190, 164], [214, 203, 177], [197, 187, 163], [205, 193, 166]], 8, 5, [163, 152, 131], 7);
 export const stoneWall = () => stones('stonewall', [[150, 150, 146], [168, 164, 156], [138, 140, 138], [160, 150, 138]], 6, 3, [96, 92, 88]);
 export const quayLip = () => stones('lip', [[226, 218, 198], [210, 202, 182]], 4, 2, [150, 142, 124]);
 

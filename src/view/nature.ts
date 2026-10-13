@@ -43,7 +43,10 @@ export function landPatch(map: THREE.Texture, x0: number, x1: number, z0: number
 }
 
 /** Instanced wind-swayed grass clumps, flower patches, trees and rocks. */
-export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: number) => boolean): { fireflies: [number, number, number][] } {
+export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: number) => boolean, beds: [number, number, number, number][] = []): { fireflies: [number, number, number][] } {
+  // Planted beds on the quay sit just above the paving instead of following the terrain.
+  const inBed = (x: number, z: number) => beds.some((b) => x > b[0] && x < b[1] && z > b[2] && z < b[3]);
+  const gy = (x: number, z: number) => (inBed(x, z) ? 0.07 : groundH(x, z));
   const r = rand(42);
   const dummy = new THREE.Object3D();
   const col = new THREE.Color();
@@ -71,10 +74,14 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   const tryAdd = (x: number, z: number) => { if (onGround(x, z)) spots.push([x, z]); };
   for (let i = 0; i < 7000; i++) tryAdd((r() - 0.5) * 100, 14.4 + Math.pow(r(), 1.5) * 38);
   for (let i = 0; i < 2600; i++) tryAdd((r() < 0.5 ? -1 : 1) * (22.3 + r() * 24), -7.6 + r() * 21.5);
+  for (const b of beds) {
+    const n = Math.round((b[1] - b[0]) * (b[3] - b[2]) * 7);
+    for (let i = 0; i < n; i++) spots.push([b[0] + 0.15 + r() * (b[1] - b[0] - 0.3), b[2] + 0.15 + r() * (b[3] - b[2] - 0.3)]);
+  }
   const grass = new THREE.InstancedMesh(gg, gm, spots.length);
   const pal = [0x3f8f3a, 0x5aa83e, 0x78bf45, 0x92cf55, 0x4a9a52];
   spots.forEach(([x, z], i) => {
-    dummy.position.set(x, groundH(x, z) - 0.02, z);
+    dummy.position.set(x, gy(x, z) - 0.02, z);
     dummy.rotation.set(0, r() * 6.28, 0);
     dummy.scale.set(1, 0.7 + r() * 1.0, 1).multiplyScalar(0.9 + r() * 0.8);
     dummy.updateMatrix();
@@ -93,6 +100,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
     const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
     if (onGround(x, z)) fl.push([x, z, r()]);
   }
+  for (const b of beds) for (let i = 0; i < 40; i++) fl.push([b[0] + 0.3 + r() * (b[1] - b[0] - 0.6), b[2] + 0.3 + r() * (b[3] - b[2] - 0.6), r()]);
   const stemG = new THREE.CylinderGeometry(0.012, 0.016, 0.5, 4); stemG.translate(0, 0.25, 0);
   const headG = new THREE.SphereGeometry(0.1, 7, 5); headG.scale(1, 0.55, 1); headG.translate(0, 0.52, 0);
   const stemM = new THREE.MeshStandardMaterial({ color: 0x4e9a45, roughness: 1 });
@@ -102,7 +110,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   const heads = new THREE.InstancedMesh(headG, headM, fl.length);
   const fpal = [0xffe14a, 0xffffff, 0xff7aa8, 0xb48cf0, 0xff9a3c, 0xfff2b0];
   fl.forEach(([x, z, k], i) => {
-    dummy.position.set(x, groundH(x, z), z);
+    dummy.position.set(x, gy(x, z), z);
     dummy.rotation.set(0, r() * 6.28, 0);
     dummy.scale.setScalar(0.75 + r() * 0.7);
     dummy.updateMatrix();
@@ -114,6 +122,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
 
   // --- trees (instanced trunks + foliage blobs)
   const trees: [number, number, number][] = [[-18, 17, 1.2], [-12, 20, 1], [-5, 18.5, 1.3], [3, 21, 1], [9, 17.5, 1.2], [16, 19, 1.1], [22.6, 16, 1.3], [-25, 12, 1.2], [27, 10, 1.2], [-8, 26, 1.5], [14, 25, 1.4], [-21, 25, 1.3], [-33, 4, 1.4], [34, 2, 1.3], [0, 31, 1.6], [-30, 20, 1.5], [30, 22, 1.5], [24, 30, 1.7], [-12, 33, 1.7]];
+  for (const b of beds) trees.push([(b[0] + b[1]) / 2, (b[2] + b[3]) / 2, 0.8]);
   const blobG = new THREE.IcosahedronGeometry(1, 2);
   {
     const p = blobG.attributes.position as THREE.BufferAttribute;
@@ -138,7 +147,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   const fpal2 = [0x3f9a4c, 0x4aa84a, 0x5fb44e, 0x6cc058, 0x3c8f55];
   let bi = 0;
   trees.forEach(([x, z, s], i) => {
-    const y = groundH(x, z);
+    const y = gy(x, z);
     dummy.position.set(x, y, z); dummy.rotation.set(0, r() * 6, 0); dummy.scale.set(s, 1.9 * s, s); dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix);
     const base = fpal2[i % fpal2.length];
@@ -174,7 +183,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   const rk = new THREE.InstancedMesh(rockG, rockM, rocks.length);
   const rpal = [0x8a9096, 0x7d8387, 0x9a9890, 0x6f767c];
   rocks.forEach(([x, z, s], i) => {
-    dummy.position.set(x, Math.max(groundH(x, z), -0.5) + s * 0.25, z);
+    dummy.position.set(x, Math.max(gy(x, z), -0.5) + s * 0.25, z);
     dummy.rotation.set(r(), r() * 6, r() * 0.4);
     dummy.scale.set(s * 1.2, s, s);
     dummy.updateMatrix();
