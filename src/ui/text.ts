@@ -2,10 +2,12 @@
 // edited in one place. Keep it simple: short, common words, short sentences, no sailing or business
 // jargon. Only the words change here; code names and save keys stay as they are.
 import {
-  DEMAND_DROPS, GEAR_MULT, HOLD_SIZES, ICE_CAPACITY, LUCKY_MULT, SAILS_MULT, SWIFT_MULT, THRIFTY_MULT, ZONES, ZONE_IDS,
+  BIG_CATCH_EXTRA, BUILDINGS, COLD_CAPACITY, DEMAND_DROPS, GEAR_MULT, HOLD_SIZES, ICE_CAPACITY, LUCKY_MULT, MARKET_DAY_MULT, REPAIR_SECONDS,
+  RESTAURANT_CAPACITY, RESTAURANT_MIN_FRESH, RESTAURANT_MULT, RESTAURANT_VARIETY_BONUS, SAILS_MULT, SMOKED_MULT, SMOKE_RACKS, SMOKE_SECONDS,
+  STORM_CATCH_MULT, STORM_DAMAGE_CHANCE, SWIFT_MULT, THRIFTY_MULT, WEATHER_TRIP_MULT, ZONES, ZONE_IDS,
 } from '../sim/config';
-import type { Phase, Species, Track, Trait, UpgradeId, ZoneId } from '../sim/config';
-import type { Boat } from '../sim/state';
+import type { BuildingId, Phase, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from '../sim/config';
+import type { Boat, Contract, Special } from '../sim/state';
 
 const pct = (x: number): number => Math.round(x * 100);
 const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;
@@ -197,3 +199,165 @@ export function pickLine(role: Role, c: LineContext, n: number): string {
   }
   return lines[n % lines.length];
 }
+
+
+// ---- goals ------------------------------------------------------------------------------------
+// One short line per goal, keyed by the goal id in sim/config.ts (GOALS). `have` and `need` are shown by the HUD for goals with a count.
+
+export const GOAL_TEXT: Record<string, string> = {
+  send: 'Send your boat out to sea. Walk to the boat and press E.',
+  unload: 'Wait for the boat to come back, then unload it at the pier.',
+  sell: 'Carry the crates to the market and sell them.',
+  pier: 'Catch a fish from the end of the pier.',
+  space: 'Buy more crate space for your boat at the shipyard.',
+  order: 'Fill an order from the notice board.',
+  rank1: 'Earn enough money to become a Boat Owner.',
+  worker: 'Hire a worker at the inn. Workers carry crates for you.',
+  boat2: 'Buy a second boat.',
+  reef: 'Send a boat to the Coral Reef.',
+  cold: 'Build the cold store. It keeps fish fresh for a long time.',
+  smoke: 'Build the smokehouse. Smoked fish sells for more.',
+  rank2: 'Become a Small Company.',
+  captain: 'Hire a captain. Captains sail your boat for you.',
+  reeffish: 'Catch every kind of fish at the Coral Reef.',
+  contract: 'Finish a contract from the notice board.',
+  restaurant: 'Build the restaurant. It pays double for fresh fish.',
+  sell100: 'Sell 100 crates of fish.',
+  rank3: 'Become a Fleet Boss.',
+  storm: 'Sail to the Open Sea or the Deep Sea on a stormy day, and get home safely.',
+  level2: 'Make any building bigger.',
+  seafish: 'Catch every kind of fish in the Open Sea.',
+  rank4: 'Become the Harbour Boss.',
+  lighthouse: 'Build the lighthouse. Then your boats can sail at night.',
+  king: 'Catch the King Fish. Sail to the Deep Sea at night.',
+};
+export const GOAL_LABEL = { title: 'Goal', reward: 'Reward', done: 'All goals done!', all: 'You finished every goal.' };
+export const goalCount = (have: number, need: number): string => `${have} of ${need}`;
+
+// ---- buildings ----------------------------------------------------------------------------------
+
+export const PLOT_SIGN = 'For sale';
+
+export const BUILDING_NAME: Record<BuildingId, string> = { coldstore: 'Cold store', smokehouse: 'Smokehouse', restaurant: 'Restaurant', lighthouse: 'Lighthouse' };
+
+export const BUILDING_DESC: Record<BuildingId, string> = {
+  coldstore: 'Keeps fish fresh for a very long time. Fish lose all their freshness in 20 minutes here, not 2 and a half. The ice box stays too.',
+  smokehouse: `Turns a fresh crate into a smoked crate. Smoked fish sells for ${SMOKED_MULT} times the price, and it never goes bad.`,
+  restaurant: `Buys fresh fish (at least ${RESTAURANT_MIN_FRESH}% fresh) for ${RESTAURANT_MULT} times the price. It does not lower the market price. It pays ${Math.round(RESTAURANT_VARIETY_BONUS * 100)}% more for each different fish it was served today.`,
+  lighthouse: 'Lights the way, so your boats can sail at night. You need it to find the King Fish.',
+};
+
+/** What each level gives, for the building panel. Index = level - 1. */
+export const BUILDING_LEVELS: Record<BuildingId, string[]> = {
+  coldstore: [1, 2, 3].map((l) => `Holds ${crates(COLD_CAPACITY[l])}.`),
+  smokehouse: [1, 2, 3].map((l) => `${plural(SMOKE_RACKS[l], 'rack')}. ${SMOKE_SECONDS[l]} seconds for each crate.`),
+  restaurant: [1, 2, 3].map((l) => `Buys ${crates(RESTAURANT_CAPACITY[l])} a day.`),
+  lighthouse: ['Boats can sail at night.'],
+};
+
+export const buildingNeeds = (id: BuildingId): string => needsRank(BUILDINGS[id].rank);
+export const BUILDING_LABEL = {
+  build: 'Build',
+  upgrade: 'Make bigger',
+  level: (l: number, max: number): string => (max === 1 ? 'Built' : `Level ${l} of ${max}`),
+  empty: 'An empty plot. Walk up and press E.',
+  prompt: (id: BuildingId, level: number): string => (level === 0 ? `${BUILDING_NAME[id]}: build here` : `${BUILDING_NAME[id]}: open`),
+  racksFree: (free: number, total: number): string => `${free} of ${plural(total, 'rack')} free`,
+  ready: (n: number): string => `${n} ready to collect`,
+  coldFull: 'The cold store is full.',
+  served: (n: number, max: number): string => `Served today: ${n} of ${max}`,
+  smokeTitle: 'Smoke these',
+  smokeNote: 'Tick the fish your workers should put in the smokehouse.',
+  workerRules: 'Workers go to the restaurant first, then the smokehouse, then the market or the storage.',
+};
+
+// ---- weather and special days ----------------------------------------------------------------
+
+export const WEATHER: Record<WeatherId, { name: string; desc: string }> = {
+  calm: { name: 'Calm', desc: 'A quiet day. Nothing special.' },
+  wind: { name: 'Good wind', desc: `Trips are ${pct(1 - WEATHER_TRIP_MULT.wind)}% shorter.` },
+  fog: { name: 'Fog', desc: `Trips are ${pct(WEATHER_TRIP_MULT.fog - 1)}% longer.` },
+  storm: { name: 'Storm', desc: `Trips to the Open Sea and the Deep Sea bring ${pct(STORM_CATCH_MULT - 1)}% more crates, but a boat may come home broken with no fish (about ${pct(STORM_DAMAGE_CHANCE)} in 100). The Shallow Water and the Coral Reef are safe.` },
+};
+export const WEATHER_LABEL = { today: 'Today', tomorrow: 'Tomorrow', stayHome: 'Stay home in storms', stayHomeNote: 'Tick this to keep the boat in the harbour when a storm comes. Only the Open Sea and the Deep Sea are risky.' };
+
+export function specialName(sp: Special): string {
+  if (!sp) return 'Nothing special';
+  return sp.kind === 'market' ? 'Market day' : `Big catch day: ${ZONE_NAME[sp.zone]}`;
+}
+export function specialDesc(sp: Special): string {
+  if (!sp) return '';
+  return sp.kind === 'market'
+    ? `Fish sells for ${MARKET_DAY_MULT} times the price at the market.`
+    : `Every trip to the ${ZONE_NAME[sp.zone]} brings ${BIG_CATCH_EXTRA} more crates.`;
+}
+
+export const REPAIR = {
+  broken: 'Broken. This boat cannot sail until it is fixed.',
+  fix: (cost: number): string => `Fix the boat ($${cost})`,
+  fixing: (secs: number): string => `Being fixed… ${secs}s left`,
+  note: `The boat builder needs ${REPAIR_SECONDS} seconds to fix a boat.`,
+};
+
+// ---- contracts ----------------------------------------------------------------------------------
+
+export const CONTRACT_LABEL = {
+  tab: 'Contracts',
+  orders: 'Orders',
+  choose: 'Choose one contract',
+  accept: 'Take this contract',
+  none: 'No contracts right now. Check again tomorrow.',
+  locked: 'Contracts open when you are a Boat Owner.',
+  active: 'Your contract',
+  note: 'Crates count when you sell them at the market. You get the reward when the whole contract is done.',
+};
+
+export function contractText(c: Contract): string {
+  const fish = `${FISH_NAME[c.species]}${c.smoked ? ' (smoked)' : ''}`;
+  return `Bring ${crates(c.qty)} of ${fish} to the market in ${plural(c.days, 'day')}. Reward: $${c.reward}.`;
+}
+export const contractProgress = (c: Contract): string => `${c.filled} of ${c.qty} sold`;
+export const contractTimeLeft = (c: Contract, now: number, daySeconds: number): string => {
+  const days = Math.max(0, (c.deadline - now) / daySeconds);
+  return days >= 1 ? `${plural(Math.ceil(days), 'day')} left` : 'Less than a day left';
+};
+
+// ---- the King Fish and the ending ---------------------------------------------------------------------
+
+export const KING = {
+  found: 'You found the King Fish! Carry it to the inn.',
+  carrying: 'You are carrying the King Fish. Take it to the inn!',
+  deliver: 'Show the King Fish to everyone',
+  noSell: 'The King Fish is not for sale.',
+  wall: 'The King Fish hangs on the wall of the inn.',
+};
+export const ENDING = {
+  title: 'The King Fish!',
+  story: 'You carry the great golden fish into the inn. Everybody stops talking. Bram takes his hat off. Nobody in the harbour has ever seen a fish like this. They will tell the story for years. You are the best fisher in the harbour.',
+  days: (n: number): string => `Days played: ${n}`,
+  earned: (n: number): string => `Money earned: $${n.toLocaleString('en')}`,
+  fish: (n: number): string => `Fish caught: ${n.toLocaleString('en')}`,
+  boats: (n: number): string => `Boats owned: ${n}`,
+  keepPlaying: 'Keep playing',
+};
+
+// ---- money per minute and toasts for the new events ------------------------------------------------------
+
+export const perMinute = (n: number): string => `$${Math.round(n).toLocaleString('en')} a minute`;
+
+export const sayTycoon = {
+  goalDone: (reward: number): string => `Goal done! Reward +$${reward}`,
+  built: (id: BuildingId, level: number): string => (level === 1 ? `The ${BUILDING_NAME[id].toLowerCase()} is built!` : `The ${BUILDING_NAME[id].toLowerCase()} is now bigger.`),
+  smoking: 'A crate is in the smokehouse.',
+  smoked: 'A crate of smoked fish is ready.',
+  served: (s: Species, price: number): string => `The restaurant bought ${FISH_NAME[s]} for $${price}.`,
+  newDay: (weather: WeatherId, special: Special, tomorrow: WeatherId, tomorrowSpecial: Special): string =>
+    `Today: ${WEATHER[weather].name}${special ? `, ${specialName(special)}` : ''}. Tomorrow: ${WEATHER[tomorrow].name}${tomorrowSpecial ? `, ${specialName(tomorrowSpecial)}` : ''}.`,
+  damaged: (name: string): string => `${name} came home broken. Fix it at the shipyard.`,
+  repairing: (name: string): string => `${name} is being fixed.`,
+  repaired: (name: string): string => `${name} is as good as new.`,
+  offered: 'New contracts are on the notice board.',
+  accepted: 'You took a contract.',
+  contractDone: (reward: number): string => `Contract done! Reward +$${reward}`,
+  contractFailed: 'You ran out of time. The contract is over.',
+};
