@@ -394,8 +394,8 @@ export const FISH_BOOK = {
 export const CRATE_TEXT = {
   golden: 'Golden',
   goldenPays: (mult: number): string => `Golden: pays ${mult} times as much`,
-  bigger: (pct: number): string => `pays ${pct}% more for its size`,
-  smaller: (pct: number): string => `pays ${pct}% less for its size`,
+  bigger: (pct: number): string => `${pct}% more for its size`,
+  smaller: (pct: number): string => `${pct}% less for its size`,
   normalSize: 'A normal size, so a normal price',
 };
 

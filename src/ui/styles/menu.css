@@ -20,4 +20,4 @@
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; margin-bottom: 4px; }
 .keys .caps { display: flex; gap: 4px; }
 .howto-about { font-size: var(--fs-md); line-height: 1.35; margin-bottom: 6px; }
-.menu-harbour { margin: -8px 0 12px; text-align: center; font-size: var(--fs-lg); color: var(--text); }
+.menu-harbour { margin: 0 0 12px; text-align: center; font-size: var(--fs-lg); color: var(--text); }

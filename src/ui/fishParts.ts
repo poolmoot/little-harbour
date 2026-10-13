@@ -32,7 +32,7 @@ export function priceEffect(c: Crate): string {
   const pct = Math.round((sizeMult(c.species, crateSize(c)) - 1) * 100);
   const size = pct > 0 ? CRATE_TEXT.bigger(pct) : pct < 0 ? CRATE_TEXT.smaller(-pct) : '';
   if (c.golden) return `${CRATE_TEXT.goldenPays(GOLDEN_MULT)}${size ? `, and ${size}` : ''}.`;
-  return size ? `${size[0].toUpperCase()}${size.slice(1)}.` : `${CRATE_TEXT.normalSize}.`;
+  return size ? `Pays ${size}.` : `${CRATE_TEXT.normalSize}.`;
 }
 
 /** The row look for a crate: golden rows are gold. */
