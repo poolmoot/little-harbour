@@ -1,5 +1,5 @@
 import {
-  DEMAND_DROPS, DEMAND_MIN, DEMAND_RECOVER, DEMAND_RECOVER_EVERY, FISH, ORDER_CRATE_MULT, SPECIES,
+  DEMAND_DROPS, DEMAND_MIN, DEMAND_RECOVER, DEMAND_RECOVER_EVERY, FISH_PRICE, ORDER_CRATE_MULT, SPECIES,
 } from './config';
 import type { Species } from './config';
 import { freshnessMultiplier, handCrates, isSpoiled, removeCrate } from './crates';
@@ -8,7 +8,7 @@ import { earnSale } from './ledger';
 import { creditOrder, matchingOrder } from './orders';
 
 export function unitPrice(state: GameState, species: Species, freshness: number): number {
-  return FISH[species].price * freshnessMultiplier(freshness) * state.demand[species];
+  return FISH_PRICE[species] * freshnessMultiplier(freshness) * state.demand[species];
 }
 
 /** What a crate would fetch right now (including the double for a matching order). */

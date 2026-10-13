@@ -42,7 +42,7 @@ Hold, Gear and Sails cost more on a higher hull tier.
 | Shallows | 25 s | Rowboat | as MVP |
 | Reef | 50 s | Sloop | as MVP |
 | Open Sea | 80 s | Cutter | Cod 60 (50), Tuna 110 (35), Swordfish 220 (15) |
-| Deep | 120 s | Trawler | Anglerfish 300 (50), Giant squid 480 (35), Golden sturgeon 1200 (15) |
+| Deep | 120 s | Trawler | Anglerfish 160 (50), Giant squid 260 (35), Golden sturgeon 800 (15) |
 
 "Rare" for the Gear multiplier means the lowest-weight species in a zone.
 Orders may ask for any species the player's fleet can reach.
@@ -97,7 +97,7 @@ bar. A rank-up shows a banner.
 ## End-of-day ledger
 
 The 06:00 summary becomes a ledger: income by fish, bonus from orders,
-wages, money spent on upgrades, crates spoiled, net profit for the day, the
+wages, trip costs, money spent on upgrades, crates spoiled, net profit for the day, the
 best single sale, and the rank progress.
 
 ## Pacing
@@ -114,13 +114,16 @@ table by the builder.
 ### Costs (tuned)
 
 Tuned against the scripted player (`src/sim/bot.ts`, run by `pacing.test.ts`).
-Median time to rank over six seeds: Boat Owner 3.9 min, Skipper & Co 18.9,
-Fleet Master 39.6, Harbour Master 69.9 (targets 5 / 15 / 35 / 70). Fish
-prices are unchanged from the MVP and this spec's zone table.
+Median time to rank over eight seeds: Boat Owner 3.8 min, Skipper & Co 18.9,
+Fleet Master 39.1, Harbour Master 69.4 (targets 5 / 15 / 35 / 70). Fish
+prices are unchanged from the MVP except the Deep zone, which was too rich
+(an average Deep fish paid about 5 times an Open Sea fish) and is now about
+2.7 times. The Trawler was lowered from 10,000 to 4,500: at the old price the
+scripted player never bought one before the top rank; now it buys three.
 
 | Item | Cost |
 |---|---|
-| Hull: Sloop / Cutter / Trawler | 400 / 2,500 / 10,000 |
+| Hull: Sloop / Cutter / Trawler | 400 / 2,500 / 4,500 |
 | Hold II / III / IV (rowboat prices) | 300 / 450 / 1,200 |
 | Gear I / II (rowboat prices) | 350 / 950 |
 | Sails I / II (rowboat prices) | 350 / 800 |
@@ -130,6 +133,15 @@ prices are unchanged from the MVP and this spec's zone table.
 | Market stall I / II | 2,000 / 9,000 |
 | Captain wage (Thrifty) / dockhand wage, per day | 40 (28) / 25 |
 | Hiring fee | none |
+| Trip cost (food and supplies, paid when a boat leaves): Shallows / Reef / Open Sea / Deep | 3 / 10 / 30 / 80 |
+| Money in a new game | 10 |
+
+Trip costs are paid by the player when a boat leaves. If there is not enough
+money the boat stays in harbour and the player is told so. A captained boat
+pays automatically and simply waits at its spot until it can pay. Pier
+fishing is free, so the player can never get stuck. The scripted player
+sends each boat to the best zone it can afford and keeps enough money back
+to pay the next trips before it shops.
 
 Per-boat upgrades can be bought while the boat is at sea or in harbour, so a
 captained boat, which is almost never idle at the berth, can still be upgraded.

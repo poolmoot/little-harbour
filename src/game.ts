@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { GameAudio } from './audio';
 import { Input } from './input';
-import { BOAT_RANGE, CRATE_RANGE, FISH, HOUR_SECONDS, INTERACT_RANGE, LAYOUT, RANK_NAMES, RANK_UNLOCKS, START_HOUR, UPGRADES, ZONES } from './sim/config';
+import { BOAT_RANGE, CRATE_RANGE, HOUR_SECONDS, INTERACT_RANGE, LAYOUT, START_HOUR } from './sim/config';
 import type { Track, Trait, ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
@@ -13,6 +13,7 @@ import { Hud } from './ui/hud';
 import type { Prompt } from './ui/hud';
 import { Panels } from './ui/panels';
 import { injectStyles } from './ui/styles';
+import { RANK_NAME, denyText, say } from './ui/text';
 import { BoatsView } from './view/boatsView';
 import { StaffView } from './view/staffView';
 import { CameraRig } from './view/cameraRig';
@@ -41,7 +42,6 @@ const STATIONS: Record<Exclude<TargetKind, 'crate' | 'boat'>, { x: number; z: nu
   fishing: { x: LAYOUT.fishingSpot.x, z: LAYOUT.fishingSpot.z, range: 3.2 },
 };
 const SAVE_EVERY = 10;
-const NOUN = (n: number) => `${n} crate${n === 1 ? '' : 's'}`;
 
 export class Game {
   private state: GameState;
@@ -128,9 +128,8 @@ export class Game {
       if (!this.resetting) this.save();
     });
 
-    if (!loaded) this.hud.toast('Welcome to the harbour! Walk with WASD, press E near things.', 'info');
-    else this.hud.toast('Welcome back. Your boats are waiting in the harbour.', 'info');
-    if (loaded && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast('A boat has a catch ready to unload.', 'good');
+    this.hud.toast(loaded ? say.welcomeBack : say.welcome, 'info');
+    if (loaded && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast(say.catchWaiting, 'good');
     if (import.meta.env.DEV) this.installDebug();
   }
 
@@ -277,17 +276,17 @@ export class Game {
         case 'boatDispatched':
           if (e.auto) break;
           a.click();
-          h.toast(`The boat heads out to the ${ZONES[e.zone].name}.`);
+          h.toast(say.sailed(e.zone, e.cost));
           break;
         case 'boatReturned':
           if (e.auto) break;
           a.bell();
-          h.toast(`A boat is back with ${NOUN(e.count)}! Unload it at the pier.`, 'good');
+          h.toast(say.returned(e.count), 'good');
           break;
         case 'boatUnloaded':
           if (e.auto) break;
           a.pop();
-          h.toast(`Unloaded ${NOUN(e.count)} onto the dock. They start spoiling now!`);
+          h.toast(say.unloaded(e.count));
           break;
         case 'cratePicked': a.pop(); break;
         case 'crateStored':
@@ -300,64 +299,64 @@ export class Game {
           break;
         case 'crateSpoiled':
           a.spoil();
-          h.toast(`A crate of ${FISH[e.species].name} has spoiled.`, 'warn');
+          h.toast(say.spoiled(e.species), 'warn');
           break;
         case 'crateDiscarded':
-          h.toast(`Threw out a spoiled crate of ${FISH[e.species].name}.`, 'warn');
+          h.toast(say.discarded(e.species), 'warn');
           break;
         case 'orderPosted':
-          h.toast('A new order is up on the notice board.');
+          h.toast(say.orderPosted);
           break;
         case 'orderFilled':
           this.recentFilled = this.now;
-          this.popAt(LAYOUT.noticeBoard.x, 2.6, LAYOUT.noticeBoard.z, `Bonus +$${e.bonus}`);
+          this.popAt(LAYOUT.noticeBoard.x, 2.6, LAYOUT.noticeBoard.z, say.bonusPop(e.bonus));
           a.coin();
-          h.toast(`${e.name}'s order is complete! Bonus +$${e.bonus}`, 'good');
+          h.toast(say.orderDone(e.name, e.bonus), 'good');
           break;
         case 'orderMissed':
           this.recentMissed = this.now;
           a.deny();
-          h.toast(`${e.name}'s order expired.`, 'warn');
+          h.toast(say.orderLate(e.name), 'warn');
           break;
         case 'castStarted': a.cast(); break;
         case 'biteStarted': a.splash(); break;
         case 'fishLanded':
           a.pop();
-          h.toast(`You landed a ${FISH[e.species].name}!`, 'good');
+          h.toast(say.caught(e.species), 'good');
           break;
         case 'fishLost':
           if (e.reason === 'cancelled') break;
           a.deny();
-          h.toast(e.reason === 'early' ? 'Too early, the fish got away.' : e.reason === 'late' ? 'Too slow, it got away.' : 'Your hands were full.', 'warn');
+          h.toast(e.reason === 'early' ? say.lostEarly : e.reason === 'late' ? say.lostLate : say.lostFull, 'warn');
           break;
         case 'upgradeBought':
           a.coin();
-          h.toast(`Bought: ${UPGRADES[e.id].name}.`, 'good');
+          h.toast(say.bought(e.id), 'good');
           saveNow = true;
           break;
         case 'boatUpgraded':
           a.coin();
-          h.toast(`${this.state.boats.find((b) => b.id === e.boatId)?.name ?? 'Boat'}: upgraded.`, 'good');
+          h.toast(say.boatBetter(this.state.boats.find((b) => b.id === e.boatId)?.name ?? 'The boat'), 'good');
           saveNow = true;
           break;
         case 'boatBought':
           a.coin();
-          h.toast('A new rowboat joins the fleet!', 'good');
+          h.toast(say.boatBought, 'good');
           saveNow = true;
           break;
-        case 'hired': a.pop(); h.toast(`${e.name} is hired as ${e.role === 'captain' ? 'a captain' : 'a dockhand'}.`, 'good'); saveNow = true; break;
-        case 'fired': h.toast(`${e.name} was let go.`); saveNow = true; break;
+        case 'hired': a.pop(); h.toast(say.hired(e.name, e.role), 'good'); saveNow = true; break;
+        case 'fired': h.toast(say.fired(e.name)); saveNow = true; break;
         case 'wagesPaid':
-          if (e.unpaid > 0) h.toast(`Could not pay ${e.unpaid} crew member${e.unpaid === 1 ? '' : 's'}: they sit today out.`, 'warn');
+          if (e.unpaid > 0) h.toast(say.unpaid(e.unpaid), 'warn');
           break;
         case 'rankUp':
           a.chime();
-          h.banner(RANK_NAMES[e.rank], `Rank up! Unlocked: ${RANK_UNLOCKS[e.rank]}`);
+          h.banner(RANK_NAME[e.rank], say.rankUp(e.rank));
           saveNow = true;
           break;
         case 'phaseChanged':
           if (e.phase === 'dawn') a.chime();
-          if (e.phase === 'night') h.toast('Night falls. Boats cannot sail until dawn.');
+          if (e.phase === 'night') h.toast(say.nightFalls);
           break;
         case 'dayEnded':
           this.panels.showSummary(e.day, e.stats);
@@ -365,14 +364,14 @@ export class Game {
           break;
         case 'denied':
           a.deny();
-          h.toast(e.reason, 'warn');
+          h.toast(denyText(e.reason, e.needRank), 'warn');
           break;
       }
     }
     if (soldCount > 0) {
       this.popAt(LAYOUT.market.x, 2.9, LAYOUT.market.z + 1.2, `+$${soldTotal}`);
       a.coin();
-      h.toast(`Sold ${NOUN(soldCount)} for $${soldTotal}.`, 'good');
+      h.toast(say.sold(soldCount, soldTotal), 'good');
     }
     if (this.staffSold > 0 && this.now - this.lastStaffPop > 1.2) {
       this.popAt(LAYOUT.market.x, 2.9, LAYOUT.market.z + 1.2, `+$${this.staffSold}`);
@@ -418,25 +417,25 @@ export class Game {
       case 'crate': {
         const c = s.crates.find((x) => x.id === t.id);
         if (!c) return null;
-        if (c.freshness <= 0) return { text: `Throw out spoiled ${FISH[c.species].name}`, key: true };
-        if (handCrates(s).length >= carryCapacity(s)) return { text: 'Hands full', key: false, dim: true };
-        return { text: `Pick up ${FISH[c.species].name} crate (${Math.round(c.freshness)}% fresh)`, key: true };
+        if (c.freshness <= 0) return { text: say.throwAway(c.species), key: true };
+        if (handCrates(s).length >= carryCapacity(s)) return { text: say.handsFull, key: false, dim: true };
+        return { text: say.pickUp(c.species, Math.round(c.freshness)), key: true };
       }
       case 'boat': {
         const b = s.boats.find((x) => x.id === t.id);
         if (!b) return null;
-        if (b.status === 'returned' && !b.captain) return { text: `Unload ${b.name} (${NOUN(b.catch.length)})`, key: true, hot: true };
-        return { text: `${b.name}: manage boat${b.status === 'out' ? ` (at sea, ${Math.max(0, Math.ceil(b.tripTime - b.progress))}s)` : ''}`, key: true };
+        if (b.status === 'returned' && !b.captain) return { text: say.unload(b.name, b.catch.length), key: true, hot: true };
+        return { text: say.openBoat(b.name, b.status === 'out' ? Math.max(0, Math.ceil(b.tripTime - b.progress)) : null), key: true };
       }
-      case 'market': return { text: 'Sell fish at the market', key: true };
-      case 'shipyard': return { text: 'Visit the shipyard', key: true };
-      case 'board': return { text: 'Read the notice board', key: true };
-      case 'inn': return { text: 'Hire crew at the inn', key: true };
-      case 'icebox': return { text: s.upgrades.icebox ? 'Use the ice box' : 'Ice box (buy at the shipyard)', key: true };
+      case 'market': return { text: say.market, key: true };
+      case 'shipyard': return { text: say.shipyard, key: true };
+      case 'board': return { text: say.board, key: true };
+      case 'inn': return { text: say.inn, key: true };
+      case 'icebox': return { text: s.upgrades.icebox ? say.iceOwned : say.iceBuy, key: true };
       case 'fishing':
-        if (s.fishing.phase === 'idle') return { text: 'Cast your line', key: true };
-        if (s.fishing.phase === 'bite') return { text: 'HOOK IT NOW!', key: true, hot: true };
-        return { text: 'Wait for a bite…  (early reel loses it)', key: true, dim: true };
+        if (s.fishing.phase === 'idle') return { text: say.cast, key: true };
+        if (s.fishing.phase === 'bite') return { text: say.pullNow, key: true, hot: true };
+        return { text: say.waitBite, key: true, dim: true };
     }
   }
 

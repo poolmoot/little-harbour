@@ -18,7 +18,7 @@ export function serialize(state: GameState): string {
   return JSON.stringify(state);
 }
 
-/** Merge parsed data over a fresh state so missing fields (older saves) get defaults. v1 saves move their global Hold/Hull levels onto every boat. */
+/** Merge parsed data over a fresh state so missing fields (older saves) get defaults. v1 saves move their global Hold/Hull levels onto every boat; v2 saves get a zero trip-cost line (filled in by the merge above). */
 export function migrate(raw: unknown): GameState | null {
   if (!raw || typeof raw !== 'object') return null;
   const d = raw as Partial<GameState> & { upgrades?: Record<string, boolean> };

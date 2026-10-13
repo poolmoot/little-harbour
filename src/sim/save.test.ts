@@ -72,7 +72,7 @@ describe('migration from the MVP save', () => {
     };
     st.setItem('harbour-game-save', JSON.stringify(old));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(2);
+    expect(l.version).toBe(3);
     expect(l.money).toBe(777);
     expect(l.boats).toHaveLength(2);
     for (const b of l.boats) {

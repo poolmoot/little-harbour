@@ -1,5 +1,5 @@
 import {
-  FISH, ORDER_BONUS, ORDER_HOURS_MAX, ORDER_HOURS_MIN, ORDER_NAMES, ORDER_QTY_MAX, ORDER_QTY_MIN, ORDER_REFILL_DELAY,
+  FISH_PRICE, ORDER_BONUS, ORDER_HOURS_MAX, ORDER_HOURS_MIN, ORDER_NAMES, ORDER_QTY_MAX, ORDER_QTY_MIN, ORDER_REFILL_DELAY,
   ORDER_SLOTS, HOUR_SECONDS, ZONES, ZONE_IDS,
 } from './config';
 import type { Species } from './config';
@@ -32,7 +32,7 @@ export function spawnOrder(state: GameState, rng: Rng): Ev[] {
     filled: 0,
     deadline: state.clock + hours * HOUR_SECONDS,
     name: rng.pick(names),
-    baseValue: qty * FISH[species].price,
+    baseValue: qty * FISH_PRICE[species],
   };
   state.orders.push(order);
   return [{ type: 'orderPosted', orderId: order.id }];

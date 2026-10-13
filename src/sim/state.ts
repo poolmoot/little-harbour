@@ -1,4 +1,4 @@
-import { SPECIES } from './config';
+import { SPECIES, START_MONEY } from './config';
 import type { Phase, Species, Track, Trait, UpgradeId, ZoneId } from './config';
 
 export type CrateLoc = 'dock' | 'hand' | 'ice' | 'haul';
@@ -81,6 +81,7 @@ export interface DayStats {
   income: Record<Species, number>; // sale income by fish
   bonus: number; // order bonuses
   wages: number;
+  tripCosts: number; // food and supplies paid when boats leave
   spent: number; // upgrades, boats and market stall
   best: { species: Species | null; price: number };
 }
@@ -111,7 +112,7 @@ export interface GameState {
 }
 
 export type Ev =
-  | { type: 'boatDispatched'; boatId: number; zone: ZoneId; auto?: boolean }
+  | { type: 'boatDispatched'; boatId: number; zone: ZoneId; cost: number; auto?: boolean }
   | { type: 'boatReturned'; boatId: number; count: number; auto?: boolean }
   | { type: 'boatUnloaded'; boatId: number; count: number; auto?: boolean }
   | { type: 'cratePicked'; crateId: number }
@@ -136,9 +137,17 @@ export type Ev =
   | { type: 'wagesPaid'; paid: number; unpaid: number }
   | { type: 'phaseChanged'; phase: Phase }
   | { type: 'dayEnded'; day: number; stats: DayStats }
-  | { type: 'denied'; reason: string };
+  | { type: 'denied'; reason: string; needRank?: number };
 
-export const STATE_VERSION = 2;
+/** Result of a "can the player do this" check. needRank is set when only a higher rank is missing. */
+export interface Check {
+  ok: boolean;
+  reason?: string;
+  needRank?: number;
+  cost?: number;
+}
+
+export const STATE_VERSION = 3;
 
 export function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
@@ -147,7 +156,7 @@ export function perSpecies<T>(f: () => T): Record<Species, T> {
 }
 
 export function emptyStats(): DayStats {
-  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, spent: 0, best: { species: null, price: 0 } };
+  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, tripCosts: 0, spent: 0, best: { species: null, price: 0 } };
 }
 
 export function newBoat(id: number, berth: number, name: string): Boat {
@@ -157,7 +166,7 @@ export function newBoat(id: number, berth: number, name: string): Boat {
 export function initialState(): GameState {
   return {
     version: STATE_VERSION,
-    money: 0,
+    money: START_MONEY,
     day: 1,
     dayTime: 0,
     clock: 0,

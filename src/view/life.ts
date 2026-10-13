@@ -1,48 +1,10 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
-import type { Phase, Species } from '../sim/config';
 import type { Crate } from '../sim/state';
 import { Figure, mat } from './figures';
+import { NPC_TITLE, pickLine } from '../ui/text';
+import type { LineContext, Role } from '../ui/text';
 import type { World } from './world';
-
-export interface LineContext {
-  phase: Phase;
-  handSpecies: Species[];
-  recentFilled: boolean;
-  recentMissed: boolean;
-  money: number;
-  boatsOut: number;
-  openOrders: number;
-}
-
-type Role = 'fishmonger' | 'shipwright' | 'innkeeper';
-
-/** Pick a line that reacts to state. `n` rotates through the eligible lines. */
-export function pickLine(role: Role, c: LineContext, n: number): string {
-  const lines: string[] = [];
-  const rare = c.handSpecies.some((s) => s === 'lobster' || s === 'snapper' || s === 'seabass');
-  if (role === 'fishmonger') {
-    if (rare) lines.push('Is that reef catch? Bring it over before it turns!');
-    if (c.recentFilled) lines.push('That order made someone happy. Well done!');
-    if (c.recentMissed) lines.push('Missed order? Fish spoils, and folk will not wait.');
-    if (c.phase === 'night') lines.push('Market is shut up tight at night. Rest those legs.');
-    if (c.phase === 'dawn' || c.phase === 'dusk') lines.push('Flounder run at dawn and dusk. Good money in them.');
-    lines.push('Fresh fish sells best. Do not let it sit in the sun.', 'If I get too much of one fish, the price drops. Mix it up.');
-  } else if (role === 'shipwright') {
-    if (c.phase === 'night') lines.push('Cannot send boats in the dark. Come back at dawn.');
-    if (c.boatsOut > 0) lines.push('Your boat is out there. Listen for the bell.');
-    if (c.money >= 150) lines.push('I see coin in your pocket. Looking for a bigger hold?');
-    lines.push('A bigger hold means more fish every trip.', 'With a reinforced hull you could try the reef.');
-  } else {
-    if (c.recentFilled) lines.push('Heard you filled that order. A round for the harbour!');
-    if (c.recentMissed) lines.push('Pity about that order. There will be another.');
-    if (c.openOrders > 0) lines.push('There are notices on the board. Folk pay double for the right fish.');
-    if (c.phase === 'night') lines.push('Cosy in here after dark. Lanterns are lit on the quay.');
-    if (c.phase === 'dawn') lines.push('Up with the gulls! Tea is on.');
-    lines.push('Read the notice board before you pick a zone.');
-  }
-  return lines[n % lines.length];
-}
 
 interface Npc {
   role: Role;
@@ -329,9 +291,9 @@ export class Life {
 
   constructor(scene: THREE.Scene, world: World, private camera: THREE.Camera, uiRoot: HTMLElement) {
     const defs: { role: Role; title: string; name: string; x: number; z: number; fig: ConstructorParameters<typeof Figure>[0] }[] = [
-      { role: 'fishmonger', title: 'Greta, fishmonger', name: 'Greta', x: LAYOUT.market.x, z: LAYOUT.market.z - 1.9, fig: { shirt: 0xe8e4d8, pants: 0x3f5f7f, apron: 0xffffff, hat: 'cap', hatColor: 0xf2c14e, hair: 0xb5651d } },
-      { role: 'shipwright', title: 'Osric, shipwright', name: 'Osric', x: LAYOUT.shipyard.x + 2.6, z: LAYOUT.shipyard.z + 3.4, fig: { shirt: 0x4a6a8a, pants: 0x5a4a3a, hat: 'cap', hatColor: 0x2f3b47, beard: 0x8a7a6a } },
-      { role: 'innkeeper', title: 'Bram, innkeeper', name: 'Bram', x: LAYOUT.inn.x - 1.0, z: LAYOUT.inn.z + 3.6, fig: { shirt: 0xb5483a, pants: 0x5a4a3a, apron: 0xf0e8d8, skin: 0xe8b890, scale: 1.05, hair: 0x3a2a1a, beard: 0x3a2a1a } },
+      { role: 'fishmonger', title: NPC_TITLE.fishmonger, name: 'Greta', x: LAYOUT.market.x, z: LAYOUT.market.z - 1.9, fig: { shirt: 0xe8e4d8, pants: 0x3f5f7f, apron: 0xffffff, hat: 'cap', hatColor: 0xf2c14e, hair: 0xb5651d } },
+      { role: 'shipwright', title: NPC_TITLE.shipwright, name: 'Osric', x: LAYOUT.shipyard.x + 2.6, z: LAYOUT.shipyard.z + 3.4, fig: { shirt: 0x4a6a8a, pants: 0x5a4a3a, hat: 'cap', hatColor: 0x2f3b47, beard: 0x8a7a6a } },
+      { role: 'innkeeper', title: NPC_TITLE.innkeeper, name: 'Bram', x: LAYOUT.inn.x - 1.0, z: LAYOUT.inn.z + 3.6, fig: { shirt: 0xb5483a, pants: 0x5a4a3a, apron: 0xf0e8d8, skin: 0xe8b890, scale: 1.05, hair: 0x3a2a1a, beard: 0x3a2a1a } },
     ];
     for (const d of defs) {
       const figure = new Figure(d.fig);

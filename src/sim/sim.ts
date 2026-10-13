@@ -16,8 +16,8 @@ export { pickUp, storeInIce, takeFromIce, nearestDockCrate, handCrates, iceCrate
 export { sellAll, sellCrate, crateValue, unitPrice } from './market';
 export { castLine, hook, cancelCast } from './fishing';
 export { buyUpgrade, canBuy } from './upgrades';
-export { buyBoat, buyBoatUpgrade, canBuyBoat, canUpgradeBoat, holdSize, trackCost, trackNote, tripTimeFor, rareMult, zoneUnlockedFor, nextBoatCost, activeCaptain, bestZone, reachableZones } from './fleet';
-export { rankOf, rankName, rankProgress, maxBoats, maxHullTier } from './rank';
+export { buyBoat, buyBoatUpgrade, canBuyBoat, canUpgradeBoat, holdSize, trackCost, tripCostFor, tripTimeFor, rareMult, zoneUnlockedFor, nextBoatCost, activeCaptain, bestZone, reachableZones } from './fleet';
+export { rankOf, rankProgress, maxBoats, maxHullTier } from './rank';
 export { canHireCaptain, canHireDockhand, dailyWages, fireCaptain, fireDockhand, hireCaptain, hireDockhand, jobPose, homePos, setBoatTarget, setHaulPolicy } from './staff';
 export { netProfit } from './ledger';
 export { stallLevel } from './market';

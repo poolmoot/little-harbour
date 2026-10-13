@@ -1,12 +1,12 @@
-import { FISH, HOUR_SECONDS } from '../sim/config';
+import { HOUR_SECONDS } from '../sim/config';
 import { carryCapacity, handCrates } from '../sim/crates';
 import { holdSize } from '../sim/fleet';
-import { rankName, rankProgress } from '../sim/rank';
-import { HULL_NAMES } from '../sim/config';
+import { rankOf, rankProgress } from '../sim/rank';
 import type { GameState } from '../sim/state';
 import { formatClock, phaseOf } from '../sim/time';
 import { hex, SPECIES_COLOUR } from '../palette';
 import { fishSvg } from './panels';
+import { FISH_NAME, LABEL, PHASE_NAME, RANK_NAME, boatType, crates } from './text';
 
 function set(el: HTMLElement, html: string): void {
   if (el.dataset.h !== html) {
@@ -40,7 +40,7 @@ export class Hud {
     right.className = 'hud-right';
     right.append(this.carry, this.orders, this.boats);
     root.append(this.money, this.clock, this.rank, right, this.prompt, this.hints, this.toasts);
-    this.hints.textContent = 'WASD walk  ·  E interact  ·  L logbook  ·  Esc close';
+    this.hints.textContent = LABEL.hints;
     this.prompt.style.display = 'none';
   }
 
@@ -67,7 +67,7 @@ export class Hud {
     }
     set(this.money, `<div class="big">$${Math.round(this.shownMoney)}</div><div class="sub">Day ${state.day}</div>`);
     const ph = phaseOf(state.dayTime);
-    set(this.clock, `<div class="t">${formatClock(state.dayTime)}</div><div class="p">${ph}</div>`);
+    set(this.clock, `<div class="t">${formatClock(state.dayTime)}</div><div class="p">${PHASE_NAME[ph]}</div>`);
 
     const hand = handCrates(state);
     const cap = carryCapacity(state);
@@ -76,7 +76,7 @@ export class Hud {
       const c = hand[i];
       chips += c
         ? `<span class="chip">${fishSvg(hex(SPECIES_COLOUR[c.species]), 22)}${Math.round(c.freshness)}%</span>`
-        : `<span class="chip empty">empty</span>`;
+        : `<span class="chip empty">free</span>`;
     }
     set(this.carry, `<h4>Carrying ${hand.length}/${cap}</h4><div class="chips">${chips}</div>`);
 
@@ -85,20 +85,20 @@ export class Hud {
     for (const o of state.orders) {
       const left = Math.max(0, o.deadline - state.clock);
       const by = formatClock((state.dayTime + left) % (HOUR_SECONDS * 24));
-      orders += `<div class="line ${left < 15 ? 'urgent' : ''}">${o.name}: ${o.filled}/${o.qty} ${FISH[o.species].name}<br><small>by ${by} (${Math.ceil(left)}s)</small></div>`;
+      orders += `<div class="line ${left < 15 ? 'urgent' : ''}">${o.name}: ${o.filled}/${o.qty} ${FISH_NAME[o.species]}<br><small>by ${by} (${Math.ceil(left)}s)</small></div>`;
     }
     set(this.orders, orders);
 
     const rp = rankProgress(state);
-    set(this.rank, `<b>${rankName(state)}</b><div class="rankbar"><i style="width:${Math.round((rp?.frac ?? 1) * 100)}%"></i></div><small>${rp ? `$${rp.have.toLocaleString()} / $${rp.need.toLocaleString()}` : 'Top rank'}</small>`);
+    set(this.rank, `<b>${RANK_NAME[rankOf(state)]}</b><div class="rankbar"><i style="width:${Math.round((rp?.frac ?? 1) * 100)}%"></i></div><small>${rp ? `$${rp.have.toLocaleString()} / $${rp.need.toLocaleString()}` : LABEL.topRank}</small>`);
 
     let boats = `<h4>Boats</h4>`;
     for (const b of state.boats) {
       const cap = b.captain && !b.captain.unpaid ? ' ⚓' : '';
-      let cls = '', fill = 0, txt = 'in harbour';
+      let cls = '', fill = 0, txt = 'at the pier';
       if (b.status === 'out') { fill = Math.min(100, (b.progress / b.tripTime) * 100); txt = `${Math.max(0, Math.ceil(b.tripTime - b.progress))}s`; }
-      else if (b.status === 'returned') { cls = 'back'; txt = `back! unload ${b.catch.length}`; }
-      boats += `<div class="brow ${cls}" title="${HULL_NAMES[b.hull]}, hold ${holdSize(b)}"><span class="tier" style="background:${['#c89c62', '#6f9ac4', '#6fae7e', '#c4584c'][b.hull]}"></span><span class="bn">${b.name}${cap}</span><span class="bst"><i style="width:${fill}%"></i><em>${txt}</em></span></div>`;
+      else if (b.status === 'returned') { cls = 'back'; txt = `Back! Unload ${b.catch.length}`; }
+      boats += `<div class="brow ${cls}" title="${boatType(b.hull)}, carries ${crates(holdSize(b))}"><span class="tier" style="background:${['#c89c62', '#6f9ac4', '#6fae7e', '#c4584c'][b.hull]}"></span><span class="bn">${b.name}${cap}</span><span class="bst"><i style="width:${fill}%"></i><em>${txt}</em></span></div>`;
     }
     set(this.boats, boats);
 

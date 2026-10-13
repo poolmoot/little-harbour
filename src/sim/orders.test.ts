@@ -26,6 +26,7 @@ describe('orders', () => {
   });
   it('a matching sale pays double and completion pays a 50% bonus', () => {
     const s = initialState();
+    s.money = 0;
     s.orders = [{ id: 99, species: 'mackerel', qty: 2, filled: 0, deadline: 1000, name: 'Marta', baseValue: 20 }];
     addCrate(s, 'mackerel', 'hand');
     addCrate(s, 'mackerel', 'hand');
