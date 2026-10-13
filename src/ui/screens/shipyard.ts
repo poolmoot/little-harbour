@@ -7,6 +7,8 @@ import { canBuy } from '../../sim/upgrades';
 import { button, card, cards, item, priceLabel } from '../components';
 import type { CardTone } from '../components';
 import { HULL_ICONS, icon } from '../icons';
+import { NPC_LOOK } from '../../view/people';
+import { portrait } from '../../view/portraits';
 import type { IconName } from '../icons';
 import { LABEL, RANK_NAME, UPGRADE, boatType, crates, denyText } from '../text';
 import { pickTab } from './types';
@@ -65,5 +67,5 @@ export const shipyardScreen: Screen = (ctx) => {
   const s = ctx.state;
   const tabs = [{ id: 'fleet', label: `Your boats ${s.boats.length} / ${MAX_BOATS}` }, { id: 'harbour', label: 'For the harbour' }];
   const tab = pickTab(ctx, tabs);
-  return { title: 'Shipyard', icon: icon('hammer', 28), tabs, tab, body: tab === 'fleet' ? fleet(s) : harbour(s) };
+  return { title: 'Shipyard', icon: icon('hammer', 28), host: portrait(NPC_LOOK.shipwright), tabs, tab, body: tab === 'fleet' ? fleet(s) : harbour(s) };
 };

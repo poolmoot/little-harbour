@@ -55,6 +55,8 @@
 .tag { position: absolute; left: 5px; top: 5px; padding: 0 6px 1px; background: var(--well-2); border: var(--line); border-radius: 6px; font-size: var(--fs-xs); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 128px), 1fr)); gap: 10px; align-items: stretch; }
 
+.face { flex: none; display: block; border-radius: 50%; background: radial-gradient(circle at 50% 35%, #bfe9ff, #2f8be6); border: var(--line); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), var(--lift-sm); object-fit: cover; }
+.card-art .face { margin: 14px 0 2px; }
 .stars { display: inline-flex; gap: 1px; }
 .stars .ic { filter: none; stroke-width: 2.5; }
 

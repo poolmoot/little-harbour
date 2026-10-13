@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
 import { Smoke } from './fx';
 import { hullGeometry } from './hull';
+import { BOAT_TIERS } from './boatModels';
 import { barrel, bx, chimney, crateBox, cy, doorAt, flat, gableRoof, net, put, signMesh, tBox, windowAt } from './kit';
 import type { Build } from './worldParts';
 
@@ -31,7 +32,7 @@ export function buildShipyard(w: Build): void {
   w.signs.push({ m: sign, phase: 1.2 });
   // upturned hull on trestles
   const hullMat = flat(0x7b4b32, 0.85);
-  const hull = put(hullGeometry(0.85, 0.72), hullMat, x + 4.6, 1.15, z + 0.8, s);
+  const hull = put(hullGeometry(BOAT_TIERS[0].shape, { bottom: 0, stripe: 0, side: 0, sheer: 0 }), hullMat, x + 4.6, 1.15, z + 0.8, s);
   hull.rotation.set(0, Math.PI / 2, Math.PI);
   hull.scale.set(0.85, 1, 0.8);
   (hull.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;

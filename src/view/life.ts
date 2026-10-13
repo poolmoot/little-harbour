@@ -4,6 +4,7 @@ import type { Crate } from '../sim/state';
 import { Figure, mat } from './figures';
 import { NPC_TITLE, pickLine } from '../ui/text';
 import type { LineContext, Role } from '../ui/text';
+import { NPC_LOOK } from './people';
 import type { World } from './world';
 
 interface Npc {
@@ -387,9 +388,9 @@ export class Life {
 
   constructor(scene: THREE.Scene, world: World, private camera: THREE.Camera, uiRoot: HTMLElement) {
     const defs: { role: Role; title: string; name: string; x: number; z: number; fig: ConstructorParameters<typeof Figure>[0] }[] = [
-      { role: 'fishmonger', title: NPC_TITLE.fishmonger, name: 'Greta', x: LAYOUT.market.x, z: LAYOUT.market.z - 1.9, fig: { shirt: 0xe8e4d8, pants: 0x3f5f7f, apron: 0xffffff, hat: 'cap', hatColor: 0xf2c14e, hair: 0xb5651d } },
-      { role: 'shipwright', title: NPC_TITLE.shipwright, name: 'Osric', x: LAYOUT.shipyard.x + 2.6, z: LAYOUT.shipyard.z + 3.4, fig: { shirt: 0x4a6a8a, pants: 0x5a4a3a, hat: 'cap', hatColor: 0x2f3b47, beard: 0x8a7a6a } },
-      { role: 'innkeeper', title: NPC_TITLE.innkeeper, name: 'Bram', x: LAYOUT.inn.x - 1.0, z: LAYOUT.inn.z + 3.6, fig: { shirt: 0xb5483a, pants: 0x5a4a3a, apron: 0xf0e8d8, skin: 0xe8b890, scale: 1.05, hair: 0x3a2a1a, beard: 0x3a2a1a } },
+      { role: 'fishmonger', title: NPC_TITLE.fishmonger, name: 'Greta', x: LAYOUT.market.x, z: LAYOUT.market.z - 1.9, fig: NPC_LOOK.fishmonger },
+      { role: 'shipwright', title: NPC_TITLE.shipwright, name: 'Osric', x: LAYOUT.shipyard.x + 2.6, z: LAYOUT.shipyard.z + 3.4, fig: NPC_LOOK.shipwright },
+      { role: 'innkeeper', title: NPC_TITLE.innkeeper, name: 'Bram', x: LAYOUT.inn.x - 1.0, z: LAYOUT.inn.z + 3.6, fig: NPC_LOOK.innkeeper },
     ];
     for (const d of defs) {
       const figure = new Figure(d.fig);

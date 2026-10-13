@@ -4,7 +4,9 @@ import { carryCapacity, iceCrates } from '../../sim/crates';
 import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import { canHireCaptain, canHireDockhand, dailyWages } from '../../sim/staff';
 import type { Dockhand, GameState } from '../../sim/state';
-import { button, card, cards, empty, item, money, section } from '../components';
+import { button, card, cards, empty, face, item, money, section } from '../components';
+import { captainLook, dockhandLook, NPC_LOOK } from '../../view/people';
+import { portrait } from '../../view/portraits';
 import type { CardTone } from '../components';
 import { icon } from '../icons';
 import { LABEL, RANK_NAME, TRAIT, crates, denyText } from '../text';
@@ -18,7 +20,7 @@ function hire(s: GameState): string {
   const list = [card({
     tone: 'green',
     tag: 'Worker',
-    art: icon('dockhand', 56),
+    art: face(portrait(dockhandLook(s.nextId)), 84) || icon('dockhand', 56),
     lines: [`Carries ${crates(carryCapacity(s))} at a time`, `${s.dockhands.length} of ${MAX_DOCKHANDS} hired`],
     name: 'Worker',
     foot: `<span class="dim">$${DOCKHAND_WAGE} a day</span>${button({ label: dock.ok ? 'Hire' : denyText(dock.reason, dock.needRank), act: 'hiredock', size: 'sm', off: !dock.ok })}`,
@@ -34,7 +36,7 @@ function hire(s: GameState): string {
     list.push(card({
       tone: TRAIT_TONE[c.trait],
       tag: 'Captain',
-      art: icon(c.trait, 56),
+      art: face(portrait(captainLook(c.id, c.trait)), 84) || icon(c.trait, 56),
       lines: [info.name, info.desc],
       name: c.name,
       foot: `<span class="dim">$${c.wage} a day</span>${actions}`,
@@ -55,14 +57,14 @@ function roster(s: GameState): string {
   let h = section(`Workers ${s.dockhands.length} / ${MAX_DOCKHANDS}`);
   if (!s.dockhands.length) h += empty('No workers yet. Hire one to carry crates for you.');
   for (const d of s.dockhands) {
-    h += item({ art: icon('dockhand', 36), title: d.name, sub: dockhandTask(d), right: button({ label: LABEL.endJob, act: 'firedock', a: d.id, tone: 'danger', size: 'sm' }) });
+    h += item({ art: face(portrait(dockhandLook(d.id)), 48) || icon('dockhand', 36), title: d.name, sub: dockhandTask(d), right: button({ label: LABEL.endJob, act: 'firedock', a: d.id, tone: 'danger', size: 'sm' }) });
   }
   const captains = s.boats.filter((b) => b.captain);
   h += section('Captains');
   if (!captains.length) h += empty('No captains yet.');
   for (const b of captains) {
     const c = b.captain!;
-    h += item({ art: icon(c.trait, 36), title: `${c.name} · ${TRAIT[c.trait].name}`, sub: `${b.name} · $${c.wage} a day`, right: button({ label: LABEL.endJob, act: 'firecap', a: b.id, tone: 'danger', size: 'sm' }) });
+    h += item({ art: face(portrait(captainLook(c.id, c.trait)), 48) || icon(c.trait, 36), title: `${c.name} · ${TRAIT[c.trait].name}`, sub: `${b.name} · $${c.wage} a day`, right: button({ label: LABEL.endJob, act: 'firecap', a: b.id, tone: 'danger', size: 'sm' }) });
   }
   h += section('Where workers take the fish');
   h += item({
@@ -81,6 +83,7 @@ export const crewScreen: Screen = (ctx) => {
   return {
     title: 'The Anchor Inn',
     icon: icon('dockhand', 28),
+    host: portrait(NPC_LOOK.innkeeper),
     tabs,
     tab,
     body: tab === 'hire' ? hire(s) : roster(s),
