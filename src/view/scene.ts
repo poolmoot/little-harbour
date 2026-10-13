@@ -129,6 +129,8 @@ export class SceneRig implements QualityTarget {
     this.renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoftShadowMap was removed in r18x; PCF is soft now
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // Counters are reset once per frame in render(), so they add up every pass (shadows, scene, bloom, grade).
+    this.renderer.info.autoReset = false;
     container.appendChild(this.renderer.domElement);
 
     this.camera = new THREE.PerspectiveCamera(42, 1, 0.5, 500);
@@ -280,6 +282,7 @@ export class SceneRig implements QualityTarget {
   }
 
   render(): void {
+    this.renderer.info.reset();
     this.composer.render();
   }
 }
