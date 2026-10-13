@@ -11,18 +11,16 @@ import { advanceClock } from './time';
 
 export { initialState } from './state';
 export type { GameState, Ev } from './state';
-export { dispatchBoat, unloadBoat, zoneUnlocked } from './boats';
-export { pickUp, storeInIce, takeFromIce, nearestDockCrate, handCrates, iceCrates, dockCrates, carryCapacity, isSpoiled, freshnessMultiplier } from './crates';
-export { sellAll, sellCrate, crateValue, unitPrice } from './market';
+export { dispatchBoat, unloadBoat } from './boats';
+export { pickUp, storeInIce, takeFromIce, handCrates, dockCrates, carryCapacity } from './crates';
+export { sellAll, sellCrate } from './market';
 export { castLine, hook, cancelCast } from './fishing';
-export { buyUpgrade, canBuy } from './upgrades';
-export { buyBoat, buyBoatUpgrade, canBuyBoat, canUpgradeBoat, holdSize, trackCost, trackNote, tripTimeFor, rareMult, zoneUnlockedFor, nextBoatCost, activeCaptain, bestZone, reachableZones } from './fleet';
-export { rankOf, rankName, rankProgress, maxBoats, maxHullTier } from './rank';
-export { canHireCaptain, canHireDockhand, dailyWages, fireCaptain, fireDockhand, hireCaptain, hireDockhand, jobPose, homePos, setBoatTarget, setHaulPolicy } from './staff';
-export { netProfit } from './ledger';
-export { stallLevel } from './market';
-export { matchingOrder } from './orders';
-export { formatClock, phaseOf, hourOf, isNight } from './time';
+export { buyUpgrade } from './upgrades';
+export { buyBoat, buyBoatUpgrade, bestZone } from './fleet';
+export { rankOf } from './rank';
+export { fireCaptain, fireDockhand, hireCaptain, hireDockhand, setBoatTarget, setHaulPolicy } from './staff';
+
+export { phaseOf } from './time';
 
 /** Start-of-game setup: post the first orders. */
 export function startGame(state: GameState, rng: Rng): Ev[] {

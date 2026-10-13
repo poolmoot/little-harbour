@@ -103,6 +103,8 @@ describe('wages', () => {
     s.boats[0].captain = { id: 5, name: 'A', trait: 'swift', wage: CAPTAIN_WAGE };
     s.dockhands = [{ id: 6, name: 'Pip', slot: 0, job: null }];
     s.money = 500;
+    s.boats[0].status = 'out'; // stays at sea, so no trip cost is paid at dawn
+    s.boats[0].tripTime = 999;
     s.dayTime = 359.9;
     s.lastPhase = 'night';
     const evs = step(s, 0.2, rng());
@@ -231,6 +233,7 @@ describe('new zones', () => {
   it('trip times are 80 s and 120 s and a boat needs the hull', () => {
     const s = initialState();
     s.boats[0].hull = 2;
+    s.money = 200;
     expect(dispatchBoat(s, 1, 'deep')[0].type).toBe('denied');
     dispatchBoat(s, 1, 'opensea');
     expect(s.boats[0].tripTime).toBe(80);

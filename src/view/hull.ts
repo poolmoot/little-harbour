@@ -66,6 +66,3 @@ export function hullLid(hw = 0.8, H = 0.72, nu = 22): THREE.BufferGeometry {
   g.setIndex(idx);
   return g;
 }
-
-export function gunwaleY(u: number, H = 0.72): number { return topAt(u, H); }
-export function hullWidth(u: number, hw = 0.8): number { return widthAt(u, hw); }

@@ -1,5 +1,7 @@
 import type { Track, UpgradeId, ZoneId } from '../sim/config';
 import type { DayStats, GameState, HaulPolicy } from '../sim/state';
+import type { QualityMode } from '../view/quality';
+import { LABEL } from './text';
 import { boatScreen } from './screens/boat';
 import { crewScreen } from './screens/crew';
 import { iceboxScreen } from './screens/icebox';
@@ -38,6 +40,8 @@ export interface PanelActions {
   setPolicy(p: HaulPolicy): void;
   store(id: number): void;
   take(id: number): void;
+  getQuality(): QualityMode;
+  setQuality(m: QualityMode): void;
   resetGame(): void;
   onClose(): void;
 }
@@ -51,7 +55,7 @@ function frame(v: ScreenView): string {
   const tabs = v.tabs
     ? `<nav class="tabs">${v.tabs.map((t) => `<button class="tab ol${t.id === v.tab ? ' on' : ''}" data-act="tab" data-a="${t.id}">${t.label}</button>`).join('')}</nav>`
     : '';
-  return `<header class="win-head"><div class="win-title ol">${v.icon}${v.title}</div>${tabs}<button class="btn danger ol win-close" data-act="close" aria-label="Close">×</button></header>
+  return `<header class="win-head"><div class="win-title ol">${v.icon}${v.title}</div>${tabs}<button class="btn danger ol win-close" data-act="close" aria-label="${LABEL.close}" title="${LABEL.close}">×</button></header>
     ${v.note ? `<p class="win-note">${v.note}</p>` : ''}<div class="win-body">${v.body}</div>${v.foot ? `<footer class="win-foot">${v.foot}</footer>` : ''}`;
 }
 
@@ -148,6 +152,7 @@ export class Panels {
       case 'openboat': this.open('boat', Number(a)); break;
       case 'store': this.actions.store(Number(a)); break;
       case 'take': this.actions.take(Number(a)); break;
+      case 'quality': this.actions.setQuality(a as QualityMode); break;
       case 'reset': this.confirmReset = true; this.render(true); break;
       case 'resetno': this.confirmReset = false; this.render(true); break;
       case 'resetyes': this.actions.resetGame(); break;
@@ -165,7 +170,7 @@ export class Panels {
   private render(force: boolean): void {
     if (!this.kind) return;
     this.lastUpdate = performance.now() / 1000;
-    const html = frame(SCREENS[this.kind]({ state: this.getState(), arg: this.arg, tab: this.tab, confirmReset: this.confirmReset, summary: this.summary }));
+    const html = frame(SCREENS[this.kind]({ state: this.getState(), arg: this.arg, tab: this.tab, confirmReset: this.confirmReset, quality: this.actions.getQuality(), summary: this.summary }));
     if (!force && html === this.last) return;
     this.last = html;
     // Keep the reader's place when live data re-renders the list.

@@ -1,4 +1,4 @@
-import { HULL_NAMES, MAX_BOATS, RANK_NAMES, UPGRADES, UPGRADE_IDS } from '../../sim/config';
+import { MAX_BOATS, UPGRADES, UPGRADE_IDS } from '../../sim/config';
 import type { UpgradeId } from '../../sim/config';
 import { canBuyBoat, holdSize } from '../../sim/fleet';
 import { rankOf } from '../../sim/rank';
@@ -8,6 +8,7 @@ import { button, card, cards, item, priceLabel } from '../components';
 import type { CardTone } from '../components';
 import { HULL_ICONS, icon } from '../icons';
 import type { IconName } from '../icons';
+import { LABEL, RANK_NAME, UPGRADE, boatType, crates, denyText } from '../text';
 import { pickTab } from './types';
 import type { Screen } from './types';
 
@@ -22,19 +23,19 @@ function fleet(s: GameState): string {
   const bb = canBuyBoat(s);
   let h = item({
     art: icon('rowboat', 40),
-    title: bb.cost === null ? 'Fleet complete' : 'New rowboat',
-    sub: bb.cost === null ? 'Every berth is in use.' : `Moors at berth ${s.boats.length + 1}. Upgrade it from the pier afterwards.`,
+    title: bb.cost === null ? 'You have all four boats' : 'New rowboat',
+    sub: bb.cost === null ? 'Every boat spot is used.' : `It gets boat spot ${s.boats.length + 1}. Make it better after you buy it.`,
     state: bb.cost === null ? 'locked' : undefined,
     right: bb.cost === null
-      ? button({ label: 'Full', tone: 'ghost', size: 'sm', off: true })
-      : button({ label: bb.ok ? priceLabel(bb.cost) : bb.reason ?? 'Locked', act: 'buyboat', off: !bb.ok }),
+      ? button({ label: LABEL.full, tone: 'ghost', size: 'sm', off: true })
+      : button({ label: bb.ok ? priceLabel(bb.cost) : denyText(bb.reason, bb.needRank), act: 'buyboat', off: !bb.ok }),
   });
   for (const b of s.boats) {
     h += item({
       art: icon(HULL_ICONS[b.hull], 40),
       title: b.name,
-      sub: `${HULL_NAMES[b.hull]} · hold ${holdSize(b)}${b.captain ? ` · captain ${b.captain.name}` : ''}`,
-      right: button({ label: 'Manage', act: 'openboat', a: b.id, tone: 'info', size: 'sm' }),
+      sub: `${boatType(b.hull)} · carries ${crates(holdSize(b))}${b.captain ? ` · captain ${b.captain.name}` : ''}`,
+      right: button({ label: LABEL.open, act: 'openboat', a: b.id, tone: 'info', size: 'sm' }),
     });
   }
   return h;
@@ -49,20 +50,20 @@ function harbour(s: GameState): string {
     const look = UPGRADE_LOOK[id];
     return card({
       tone: owned ? 'grey' : look.tone,
-      tag: owned ? 'Owned' : rank < u.rank ? RANK_NAMES[u.rank] : undefined,
+      tag: owned ? LABEL.owned : rank < u.rank ? RANK_NAME[u.rank] : undefined,
       art: icon(look.icon, 48),
-      lines: [u.desc],
-      name: u.name,
+      lines: [UPGRADE[id].desc],
+      name: UPGRADE[id].name,
       foot: owned
-        ? button({ label: 'Owned', tone: 'ghost', size: 'sm', off: true })
-        : button({ label: chk.ok ? priceLabel(u.cost) : chk.reason ?? 'Locked', act: 'buy', a: id, size: 'sm', off: !chk.ok }),
+        ? button({ label: LABEL.owned, tone: 'ghost', size: 'sm', off: true })
+        : button({ label: chk.ok ? priceLabel(u.cost) : denyText(chk.reason, chk.needRank), act: 'buy', a: id, size: 'sm', off: !chk.ok }),
     });
   }));
 }
 
 export const shipyardScreen: Screen = (ctx) => {
   const s = ctx.state;
-  const tabs = [{ id: 'fleet', label: `Fleet ${s.boats.length} / ${MAX_BOATS}` }, { id: 'harbour', label: 'Harbour' }];
+  const tabs = [{ id: 'fleet', label: `Your boats ${s.boats.length} / ${MAX_BOATS}` }, { id: 'harbour', label: 'For the harbour' }];
   const tab = pickTab(ctx, tabs);
   return { title: 'Shipyard', icon: icon('hammer', 28), tabs, tab, body: tab === 'fleet' ? fleet(s) : harbour(s) };
 };

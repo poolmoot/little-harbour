@@ -7,9 +7,9 @@ import { dispatchBoat, unloadBoat } from './boats';
 import { carryCapacity, freeDockSlot, isSpoiled, removeCrate } from './crates';
 import { activeCaptain, bestZone, zoneUnlockedFor } from './fleet';
 import { crateValue, sellCrateObj } from './market';
-import { captainsUnlocked, dockhandsUnlocked, rankOf } from './rank';
+import { CAPTAINS_RANK, DOCKHANDS_RANK, captainsUnlocked, dockhandsUnlocked, rankOf } from './rank';
 import type { Rng } from './rng';
-import type { Crate, Dockhand, Ev, GameState, HaulPolicy, Job, Pt } from './state';
+import type { Check, Crate, Dockhand, Ev, GameState, HaulPolicy, Job, Pt } from './state';
 import { nextId } from './state';
 import { isNight } from './time';
 
@@ -26,17 +26,17 @@ export function refreshCandidates(state: GameState, rng: Rng): void {
   }
 }
 
-export function canHireCaptain(state: GameState, boatId: number): { ok: boolean; reason?: string } {
-  if (!captainsUnlocked(rankOf(state))) return { ok: false, reason: 'Needs rank: Skipper & Co' };
+export function canHireCaptain(state: GameState, boatId: number): Check {
+  if (!captainsUnlocked(rankOf(state))) return { ok: false, reason: 'Rank too low', needRank: CAPTAINS_RANK };
   const b = state.boats.find((x) => x.id === boatId);
   if (!b) return { ok: false, reason: 'No such boat' };
-  if (b.captain) return { ok: false, reason: 'Boat already has a captain' };
+  if (b.captain) return { ok: false, reason: 'This boat has a captain' };
   return { ok: true };
 }
 
 export function hireCaptain(state: GameState, candidateId: number, boatId: number): Ev[] {
   const chk = canHireCaptain(state, boatId);
-  if (!chk.ok) return [{ type: 'denied', reason: chk.reason ?? 'Cannot hire.' }];
+  if (!chk.ok) return [{ type: 'denied', reason: chk.reason ?? 'You cannot hire now.', needRank: chk.needRank }];
   const i = state.candidates.findIndex((c) => c.id === candidateId);
   if (i < 0) return [{ type: 'denied', reason: 'That captain has gone.' }];
   const b = state.boats.find((x) => x.id === boatId)!;
@@ -48,21 +48,21 @@ export function hireCaptain(state: GameState, candidateId: number, boatId: numbe
 
 export function fireCaptain(state: GameState, boatId: number): Ev[] {
   const b = state.boats.find((x) => x.id === boatId);
-  if (!b?.captain) return [{ type: 'denied', reason: 'No captain to let go.' }];
+  if (!b?.captain) return [{ type: 'denied', reason: 'There is no captain to let go.' }];
   const name = b.captain.name;
   b.captain = null;
   return [{ type: 'fired', role: 'captain', name }];
 }
 
-export function canHireDockhand(state: GameState): { ok: boolean; reason?: string } {
-  if (!dockhandsUnlocked(rankOf(state))) return { ok: false, reason: 'Needs rank: Boat Owner' };
-  if (state.dockhands.length >= MAX_DOCKHANDS) return { ok: false, reason: 'No room for more dockhands' };
+export function canHireDockhand(state: GameState): Check {
+  if (!dockhandsUnlocked(rankOf(state))) return { ok: false, reason: 'Rank too low', needRank: DOCKHANDS_RANK };
+  if (state.dockhands.length >= MAX_DOCKHANDS) return { ok: false, reason: 'No room for more workers' };
   return { ok: true };
 }
 
 export function hireDockhand(state: GameState, rng: Rng): Ev[] {
   const chk = canHireDockhand(state);
-  if (!chk.ok) return [{ type: 'denied', reason: chk.reason ?? 'Cannot hire.' }];
+  if (!chk.ok) return [{ type: 'denied', reason: chk.reason ?? 'You cannot hire now.', needRank: chk.needRank }];
   const used = new Set(state.dockhands.map((d) => d.name));
   const name = rng.pick(DOCKHAND_NAMES.filter((n) => !used.has(n)));
   let slot = 0;
@@ -73,7 +73,7 @@ export function hireDockhand(state: GameState, rng: Rng): Ev[] {
 
 export function fireDockhand(state: GameState, id: number): Ev[] {
   const d = state.dockhands.find((x) => x.id === id);
-  if (!d) return [{ type: 'denied', reason: 'No such dockhand.' }];
+  if (!d) return [{ type: 'denied', reason: 'No such worker.' }];
   releaseCrates(state, d);
   state.dockhands = state.dockhands.filter((x) => x.id !== id);
   return [{ type: 'fired', role: 'dockhand', name: d.name }];
@@ -87,7 +87,7 @@ export function setHaulPolicy(state: GameState, p: HaulPolicy): Ev[] {
 export function setBoatTarget(state: GameState, boatId: number, zone: ZoneId): Ev[] {
   const b = state.boats.find((x) => x.id === boatId);
   if (!b) return [{ type: 'denied', reason: 'No such boat.' }];
-  if (!zoneUnlockedFor(b, zone)) return [{ type: 'denied', reason: 'This boat needs a bigger hull for that zone.' }];
+  if (!zoneUnlockedFor(b, zone)) return [{ type: 'denied', reason: 'This boat is too small to go there.' }];
   b.target = zone;
   return [];
 }

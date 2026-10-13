@@ -1,47 +1,33 @@
 import { Vector3 } from 'three';
 import { GameAudio } from './audio';
 import { Input } from './input';
-import { BOAT_RANGE, CRATE_RANGE, FISH, HOUR_SECONDS, INTERACT_RANGE, LAYOUT, RANK_NAMES, RANK_UNLOCKS, START_HOUR, UPGRADES, ZONES } from './sim/config';
-import type { Track, Trait, ZoneId } from './sim/config';
+import { HOUR_SECONDS, START_HOUR } from './sim/config';
+import type { ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
-import { buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy, bestZone } from './sim/sim';
-import { buyUpgrade, carryCapacity, castLine, cancelCast, dispatchBoat, dockCrates, handCrates, hook, initialState, pickUp, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce, unloadBoat } from './sim/sim';
+import { buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy } from './sim/sim';
+import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
 import { Hud } from './ui/hud';
-import type { Prompt } from './ui/hud';
+import { EventRouter } from './events';
+import { STATIONS, findTarget, interact, promptFor } from './interaction';
+import type { Target } from './interaction';
 import { Panels } from './ui/panels';
 import './ui/styles/index.css';
+import { say } from './ui/text';
 import { BoatsView } from './view/boatsView';
 import { StaffView } from './view/staffView';
 import { CameraRig } from './view/cameraRig';
 import { CratesView } from './view/cratesView';
 import { Life } from './view/life';
 import { FishingView, Player, TargetMarker } from './view/player';
+import { Quality } from './view/quality';
 import { SceneRig } from './view/scene';
 import { World } from './view/world';
 import { Water, Wake } from './view/water';
 
-type TargetKind = 'crate' | 'boat' | 'market' | 'shipyard' | 'board' | 'icebox' | 'fishing' | 'inn';
-interface Target {
-  kind: TargetKind;
-  id: number;
-  x: number;
-  z: number;
-  dist: number;
-}
-
-const STATIONS: Record<Exclude<TargetKind, 'crate' | 'boat'>, { x: number; z: number; range: number }> = {
-  market: { x: LAYOUT.market.x, z: LAYOUT.market.z + 1.7, range: INTERACT_RANGE },
-  shipyard: { x: LAYOUT.shipyard.x, z: LAYOUT.shipyard.z + 2.8, range: INTERACT_RANGE },
-  board: { x: LAYOUT.noticeBoard.x, z: LAYOUT.noticeBoard.z + 0.5, range: INTERACT_RANGE },
-  icebox: { x: LAYOUT.iceBox.x, z: LAYOUT.iceBox.z + 1.1, range: INTERACT_RANGE },
-  inn: { x: LAYOUT.inn.x + 0.8, z: LAYOUT.inn.z + 3.6, range: INTERACT_RANGE },
-  fishing: { x: LAYOUT.fishingSpot.x, z: LAYOUT.fishingSpot.z, range: 3.2 },
-};
 const SAVE_EVERY = 10;
-const NOUN = (n: number) => `${n} crate${n === 1 ? '' : 's'}`;
 
 export class Game {
   private state: GameState;
@@ -59,8 +45,6 @@ export class Game {
   private staffView: StaffView;
   private stallShown = -1;
   private vaneShown = false;
-  private staffSold = 0;
-  private lastStaffPop = 0;
   private life: Life;
   private fishView: FishingView;
   private marker: TargetMarker;
@@ -70,12 +54,12 @@ export class Game {
   private last = performance.now();
   private now = 0;
   private saveTimer = 0;
-  private recentFilled = -99;
-  private recentMissed = -99;
+  private events!: EventRouter;
   private resetting = false;
   private started = false;
   private holdHour: number | null = null;
   private frameMs = 16;
+  private quality: Quality;
 
   constructor(app: HTMLElement, uiRoot: HTMLElement) {
     const loaded = loadGame(localStorage, this.rng);
@@ -83,6 +67,7 @@ export class Game {
     startGame(this.state, this.rng);
 
     this.rig = new SceneRig(app);
+    this.quality = new Quality(this.rig, localStorage);
     this.world = new World(this.rig.scene);
     this.water = new Water(this.rig.scene);
     this.wake = new Wake(this.rig.scene);
@@ -95,6 +80,14 @@ export class Game {
     this.fishView = new FishingView(this.rig.scene, this.player);
     this.marker = new TargetMarker(this.rig.scene);
     this.hud = new Hud(uiRoot, (kind) => { this.audio.click(); this.panels.toggle(kind); });
+    this.events = new EventRouter({
+      audio: this.audio,
+      hud: this.hud,
+      showSummary: (day, stats) => this.panels.showSummary(day, stats),
+      getState: () => this.state,
+      popAt: (x, y, z, text) => this.popAt(x, y, z, text),
+      saveNow: () => { this.save(); this.saveTimer = 0; },
+    });
     this.panels = new Panels(
       uiRoot,
       {
@@ -112,6 +105,8 @@ export class Game {
         setPolicy: (p) => this.run(setHaulPolicy(this.state, p)),
         store: (id) => this.run(storeInIce(this.state, id)),
         take: (id) => this.run(takeFromIce(this.state, id)),
+        getQuality: () => this.quality.mode,
+        setQuality: (m) => { this.quality.setMode(m); this.panels.refresh(); },
         resetGame: () => this.reset(),
         onClose: () => this.audio.click(),
       },
@@ -127,60 +122,20 @@ export class Game {
       if (!this.resetting) this.save();
     });
 
-    if (!loaded) this.hud.toast('Welcome to the harbour! Walk with WASD, press E near things.', 'info');
-    else this.hud.toast('Welcome back. Your boats are waiting in the harbour.', 'info');
-    if (loaded && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast('A boat has a catch ready to unload.', 'good');
-    if (import.meta.env.DEV) this.installDebug();
+    this.hud.toast(loaded ? say.welcomeBack : say.welcome, 'info');
+    if (loaded && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast(say.catchWaiting, 'good');
+    if (import.meta.env.DEV) {
+      const self = this;
+      void import('./debug').then((m) => m.installDebug({
+        get state() { return self.state; },
+        rng: this.rng, hud: this.hud, panels: this.panels, player: this.player, cameraRig: this.cameraRig, rig: this.rig,
+        dispatch: (id, zone) => this.dispatch(id, zone),
+        handle: (evs) => this.events.handle(evs),
+        frameMs: () => this.frameMs,
+        setHoldHour: (h) => { this.holdHour = h; },
+      }));
+    }
   }
-
-  /** Development-only helpers: window.__debug (see report). Never shipped in production builds. */
-  private installDebug(): void {
-    const dbg = {
-      /** Freeze the clock at an hour (0-24); setHour(null) resumes time. */
-      setHour: (h: number | null) => {
-        this.holdHour = h;
-        if (h !== null) this.state.dayTime = (((h - START_HOUR) % 24) + 24) % 24 * HOUR_SECONDS;
-      },
-      teleport: (x: number, z: number) => {
-        this.player.pos.set(x, 0, z);
-        this.cameraRig.focus.set(x, 0, z);
-      },
-      money: (n: number) => { this.state.money += n; },
-      /** Harbour upgrade (icebox, handcart, stall1, stall2) or a boat track: upgrade('hull', 2, boatIndex) sets that track level. */
-      upgrade: (id: keyof GameState['upgrades'] | Track, level = 1, boat = 0) => {
-        if (id in this.state.upgrades) { this.state.upgrades[id as keyof GameState['upgrades']] = true; return; }
-        const b = this.state.boats[boat];
-        if (b) b[id as Track] = level;
-      },
-      send: (boat = 0, zone?: ZoneId) => this.dispatch(this.state.boats[boat]?.id ?? 0, zone ?? this.state.boats[boat]?.target ?? 'shallows'),
-      /** Step the simulation forward (a hidden tab pauses animation frames). */
-      skip: (seconds: number) => {
-        const n = Math.ceil(seconds / 0.25);
-        for (let i = 0; i < n; i++) this.handle(step(this.state, 0.25, this.rng));
-        this.panels.refresh();
-      },
-      /** Jump to a rank (0-4) by setting lifetime earnings. */
-      rank: (r: number) => { this.state.lifetime = Math.max(this.state.lifetime, [0, 500, 3000, 15000, 60000][r] ?? 0); },
-      /** Add boats (as rowboats) until there are n. */
-      fleet: (n: number) => { this.state.lifetime = Math.max(this.state.lifetime, 15000); this.state.money += 20000; while (this.state.boats.length < n) buyBoat(this.state); },
-      hireDockhands: (n = 1) => { this.state.lifetime = Math.max(this.state.lifetime, 500); for (let i = 0; i < n; i++) hireDockhand(this.state, this.rng); },
-      captain: (boat = 0, trait: Trait = 'swift') => {
-        const b = this.state.boats[boat];
-        if (!b) return;
-        b.captain = { id: this.state.nextId++, name: 'Debug', trait, wage: 40 };
-        b.target = bestZone(b);
-      },
-      panel: (kind: 'boat' | 'hire' | 'shipyard' | 'summary', boat = 0) => this.panels.open(kind, this.state.boats[boat]?.id ?? 0),
-      /** Override the camera: cam(pitchDeg, distance); cam() clears. */
-      cam: (pitch?: number, dist = 20) => { this.cameraRig.override = pitch === undefined ? null : { pitch, dist }; },
-      popup: (text = '+$12') => this.hud.floatText(text, window.innerWidth / 2, window.innerHeight / 2),
-      toast: (t: string) => this.hud.toast(t, 'good'),
-      stats: () => ({ ms: +this.frameMs.toFixed(2), calls: this.rig.renderer.info.render.calls, tris: this.rig.renderer.info.render.triangles, geometries: this.rig.renderer.info.memory.geometries }),
-      state: () => this.state,
-    };
-    (window as unknown as { __debug: typeof dbg }).__debug = dbg;
-  }
-
 
   start(): void {
     if (this.started) return;
@@ -204,38 +159,13 @@ export class Game {
       this.panels.toggle('logbook');
     } else if (code === 'KeyE') {
       if (this.panels.isOpen()) {
-        if (this.panels.current === 'summary' || code === 'KeyE') this.panels.close();
+        this.panels.close();
         return;
       }
-      this.interact();
-    }
-  }
-
-  private interact(): void {
-    const t = this.target;
-    if (!t) return;
-    const s = this.state;
-    switch (t.kind) {
-      case 'crate':
-        this.run(pickUp(s, t.id));
-        break;
-      case 'boat': {
-        const b = s.boats.find((x) => x.id === t.id);
-        if (!b) break;
-        if (b.status === 'returned' && !b.captain) this.run(unloadBoat(s, b.id));
-        else this.panels.open('boat', b.id);
-        break;
-      }
-      case 'market': this.panels.open('market'); break;
-      case 'shipyard': this.panels.open('shipyard'); break;
-      case 'board': this.panels.open('board'); break;
-      case 'icebox': this.panels.open('ice'); break;
-      case 'inn': this.panels.open('hire'); break;
-      case 'fishing': {
-        if (s.fishing.phase === 'idle') this.run(castLine(s, this.rng));
-        else this.run(hook(s, this.rng));
-        break;
-      }
+      const r = interact(this.target, this.state, this.rng);
+      if (!r) return;
+      if ('evs' in r) this.run(r.evs);
+      else this.panels.open(r.open, r.arg ?? 0);
     }
   }
 
@@ -264,185 +194,17 @@ export class Game {
   }
 
   private run(evs: Ev[]): void {
-    this.handle(evs);
+    this.events.handle(evs);
     this.panels.refresh();
   }
 
-  private handle(evs: Ev[]): void {
-    let soldCount = 0, soldTotal = 0, saveNow = false;
-    const a = this.audio, h = this.hud;
-    for (const e of evs) {
-      switch (e.type) {
-        case 'boatDispatched':
-          if (e.auto) break;
-          a.click();
-          h.toast(`The boat heads out to the ${ZONES[e.zone].name}.`);
-          break;
-        case 'boatReturned':
-          if (e.auto) break;
-          a.bell();
-          h.toast(`A boat is back with ${NOUN(e.count)}! Unload it at the pier.`, 'good');
-          break;
-        case 'boatUnloaded':
-          if (e.auto) break;
-          a.pop();
-          h.toast(`Unloaded ${NOUN(e.count)} onto the dock. They start spoiling now!`);
-          break;
-        case 'cratePicked': a.pop(); break;
-        case 'crateStored':
-        case 'crateTaken': a.pop(); break;
-        case 'crateSold':
-          if (e.staff) { this.staffSold += e.price; break; }
-          soldCount++;
-          soldTotal += e.price;
-          saveNow = true;
-          break;
-        case 'crateSpoiled':
-          a.spoil();
-          h.toast(`A crate of ${FISH[e.species].name} has spoiled.`, 'warn');
-          break;
-        case 'crateDiscarded':
-          h.toast(`Threw out a spoiled crate of ${FISH[e.species].name}.`, 'warn');
-          break;
-        case 'orderPosted':
-          h.toast('A new order is up on the notice board.');
-          break;
-        case 'orderFilled':
-          this.recentFilled = this.now;
-          this.popAt(LAYOUT.noticeBoard.x, 2.6, LAYOUT.noticeBoard.z, `Bonus +$${e.bonus}`);
-          a.coin();
-          h.toast(`${e.name}'s order is complete! Bonus +$${e.bonus}`, 'good');
-          break;
-        case 'orderMissed':
-          this.recentMissed = this.now;
-          a.deny();
-          h.toast(`${e.name}'s order expired.`, 'warn');
-          break;
-        case 'castStarted': a.cast(); break;
-        case 'biteStarted': a.splash(); break;
-        case 'fishLanded':
-          a.pop();
-          h.toast(`You landed a ${FISH[e.species].name}!`, 'good');
-          break;
-        case 'fishLost':
-          if (e.reason === 'cancelled') break;
-          a.deny();
-          h.toast(e.reason === 'early' ? 'Too early, the fish got away.' : e.reason === 'late' ? 'Too slow, it got away.' : 'Your hands were full.', 'warn');
-          break;
-        case 'upgradeBought':
-          a.coin();
-          h.toast(`Bought: ${UPGRADES[e.id].name}.`, 'good');
-          saveNow = true;
-          break;
-        case 'boatUpgraded':
-          a.coin();
-          h.toast(`${this.state.boats.find((b) => b.id === e.boatId)?.name ?? 'Boat'}: upgraded.`, 'good');
-          saveNow = true;
-          break;
-        case 'boatBought':
-          a.coin();
-          h.toast('A new rowboat joins the fleet!', 'good');
-          saveNow = true;
-          break;
-        case 'hired': a.pop(); h.toast(`${e.name} is hired as ${e.role === 'captain' ? 'a captain' : 'a dockhand'}.`, 'good'); saveNow = true; break;
-        case 'fired': h.toast(`${e.name} was let go.`); saveNow = true; break;
-        case 'wagesPaid':
-          if (e.unpaid > 0) h.toast(`Could not pay ${e.unpaid} crew member${e.unpaid === 1 ? '' : 's'}: they sit today out.`, 'warn');
-          break;
-        case 'rankUp':
-          a.chime();
-          h.banner(RANK_NAMES[e.rank], `Rank up! Unlocked: ${RANK_UNLOCKS[e.rank]}`);
-          saveNow = true;
-          break;
-        case 'phaseChanged':
-          if (e.phase === 'dawn') a.chime();
-          if (e.phase === 'night') h.toast('Night falls. Boats cannot sail until dawn.');
-          break;
-        case 'dayEnded':
-          this.panels.showSummary(e.day, e.stats);
-          saveNow = true;
-          break;
-        case 'denied':
-          a.deny();
-          h.toast(e.reason, 'warn');
-          break;
-      }
-    }
-    if (soldCount > 0) {
-      this.popAt(LAYOUT.market.x, 2.9, LAYOUT.market.z + 1.2, `+$${soldTotal}`);
-      a.coin();
-      h.toast(`Sold ${NOUN(soldCount)} for $${soldTotal}.`, 'good');
-    }
-    if (this.staffSold > 0 && this.now - this.lastStaffPop > 1.2) {
-      this.popAt(LAYOUT.market.x, 2.9, LAYOUT.market.z + 1.2, `+$${this.staffSold}`);
-      this.staffSold = 0;
-      this.lastStaffPop = this.now;
-    }
-    if (saveNow) {
-      this.save();
-      this.saveTimer = 0;
-    }
-  }
-
   // ---- targeting ---------------------------------------------------------
-
-  private findTarget(): Target | null {
-    const p = this.player.pos;
-    const s = this.state;
-    let best: Target | null = null;
-    for (const c of dockCrates(s)) {
-      const d = Math.hypot((c.x ?? 0) - p.x, (c.z ?? 0) - p.z);
-      if (d <= CRATE_RANGE && (!best || d < best.dist)) best = { kind: 'crate', id: c.id, x: c.x ?? 0, z: c.z ?? 0, dist: d };
-    }
-    if (best) return best;
-    const consider = (kind: TargetKind, id: number, x: number, z: number, range: number) => {
-      const d = Math.hypot(x - p.x, z - p.z);
-      if (d <= range && (!best || d < best.dist)) best = { kind, id, x, z, dist: d };
-    };
-    for (const b of s.boats) {
-      const berth = LAYOUT.berths[b.berth];
-      consider('boat', b.id, berth.edgeX, berth.edgeZ, BOAT_RANGE);
-    }
-    for (const k of Object.keys(STATIONS) as (keyof typeof STATIONS)[]) {
-      const st = STATIONS[k];
-      consider(k, 0, st.x, st.z, st.range);
-    }
-    return best;
-  }
-
-  private promptFor(t: Target | null): Prompt | null {
-    if (!t) return null;
-    const s = this.state;
-    switch (t.kind) {
-      case 'crate': {
-        const c = s.crates.find((x) => x.id === t.id);
-        if (!c) return null;
-        if (c.freshness <= 0) return { text: `Throw out spoiled ${FISH[c.species].name}`, key: true };
-        if (handCrates(s).length >= carryCapacity(s)) return { text: 'Hands full', key: false, dim: true };
-        return { text: `Pick up ${FISH[c.species].name} crate (${Math.round(c.freshness)}% fresh)`, key: true };
-      }
-      case 'boat': {
-        const b = s.boats.find((x) => x.id === t.id);
-        if (!b) return null;
-        if (b.status === 'returned' && !b.captain) return { text: `Unload ${b.name} (${NOUN(b.catch.length)})`, key: true, hot: true };
-        return { text: `${b.name}: manage boat${b.status === 'out' ? ` (at sea, ${Math.max(0, Math.ceil(b.tripTime - b.progress))}s)` : ''}`, key: true };
-      }
-      case 'market': return { text: 'Sell fish at the market', key: true };
-      case 'shipyard': return { text: 'Visit the shipyard', key: true };
-      case 'board': return { text: 'Read the notice board', key: true };
-      case 'inn': return { text: 'Hire crew at the inn', key: true };
-      case 'icebox': return { text: s.upgrades.icebox ? 'Use the ice box' : 'Ice box (buy at the shipyard)', key: true };
-      case 'fishing':
-        if (s.fishing.phase === 'idle') return { text: 'Cast your line', key: true };
-        if (s.fishing.phase === 'bite') return { text: 'HOOK IT NOW!', key: true, hot: true };
-        return { text: 'Wait for a bite…  (early reel loses it)', key: true, dim: true };
-    }
-  }
 
   // ---- frame -------------------------------------------------------------
 
   private frame(dt: number): void {
     this.now += dt;
+    this.events.now = this.now;
     const s = this.state;
     const frozen = this.panels.isOpen();
 
@@ -450,15 +212,16 @@ export class Game {
     const stepped = this.player.update(dt, this.input.moveVector(), frozen, s.fishing.phase !== 'idle');
     if (stepped) this.audio.step();
     if (s.fishing.phase !== 'idle' && Math.hypot(this.player.pos.x - STATIONS.fishing.x, this.player.pos.z - STATIONS.fishing.z) > 3.8) {
-      this.handle(cancelCast(s));
+      this.events.handle(cancelCast(s));
     }
 
-    this.handle(step(s, dt, this.rng));
+    this.events.handle(step(s, dt, this.rng));
     if (this.holdHour !== null) s.dayTime = (((this.holdHour - START_HOUR) % 24) + 24) % 24 * HOUR_SECONDS;
     this.frameMs += (dt * 1000 - this.frameMs) * 0.05;
+    this.quality.sample(dt);
     this.cameraRig.pitchGoal = 55 - 15 * Math.min(1, Math.max(0, -this.player.pos.z / 10));
 
-    this.target = frozen ? null : this.findTarget();
+    this.target = frozen ? null : findTarget(s, this.player.pos);
 
     this.saveTimer += dt;
     if (this.saveTimer >= SAVE_EVERY) {
@@ -490,8 +253,8 @@ export class Game {
       {
         phase: phaseOf(s.dayTime),
         handSpecies: hand.map((c) => c.species),
-        recentFilled: this.now - this.recentFilled < 20,
-        recentMissed: this.now - this.recentMissed < 20,
+        recentFilled: this.now - this.events.recentFilled < 20,
+        recentMissed: this.now - this.events.recentMissed < 20,
         money: s.money,
         boatsOut: s.boats.filter((b) => b.status === 'out').length,
         openOrders: s.orders.length,
@@ -502,7 +265,7 @@ export class Game {
     this.rig.render();
 
     // ui
-    this.hud.update(s, this.promptFor(this.target));
+    this.hud.update(s, promptFor(s, this.target));
     this.panels.update();
   }
 }

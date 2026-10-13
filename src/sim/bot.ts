@@ -1,10 +1,9 @@
 // A greedy scripted player that drives the pure simulation. Used by the pacing test and for tuning costs.
 import { Rng } from './rng';
-import { RANK_NAMES } from './config';
 import type { Track } from './config';
 import { dispatchBoat, unloadBoat } from './boats';
 import { cancelCast, castLine, hook } from './fishing';
-import { bestZone, buyBoat, buyBoatUpgrade, canBuyBoat, canUpgradeBoat } from './fleet';
+import { bestZone, buyBoat, buyBoatUpgrade, canBuyBoat, canUpgradeBoat, reachableZones, tripCostFor } from './fleet';
 import { carryCapacity, dockCrates, handCrates, pickUp } from './crates';
 import { crateValue, sellAll } from './market';
 import { canHireCaptain, canHireDockhand, hireCaptain, hireDockhand, setBoatTarget } from './staff';
@@ -12,7 +11,7 @@ import { initialState } from './state';
 import type { GameState } from './state';
 import { startGame, step } from './sim';
 import { buyUpgrade, canBuy } from './upgrades';
-import { UPGRADE_IDS } from './config';
+import { UPGRADES, UPGRADE_IDS } from './config';
 import { isNight } from './time';
 
 export interface BotResult {
@@ -38,12 +37,15 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
   let busy = 0;
   const logbook: string[] = [];
 
+  /** Money kept back so every boat can afford its next trip. */
+  const reserve = () => s.boats.reduce((a, b) => a + tripCostFor(bestZone(b)), 0);
+
   const shop = (): boolean => {
     type Opt = { cost: number; go: () => void };
     const opts: Opt[] = [];
     for (const id of UPGRADE_IDS) {
       if (id === 'icebox') continue;
-      if (canBuy(s, id).ok) opts.push({ cost: id === 'handcart' ? 200 : id === 'stall1' ? 2000 : 9000, go: () => { buyUpgrade(s, id); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}`); } });
+      if (canBuy(s, id).ok) opts.push({ cost: UPGRADES[id].cost, go: () => { buyUpgrade(s, id); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}`); } });
     }
     for (const b of s.boats) {
       for (const t of ['hull', 'hold', 'gear', 'sails'] as Track[]) {
@@ -53,8 +55,9 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
     }
     const bb = canBuyBoat(s);
     if (bb.ok) opts.push({ cost: bb.cost!, go: () => { buyBoat(s); logbook.push(`${(s.clock / 60).toFixed(1)}m boat`); } });
+    const spare = s.money - reserve();
     opts.sort((a, b) => a.cost - b.cost);
-    if (opts.length === 0) return false;
+    if (opts.length === 0 || opts[0].cost > spare) return false;
     // Greedy: the cheapest thing that raises income. Wait for it if it is not yet affordable? No: only buy what we can afford.
     opts[0].go();
     return true;
@@ -92,8 +95,11 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
       if (b.captain && !b.captain.unpaid) continue;
       if (b.status === 'returned') { cancelCast(s); unloadBoat(s, b.id); acted = true; busy = 1.5; }
       else if (b.status === 'docked' && !isNight(s)) {
-        if (b.target !== bestZone(b)) setBoatTarget(s, b.id, bestZone(b));
-        if (dispatchBoat(s, b.id, b.target)[0].type === 'boatDispatched') { cancelCast(s); acted = true; busy = 1.5; }
+        // The best zone this boat can reach and the player can pay for.
+        const zone = reachableZones(b).filter((z) => tripCostFor(z) <= s.money).pop();
+        if (zone === undefined) continue;
+        setBoatTarget(s, b.id, zone);
+        if (dispatchBoat(s, b.id, zone)[0].type === 'boatDispatched') { cancelCast(s); acted = true; busy = 1.5; }
       }
     }
     if (acted) continue;
@@ -123,4 +129,3 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
   return { rankMinutes, minutes: s.clock / 60, state: s };
 }
 
-export { RANK_NAMES };

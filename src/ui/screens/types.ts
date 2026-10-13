@@ -1,4 +1,5 @@
 import type { DayStats, GameState } from '../../sim/state';
+import type { QualityMode } from '../../view/quality';
 
 export interface TabDef { id: string; label: string }
 
@@ -10,6 +11,8 @@ export interface ScreenCtx {
   /** Requested tab id ('' on open). */
   tab: string;
   confirmReset: boolean;
+  /** Current picture-quality setting (shown in the fish book). */
+  quality: QualityMode;
   summary: { day: number; stats: DayStats } | null;
 }
 

@@ -11,6 +11,7 @@ describe('market', () => {
   });
   it('each sale drops demand by 0.06 down to a floor of 0.5, and pays money', () => {
     const s = initialState();
+    s.money = 0;
     const c = addCrate(s, 'lobster', 'hand');
     sellCrate(s, c.id);
     expect(s.money).toBe(90);
@@ -30,6 +31,7 @@ describe('market', () => {
   });
   it('spoiled crates are worth nothing and are binned on sale', () => {
     const s = initialState();
+    s.money = 0;
     const c = addCrate(s, 'lobster', 'hand');
     c.freshness = 0;
     expect(crateValue(s, c)).toBe(0);

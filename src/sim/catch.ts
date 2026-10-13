@@ -3,7 +3,7 @@ import type { Phase, Species, ZoneId } from './config';
 import type { Rng } from './rng';
 
 /** The lowest-weight species of a zone: the one Gear and Lucky captains favour. */
-export function rareSpecies(zone: ZoneId): Species {
+function rareSpecies(zone: ZoneId): Species {
   const e = Object.entries(ZONES[zone].table) as [Species, number][];
   return e.reduce((a, b) => (b[1] < a[1] ? b : a))[0];
 }

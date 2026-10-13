@@ -14,12 +14,12 @@ export interface StorageLike {
   removeItem(key: string): void;
 }
 
-export function serialize(state: GameState): string {
+function serialize(state: GameState): string {
   return JSON.stringify(state);
 }
 
-/** Merge parsed data over a fresh state so missing fields (older saves) get defaults. v1 saves move their global Hold/Hull levels onto every boat. */
-export function migrate(raw: unknown): GameState | null {
+/** Merge parsed data over a fresh state so missing fields (older saves) get defaults. v1 saves move their global Hold/Hull levels onto every boat; v2 saves get a zero trip-cost line (filled in by the merge above). */
+function migrate(raw: unknown): GameState | null {
   if (!raw || typeof raw !== 'object') return null;
   const d = raw as Partial<GameState> & { upgrades?: Record<string, boolean> };
   if (typeof d.version !== 'number' || d.version > STATE_VERSION) return null;
@@ -60,7 +60,7 @@ export function migrate(raw: unknown): GameState | null {
 }
 
 /** Boats that were at sea come home with their catch ready; any cast line is reset; hauled crates go back on the dock. */
-export function settleLoaded(state: GameState, rng: Rng): void {
+function settleLoaded(state: GameState, rng: Rng): void {
   resetDockhands(state);
   for (const b of state.boats) {
     if (b.status === 'out') {

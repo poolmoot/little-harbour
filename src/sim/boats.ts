@@ -1,8 +1,8 @@
-import { ZONES } from './config';
 import type { Species, ZoneId } from './config';
 import { rollCatch } from './catch';
 import { addCrate } from './crates';
-import { holdSize, rareMult, tripTimeFor, zoneUnlockedFor } from './fleet';
+import { holdSize, rareMult, tripCostFor, tripTimeFor, zoneUnlockedFor } from './fleet';
+import { spendOnTrip } from './ledger';
 import type { Rng } from './rng';
 import type { Boat, Ev, GameState } from './state';
 import { isNight, phaseOf } from './time';
@@ -17,17 +17,20 @@ export function dispatchBoat(state: GameState, boatId: number, zone?: ZoneId, au
   const boat = state.boats.find((b) => b.id === boatId);
   if (!boat) return [{ type: 'denied', reason: 'No such boat.' }];
   const z = zone ?? boat.target;
-  if (boat.status === 'out') return [{ type: 'denied', reason: 'That boat is already at sea.' }];
+  if (boat.status === 'out') return [{ type: 'denied', reason: 'That boat is already out at sea.' }];
   if (boat.status === 'returned') return [{ type: 'denied', reason: 'Unload the boat first.' }];
-  if (isNight(state)) return [{ type: 'denied', reason: 'Too dark to sail. Wait for dawn.' }];
-  if (!zoneUnlockedFor(boat, z)) return [{ type: 'denied', reason: 'This boat needs a bigger hull for that zone.' }];
+  if (isNight(state)) return [{ type: 'denied', reason: 'It is too dark to go out. Wait for morning.' }];
+  if (!zoneUnlockedFor(boat, z)) return [{ type: 'denied', reason: 'This boat is too small to go there.' }];
+  const cost = tripCostFor(z);
+  if (state.money < cost) return [{ type: 'denied', reason: `Not enough money for the trip. It costs $${cost}.` }];
+  spendOnTrip(state, cost);
   boat.status = 'out';
   boat.zone = z;
   boat.target = z;
   boat.progress = 0;
   boat.tripTime = tripTimeFor(boat, z);
   boat.catch = [];
-  return [{ type: 'boatDispatched', boatId, zone: z, auto }];
+  return [{ type: 'boatDispatched', boatId, zone: z, cost, auto }];
 }
 
 export function recordCaught(state: GameState, species: Species): void {
@@ -68,4 +71,3 @@ export function unloadBoat(state: GameState, boatId: number, auto = false): Ev[]
   return [{ type: 'boatUnloaded', boatId, count: n, auto }];
 }
 
-export { ZONES };

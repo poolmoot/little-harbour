@@ -9,32 +9,25 @@ export type ZoneId = 'shallows' | 'reef' | 'opensea' | 'deep';
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
 export type UpgradeId = 'icebox' | 'handcart' | 'stall1' | 'stall2';
 
-export const FISH: Record<Species, { name: string; price: number }> = {
-  herring: { name: 'Herring', price: 6 },
-  mackerel: { name: 'Mackerel', price: 10 },
-  flounder: { name: 'Flounder', price: 18 },
-  seabass: { name: 'Sea bass', price: 28 },
-  snapper: { name: 'Red snapper', price: 40 },
-  lobster: { name: 'Lobster', price: 90 },
-  cod: { name: 'Cod', price: 60 },
-  tuna: { name: 'Tuna', price: 110 },
-  swordfish: { name: 'Swordfish', price: 220 },
-  anglerfish: { name: 'Anglerfish', price: 300 },
-  squid: { name: 'Giant squid', price: 480 },
-  sturgeon: { name: 'Golden sturgeon', price: 1200 },
+export const FISH_PRICE: Record<Species, number> = {
+  herring: 6, mackerel: 10, flounder: 18, seabass: 28, snapper: 40, lobster: 90,
+  cod: 60, tuna: 110, swordfish: 220, anglerfish: 160, squid: 260, sturgeon: 800,
 };
 
-/** needsHull is the minimum hull tier (0 Rowboat .. 3 Trawler). */
-export const ZONES: Record<ZoneId, { name: string; trip: number; needsHull: number; table: Partial<Record<Species, number>> }> = {
-  shallows: { name: 'Shallows', trip: 25, needsHull: 0, table: { herring: 50, mackerel: 30, flounder: 20 } },
-  reef: { name: 'Reef', trip: 50, needsHull: 1, table: { seabass: 50, snapper: 35, lobster: 15 } },
-  opensea: { name: 'Open Sea', trip: 80, needsHull: 2, table: { cod: 50, tuna: 35, swordfish: 15 } },
-  deep: { name: 'Deep', trip: 120, needsHull: 3, table: { anglerfish: 50, squid: 35, sturgeon: 15 } },
+/** trip = seconds at sea. tripCost = food and supplies, paid when the boat leaves. needsHull = minimum hull tier (0 Rowboat .. 3 Trawler). */
+export const ZONES: Record<ZoneId, { trip: number; tripCost: number; needsHull: number; table: Partial<Record<Species, number>> }> = {
+  shallows: { trip: 25, tripCost: 3, needsHull: 0, table: { herring: 50, mackerel: 30, flounder: 20 } },
+  reef: { trip: 50, tripCost: 10, needsHull: 1, table: { seabass: 50, snapper: 35, lobster: 15 } },
+  opensea: { trip: 80, tripCost: 30, needsHull: 2, table: { cod: 50, tuna: 35, swordfish: 15 } },
+  deep: { trip: 120, tripCost: 80, needsHull: 3, table: { anglerfish: 50, squid: 35, sturgeon: 15 } },
 };
 export const ZONE_IDS: ZoneId[] = ['shallows', 'reef', 'opensea', 'deep'];
 
 export const PIER_TABLE: Partial<Record<Species, number>> = { herring: 70, mackerel: 30 };
 export const FLOUNDER_TWILIGHT_MULT = 3;
+
+/** Money in a new game, enough for the first trips. */
+export const START_MONEY = 10;
 
 // Time. One day = 6 real minutes, clock runs 06:00 -> 06:00.
 export const DAY_SECONDS = 360;
@@ -49,7 +42,6 @@ export const MIN_PRICE_MULT = 0.3;
 export const CARRY_BASE = 2;
 export const CARRY_HANDCART = 4;
 export const ICE_CAPACITY = 6;
-export const HOLD_START = 4;
 
 // Market
 /** Demand drop per crate sold, by market stall level. */
@@ -74,11 +66,12 @@ export const FISH_WAIT_MIN = 2;
 export const FISH_WAIT_MAX = 6;
 export const FISH_HOOK_WINDOW = 0.7;
 
-export const UPGRADES: Record<UpgradeId, { name: string; cost: number; desc: string; requires?: UpgradeId; rank: number }> = {
-  icebox: { name: 'Ice box', cost: 120, desc: 'Keeps up to 6 crates fresh four times longer.', rank: 0 },
-  handcart: { name: 'Handcart', cost: 200, desc: 'You and your dockhands carry 4 crates instead of 2.', rank: 0 },
-  stall1: { name: 'Market stall I', cost: 2000, desc: 'A wider stall: each crate sold drops demand 0.04 instead of 0.06.', rank: 2 },
-  stall2: { name: 'Market stall II', cost: 9000, desc: 'A grand stall: demand drops only 0.025 per crate.', requires: 'stall1', rank: 3 },
+/** Harbour-wide purchases. Names and descriptions are in ui/text.ts. */
+export const UPGRADES: Record<UpgradeId, { cost: number; requires?: UpgradeId; rank: number }> = {
+  icebox: { cost: 120, rank: 0 },
+  handcart: { cost: 200, rank: 0 },
+  stall1: { cost: 2000, rank: 2 },
+  stall2: { cost: 9000, requires: 'stall1', rank: 3 },
 };
 export const UPGRADE_IDS: UpgradeId[] = ['icebox', 'handcart', 'stall1', 'stall2'];
 
@@ -86,8 +79,6 @@ export const UPGRADE_IDS: UpgradeId[] = ['icebox', 'handcart', 'stall1', 'stall2
 export type Track = 'hull' | 'hold' | 'gear' | 'sails';
 export const TRACKS: Track[] = ['hull', 'hold', 'gear', 'sails'];
 export const TRACK_MAX: Record<Track, number> = { hull: 3, hold: 3, gear: 2, sails: 2 };
-export const TRACK_NAMES: Record<Track, string> = { hull: 'Hull', hold: 'Hold', gear: 'Gear', sails: 'Sails' };
-export const HULL_NAMES = ['Rowboat', 'Sloop', 'Cutter', 'Trawler'];
 export const HOLD_SIZES = [4, 6, 8, 12];
 export const GEAR_MULT = [1, 1.5, 2.2];
 export const SAILS_MULT = [1, 0.85, 0.7];
@@ -95,7 +86,7 @@ export const MAX_BOATS = 4;
 export const BOAT_NAMES = ['Gull', 'Wren', 'Marigold', 'Albatross'];
 /** Cost to reach level i of each track (index 0 unused). Hold, Gear and Sails are multiplied by TIER_COST_MULT[hull]. */
 export const TRACK_COST: Record<Track, number[]> = {
-  hull: [0, 400, 2500, 10000],
+  hull: [0, 400, 2500, 4500],
   hold: [0, 300, 450, 1200],
   gear: [0, 350, 950],
   sails: [0, 350, 800],
@@ -105,25 +96,12 @@ export const TIER_COST_MULT = [1, 1.6, 2.6, 4];
 export const BOAT_COST = [0, 700, 2200, 6000];
 
 // ---- Rank ---------------------------------------------------------------
-export const RANK_NAMES = ['Dockside Fisher', 'Boat Owner', 'Skipper & Co', 'Fleet Master', 'Harbour Master'];
 export const RANK_THRESHOLDS = [0, 500, 3000, 15000, 60000];
-export const RANK_UNLOCKS = [
-  'The basics',
-  'Dockhands, a second boat, the Sloop hull',
-  'Captains, a third berth, the Cutter hull, market stall I',
-  'A fourth berth, the Trawler hull, market stall II',
-  'The title, and a golden weathervane on the inn',
-];
+export const TOP_RANK = RANK_THRESHOLDS.length - 1;
 
 // ---- Staff --------------------------------------------------------------
 export type Trait = 'swift' | 'lucky' | 'careful' | 'thrifty';
 export const TRAITS: Trait[] = ['swift', 'lucky', 'careful', 'thrifty'];
-export const TRAIT_INFO: Record<Trait, { name: string; desc: string }> = {
-  swift: { name: 'Swift', desc: 'Trips take 15% less time' },
-  lucky: { name: 'Lucky', desc: 'Rare fish are 25% more likely' },
-  careful: { name: 'Careful', desc: 'Hold carries 1 extra crate' },
-  thrifty: { name: 'Thrifty', desc: 'Wage is 30% lower' },
-};
 export const CAPTAIN_WAGE = 40;
 export const DOCKHAND_WAGE = 25;
 export const MAX_DOCKHANDS = 4;

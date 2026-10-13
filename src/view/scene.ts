@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { hourOf } from '../sim/time';
+import type { QualityPreset, QualityTarget } from './quality';
 
 interface Key {
   h: number;
@@ -100,7 +101,7 @@ const GRADE = {
   }`,
 };
 
-export class SceneRig {
+export class SceneRig implements QualityTarget {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
@@ -116,11 +117,10 @@ export class SceneRig {
   private composer: EffectComposer;
   private bloom: UnrealBloomPass;
   private grade: ShaderPass;
+  private dprCap = 1.75;
 
   constructor(container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-    const dpr = Math.min(window.devicePixelRatio, 1.75);
-    this.renderer.setPixelRatio(dpr);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoftShadowMap was removed in r18x; PCF is soft now
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -166,8 +166,30 @@ export class SceneRig {
     window.addEventListener('resize', () => this.resize());
   }
 
+  /** Apply a picture quality level: pixel ratio, shadows, anti-aliasing and bloom. */
+  applyQuality(p: QualityPreset): void {
+    this.dprCap = p.dpr;
+    const shadows = p.shadow > 0;
+    this.renderer.shadowMap.enabled = shadows;
+    this.sun.castShadow = shadows;
+    if (shadows && this.sun.shadow.mapSize.x !== p.shadow) {
+      this.sun.shadow.mapSize.set(p.shadow, p.shadow);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+    }
+    for (const rt of [this.composer.renderTarget1, this.composer.renderTarget2]) {
+      if (rt.samples !== p.samples) {
+        rt.samples = p.samples;
+        rt.dispose();
+      }
+    }
+    this.bloom.enabled = p.bloom;
+    this.resize();
+  }
+
   resize(): void {
     const w = window.innerWidth, h = window.innerHeight;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.dprCap));
     this.renderer.setSize(w, h);
     this.composer.setPixelRatio(this.renderer.getPixelRatio());
     this.composer.setSize(w, h);

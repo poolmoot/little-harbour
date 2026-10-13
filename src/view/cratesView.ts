@@ -12,14 +12,21 @@ const DEAD = new THREE.Color(0x54503f);
 const tmp = new THREE.Color();
 const TWEEN = 0.3;
 
-export function makeCrateMesh(species: Species): THREE.Group {
-  const g = new THREE.Group();
-  const wood = tex('crate', crateWood(), 0.85);
-  tBox(0.64, 0.4, 0.5, wood, 0.7, 0, 0.2, 0, g);
-  const dark = tex('dkcrate', crateWood(), 0.9, 0x8a6a48);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(0.05, 0.4, 0.05, dark, sx * 0.3, 0.2, sz * 0.23, g);
-  bx(0.66, 0.05, 0.52, dark, 0, 0.03, 0, g);
-  const top = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.08, 0.4), new THREE.MeshStandardMaterial({ color: SPECIES_COLOUR[species], roughness: 0.55 }));
+let crateBody: THREE.Group | null = null;
+const crateTopGeo = new THREE.BoxGeometry(0.54, 0.08, 0.4);
+
+/** Crate boxes share one set of geometry and wood materials; only the coloured top has its own material. */
+function makeCrateMesh(species: Species): THREE.Group {
+  if (!crateBody) {
+    crateBody = new THREE.Group();
+    const wood = tex('crate', crateWood(), 0.85);
+    tBox(0.64, 0.4, 0.5, wood, 0.7, 0, 0.2, 0, crateBody);
+    const dark = tex('dkcrate', crateWood(), 0.9, 0x8a6a48);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(0.05, 0.4, 0.05, dark, sx * 0.3, 0.2, sz * 0.23, crateBody);
+    bx(0.66, 0.05, 0.52, dark, 0, 0.03, 0, crateBody);
+  }
+  const g = crateBody.clone();
+  const top = new THREE.Mesh(crateTopGeo, new THREE.MeshStandardMaterial({ color: SPECIES_COLOUR[species], roughness: 0.55 }));
   top.position.y = 0.4;
   top.castShadow = true;
   g.add(top);
@@ -28,7 +35,7 @@ export function makeCrateMesh(species: Species): THREE.Group {
   return g;
 }
 
-export function tintCrate(g: THREE.Object3D, species: Species, freshness: number): void {
+function tintCrate(g: THREE.Object3D, species: Species, freshness: number): void {
   const top = g.userData.top as THREE.Mesh;
   const m = top.material as THREE.MeshStandardMaterial;
   const t = 1 - freshness / 100;
@@ -51,21 +58,25 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 const backOut = (t: number) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
 const tgtPos = new THREE.Vector3();
 const wp = new THREE.Vector3();
+const icePt = new THREE.Vector3();
+const dropOff = new THREE.Vector3(0, 0.9, 0);
 
 export class CratesView {
   private entries = new Map<number, Entry>();
   /** Where dockhands are carrying each hauled crate (filled by StaffView each frame). */
   readonly haul = new Map<number, THREE.Vector3>();
+  private seen = new Set<number>();
   constructor(private scene: THREE.Scene, private player: Player) {}
 
   /** Positions of ice-box crates sit on top of the box, in a 3x2 grid. */
   private icePos(i: number): THREE.Vector3 {
     const ib = LAYOUT.iceBox;
-    return new THREE.Vector3(ib.x - 0.55 + (i % 3) * 0.55, 1.0, ib.z - 0.25 + Math.floor(i / 3) * 0.5);
+    return icePt.set(ib.x - 0.55 + (i % 3) * 0.55, 1.0, ib.z - 0.25 + Math.floor(i / 3) * 0.5);
   }
 
   sync(state: GameState, now: number, dt: number): void {
-    const seen = new Set<number>();
+    const seen = this.seen;
+    seen.clear();
     let hand = 0, ice = 0;
     for (const c of state.crates) {
       seen.add(c.id);
@@ -114,7 +125,7 @@ export class CratesView {
       }
       if (fresh) {
         // new crate (unloaded from a boat or caught): drop in with a pop
-        e.from.copy(tgtPos).add(new THREE.Vector3(0, 0.9, 0));
+        e.from.copy(tgtPos).add(dropOff);
         e.fromScale = 0.3;
         moved = true;
       }
