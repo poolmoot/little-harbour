@@ -212,8 +212,8 @@ game bundle); `docs/superpowers/specs/` design notes.
 **src/**
 - `main.ts` — start-up: finds the page elements and starts the game.
 - `game.ts` — the Game class: owns state, builds the view/UI, runs the frame loop, saves.
-- `events.ts` — turns sim events into sounds, toasts, pop-ups and saves.
-- `interaction.ts` — what is near the player, the prompt text, and what E does.
+- `events.ts` — turns sim events into sounds, toasts, pop-ups and saves; also sets the rain, storm-wind and fog sound layers from the weather.
+- `interaction.ts` — what is near the player, the prompt text, and what E does (including the four plot doors and delivering the King Fish at the inn).
 - `debug.ts` — dev-only `window.__debug` helpers (never in production builds).
 - `input.ts` — keyboard state (sliders keep their own arrow keys).
 - `palette.ts` — fish colours shared by view and UI.
@@ -251,21 +251,25 @@ game bundle); `docs/superpowers/specs/` design notes.
 
 **src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
 - `text.ts` — all names and wording the player reads in the game.
+- `screenText.ts` — wording for the tycoon screens (goal tracker, weather chip, building windows, contracts tab, workers' rules, repairs, day report, ending, new toasts).
 - `menuText.ts` — wording for the title screen, pause menu, settings, how to play, the controls hint and the mute toast.
-- `hud.ts` — money, clock, carrying, orders, boats, rank bar, prompt, controls hint, toasts.
+- `hud.ts` — money (with money per minute), clock, weather chip, goal tracker, carrying, orders, boats, rank bar, prompt, controls hint, toasts.
+- `hudParts.ts` — pure builders for the goal tracker, weather chip and money-per-minute text (tested).
+- `buildingParts.ts` — shared pieces of the building windows (upgrade row, which carried crates fit).
 - `panels.ts` — the window manager: opens a screen, draws it, routes button and slider events to game actions (`PanelKind`, `SCREENS`, `Panels.act`).
 - `menuFlow.ts` — pure rules for title / play / paused and what Esc does in each.
 - `components.ts` — reusable HTML builders (button, meter, slider, card, item, chip, section, stat).
 - `icons.ts` — the chunky SVG icon set and fish icons.
 - `screens/types.ts` — `ScreenCtx` and `ScreenView`.
-- `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts`, `icebox.ts` — the in-game windows.
+- `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts`, `icebox.ts` — the in-game windows. `notices.ts` has the Orders and Contracts tabs; `crew.ts` holds the "Smoke these" ticks and the spare-crates choice; `boat.ts` has the "Stay home in storms" tick and the broken state; `shipyard.ts` has the Fix buttons.
+- `screens/plot.ts` — the window for a plot (For sale, or the right building window); `coldstore.ts`, `smokehouse.ts`, `restaurant.ts`, `lighthouse.ts` — the four building windows. `screens/ending.ts` — the King Fish ending.
 - `screens/logbook.ts` — the fish book. `screens/ledger.ts` — the day report.
 - `screens/title.ts` — the title screen. `screens/pause.ts` — the pause menu.
 - `screens/settings.ts` — volumes, mute, picture quality, reset game.
 - `screens/howto.ts` — the how-to-play page.
 - `styles/index.css` — pulls in the other style files. `tokens.css` — every colour, size and timing. `base.css` — base text and animations.
 - `styles/components.css` — buttons, meters, sliders, cards, rows. `hud.css` — the HUD. `window.css` — windows. `menu.css` — title, pause, settings, how-to-play.
-- Tests: `components.test.ts`, `menus.test.ts` (menu screens), `menuFlow.test.ts`, `textTycoon.test.ts`.
+- Tests: `components.test.ts`, `menus.test.ts` (menu screens), `menuFlow.test.ts`, `textTycoon.test.ts`, `hudParts.test.ts`, `screens/tycoon.test.ts` (the tycoon windows); `src/events.test.ts` covers the event sounds, weather layers and plot targets.
 
 **src/audio/** (all through `GameAudio` in `index.ts`: `getSettings`, `setVolume`, `setMuted`, `toggleMute`, `settings.subscribe`)
 - `index.ts` — `GameAudio`, the one entry point; per-frame `update`, the M key, sound-effect calls.

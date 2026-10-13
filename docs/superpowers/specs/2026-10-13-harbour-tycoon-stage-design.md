@@ -141,10 +141,17 @@ branch. So this stage lands in two steps:
    migration. No changes to `src/ui/hud.ts`, `src/ui/panels.ts` or
    `src/ui/styles.ts`. The new features are reachable through `__debug`
    helpers only.
-2. **Screens second (after the new UI is merged):** the goal tracker,
-   weather and money-per-minute in the HUD, the building panel, the
-   contracts tab, the "Smoke these" list and storm tick, the ending screen,
-   and the placeholder models and plots.
+2. **Screens: done.** HUD (goal tracker with a "goal done" flourish, weather chip with
+   tomorrow and any special day, money per minute); an interaction point at each plot
+   door with the For sale window and the four building windows (`screens/plot.ts`,
+   `coldstore.ts`, `smokehouse.ts`, `restaurant.ts`, `lighthouse.ts`); the Contracts tab on
+   the notice board; the "Smoke these" ticks and the spare-crates choice in the hire window;
+   the "Stay home in storms" tick and the broken state in the boat window, and Fix buttons
+   in the shipyard; tomorrow's weather and the goal-rewards line in the day report; the
+   ending screen when the King Fish is carried into the inn (`screens/ending.ts`); toasts,
+   sounds and the rain, storm-wind and fog layers in `src/events.ts`. Wording is in
+   `src/ui/screenText.ts`. Placeholder models, the goal arrow and weather visuals belong
+   to the graphics agent.
 
 ## Out of scope
 
