@@ -81,8 +81,10 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }`;
 
+/** Daytime colour boost in the final grade; a touch stronger than neutral to suit the cartoon look. */
+const GRADE_SAT = 1.22;
 const GRADE = {
-  uniforms: { tDiffuse: { value: null }, uVig: { value: 0.32 }, uSat: { value: 1.18 }, uCon: { value: 1.06 }, uTint: { value: new THREE.Color(1, 1, 1) }, uAspect: { value: 1.6 } },
+  uniforms: { tDiffuse: { value: null }, uVig: { value: 0.32 }, uSat: { value: GRADE_SAT }, uCon: { value: 1.06 }, uTint: { value: new THREE.Color(1, 1, 1) }, uAspect: { value: 1.6 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
   uniform sampler2D tDiffuse; uniform float uVig, uSat, uCon, uAspect; uniform vec3 uTint; varying vec2 vUv;
@@ -254,7 +256,7 @@ export class SceneRig implements QualityTarget {
     const warm = Math.max(0, 1 - Math.abs(s.sunI - 1.6) / 0.8) * (night && h < 18 ? 1 : 1) * (s.night < 0.5 ? 1 : 0);
     const g = this.grade.uniforms;
     (g.uTint.value as THREE.Color).setRGB(1 + warm * 0.06, 1 + warm * 0.005, 1 - warm * 0.05 + s.night * 0.04);
-    g.uSat.value = 1.18 - s.night * 0.1;
+    g.uSat.value = GRADE_SAT - s.night * 0.1;
     this.bloom.strength = 0.28 + s.night * 0.12;
   }
 

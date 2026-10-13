@@ -3,7 +3,7 @@ import { LAYOUT } from '../sim/config';
 import type { Species } from '../sim/config';
 import type { Crate, GameState } from '../sim/state';
 import { SPECIES_COLOUR } from '../palette';
-import { bx, tBox, tex } from './kit';
+import { bake, bx, tBox, tex, toon } from './kit';
 import { crateWood } from './textures';
 import type { Player } from './player';
 
@@ -15,7 +15,7 @@ const TWEEN = 0.3;
 let crateBody: THREE.Group | null = null;
 const crateTopGeo = new THREE.BoxGeometry(0.54, 0.08, 0.4);
 
-/** Crate boxes share one set of geometry and wood materials; only the coloured top has its own material. */
+/** Crate boxes share one set of geometry, wood materials and outline; only the coloured top has its own material. */
 function makeCrateMesh(species: Species): THREE.Group {
   if (!crateBody) {
     crateBody = new THREE.Group();
@@ -24,9 +24,10 @@ function makeCrateMesh(species: Species): THREE.Group {
     const dark = tex('dkcrate', crateWood(), 0.9, 0x8a6a48);
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(0.05, 0.4, 0.05, dark, sx * 0.3, 0.2, sz * 0.23, crateBody);
     bx(0.66, 0.05, 0.52, dark, 0, 0.03, 0, crateBody);
+    bake(crateBody); // two wood meshes and one ink outline, shared by every crate
   }
   const g = crateBody.clone();
-  const top = new THREE.Mesh(crateTopGeo, new THREE.MeshStandardMaterial({ color: SPECIES_COLOUR[species], roughness: 0.55 }));
+  const top = new THREE.Mesh(crateTopGeo, toon(new THREE.MeshStandardMaterial({ color: SPECIES_COLOUR[species], roughness: 0.55 })));
   top.position.y = 0.4;
   top.castShadow = true;
   g.add(top);

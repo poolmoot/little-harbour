@@ -1,24 +1,52 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as TX from './textures';
+import { addInk, inkGeometry, inkMesh, thinnestSide } from './ink';
 
 /** Shared materials, geometry helpers and prop factories for the harbour. Everything is built from code. */
+
+/**
+ * Cel shading for the world, to match the characters: sunlight falls in three flat steps
+ * (facing the light, turned partly away, turned fully away) instead of a smooth fade.
+ * The steps have slightly soft edges so big flat surfaces do not pop as the sun moves.
+ */
+const TOON_PART_LIT = 0.62;                 // share of the light a surface turned partly away gets
+const TOON_LIT_FROM = 0.34, TOON_LIT_TO = 0.5; // facing (0..1) over which a surface goes from part lit to fully lit
+const TOON_DARK_TO = 0.06;                  // facing below which a surface falls into shade
+const TOON_LIGHTS = THREE.ShaderChunk.lights_physical_pars_fragment.replace(
+  'vec3 irradiance = dotNL * directLight.color;',
+  'vec3 irradiance = toonBand( dotNL ) * directLight.color;',
+);
+const TOON_BAND = `
+float toonBand( float facing ) {
+  float lit = mix( ${TOON_PART_LIT.toFixed(2)}, 1.0, smoothstep( ${TOON_LIT_FROM.toFixed(2)}, ${TOON_LIT_TO.toFixed(2)}, facing ) );
+  return lit * smoothstep( 0.0, ${TOON_DARK_TO.toFixed(2)}, facing );
+}`;
+function toonCompile(shader: { fragmentShader: string }): void {
+  shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_pars_fragment>', TOON_BAND + TOON_LIGHTS);
+}
+/** Give a lit material the world's cel shading. Its other settings (colour, map, glow, roughness) keep working. */
+export function toon<T extends THREE.MeshStandardMaterial>(m: T): T {
+  m.onBeforeCompile = toonCompile;
+  return m;
+}
+
 const cache = new Map<string, THREE.MeshStandardMaterial>();
 export function flat(color: number, rough = 0.9): THREE.MeshStandardMaterial {
   const k = `f${color}-${rough}`;
   let m = cache.get(k);
-  if (!m) { m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0 }); cache.set(k, m); }
+  if (!m) { m = toon(new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0 })); cache.set(k, m); }
   return m;
 }
 export function tex(key: string, map: THREE.Texture, rough = 0.92, color = 0xffffff): THREE.MeshStandardMaterial {
   let m = cache.get(key);
-  if (!m) { m = new THREE.MeshStandardMaterial({ map, roughness: rough, color }); cache.set(key, m); }
+  if (!m) { m = toon(new THREE.MeshStandardMaterial({ map, roughness: rough, color })); cache.set(key, m); }
   return m;
 }
 
 /** Window glass: one shared material, driven by the day-night cycle. */
-export const windowMat = new THREE.MeshStandardMaterial({ color: 0x9fd0e0, emissive: 0xffc866, emissiveIntensity: 0, roughness: 0.25 });
-export const lampMat = new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xffc060, emissiveIntensity: 0, roughness: 0.4 });
+export const windowMat = toon(new THREE.MeshStandardMaterial({ color: 0x9fd0e0, emissive: 0xffc866, emissiveIntensity: 0, roughness: 0.25 }));
+export const lampMat = toon(new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xffc060, emissiveIntensity: 0, roughness: 0.4 }));
 
 export function mats() {
   return {
@@ -29,16 +57,16 @@ export function mats() {
     wood: tex('wallwood', TX.wallPlanks(), 0.9),
     dark: tex('darkwood', TX.darkPlanks(), 0.9),
     crate: tex('crate', TX.crateWood(), 0.85),
-    cream: tex('cream', TX.plaster('cream', [236, 224, 196]), 0.95),
-    white: tex('white', TX.plaster('white', [240, 236, 224]), 0.95),
-    redRoof: tex('redroof', TX.roofTiles('red', [186, 84, 64]), 0.85),
-    blueRoof: tex('blueroof', TX.roofTiles('blue', [84, 120, 150]), 0.85),
-    greenRoof: tex('greenroof', TX.roofTiles('green', [96, 138, 98]), 0.85),
+    cream: tex('cream', TX.plaster('cream', [246, 226, 184]), 0.95),
+    white: tex('white', TX.plaster('white', [244, 240, 228]), 0.95),
+    redRoof: tex('redroof', TX.roofTiles('red', [210, 80, 58]), 0.85),
+    blueRoof: tex('blueroof', TX.roofTiles('blue', [66, 122, 176]), 0.85),
+    greenRoof: tex('greenroof', TX.roofTiles('green', [84, 154, 98]), 0.85),
     grass: tex('grass', TX.grass(), 1),
-    trim: flat(0x5a4330),
-    iron: flat(0x2d3236, 0.6),
-    rope: flat(0xc9b58a),
-    stone: flat(0x9aa0a2),
+    trim: flat(0x6a4630),
+    iron: flat(0x34384a, 0.6),
+    rope: flat(0xd8bc80),
+    stone: flat(0x9aa2b4),
   };
 }
 
@@ -67,12 +95,17 @@ export function cy(rt: number, rb: number, h: number, m: THREE.Material, x = 0, 
   return put(new THREE.CylinderGeometry(rt, rb, h, seg), m, x, y, z, parent);
 }
 
-/** Merge all meshes under `root` that share a material into one draw call. Instanced meshes are left alone. */
+/**
+ * Merge all meshes under `root` that share a material into one draw call. Instanced meshes are left alone.
+ * Every shadow-casting part also goes into one shared ink outline (see ink.ts); flat ground slabs and
+ * glowing glass cast no shadow and so stay unlined. Set `userData.noInk` to leave a part out.
+ */
 export function bake(root: THREE.Object3D): void {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
   const buckets = new Map<string, { m: THREE.Material; cast: boolean; recv: boolean; gs: THREE.BufferGeometry[] }>();
   const dead: THREE.Mesh[] = [];
+  const shells: THREE.BufferGeometry[] = [];
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh || (mesh as THREE.InstancedMesh).isInstancedMesh || mesh.userData.keep || Array.isArray(mesh.material)) return;
@@ -86,6 +119,8 @@ export function bake(root: THREE.Object3D): void {
     if (!b) { b = { m: mesh.material, cast: mesh.castShadow, recv: mesh.receiveShadow, gs: [] }; buckets.set(key, b); }
     b.gs.push(g);
     dead.push(mesh);
+    const shell = mesh.castShadow && !mesh.userData.noInk ? inkGeometry(g, thinnestSide(mesh)) : null;
+    if (shell) shells.push(shell);
   });
   for (const m of dead) { m.parent?.remove(m); m.geometry.dispose(); }
   for (const b of buckets.values()) {
@@ -96,6 +131,8 @@ export function bake(root: THREE.Object3D): void {
     mesh.receiveShadow = b.recv;
     root.add(mesh);
   }
+  const ink = inkMesh(shells);
+  if (ink) root.add(ink);
 }
 
 // ---- reusable shapes ------------------------------------------------------
@@ -108,7 +145,7 @@ export function barrel(parent: THREE.Object3D, x: number, z: number, y = 0, s = 
   g.position.set(x, y, z);
   g.scale.setScalar(s);
   g.rotation.y = x * 7 + z * 3;
-  put(barrelGeo, tex('barrel', TX.boards('barrel', [140, 96, 60], 10, false), 0.9), 0, 0, 0, g);
+  put(barrelGeo, tex('barrel', TX.boards('barrel', [164, 104, 58], 10, false), 0.9), 0, 0, 0, g);
   for (const [h, r] of [[0.14, 0.34], [0.4, 0.385], [0.66, 0.34]] as const) cy(r, r, 0.045, M.iron, 0, h, 0, g, 14);
   if (lid) cy(0.27, 0.27, 0.025, M.dark, 0, 0.8, 0, g, 12);
   parent.add(g);
@@ -162,7 +199,7 @@ export function net(parent: THREE.Object3D, w: number, h: number, x: number, y: 
   const p = g.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 2.3) * 0.12 + (p.getY(i) < 0 ? 0.05 : 0));
   g.computeVertexNormals();
-  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: TX.net(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1, color: 0xb8a878 }));
+  const m = new THREE.Mesh(g, toon(new THREE.MeshStandardMaterial({ map: TX.net(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1, color: 0xb8a878 })));
   const map = (m.material as THREE.MeshStandardMaterial).map as THREE.Texture;
   map.wrapS = map.wrapT = THREE.RepeatWrapping;
   map.repeat.set(w / 0.7, h / 0.7);
@@ -174,9 +211,10 @@ export function net(parent: THREE.Object3D, w: number, h: number, x: number, y: 
 }
 
 export function signMesh(text: string, w: number, h: number, bg?: string, fg?: string): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), [flat(0x3a2a1c), flat(0x3a2a1c), flat(0x3a2a1c), flat(0x3a2a1c), new THREE.MeshStandardMaterial({ map: TX.sign(text, w, h, bg, fg), roughness: 0.9 }), flat(0x3a2a1c)]);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), [flat(0x3a2a1c), flat(0x3a2a1c), flat(0x3a2a1c), flat(0x3a2a1c), toon(new THREE.MeshStandardMaterial({ map: TX.sign(text, w, h, bg, fg), roughness: 0.9 })), flat(0x3a2a1c)]);
   m.castShadow = true;
   m.userData.keep = true;
+  addInk(m);
   return m;
 }
 

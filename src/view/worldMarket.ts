@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
 import { SPECIES_COLOUR } from '../palette';
 
-import { barrel, bx, crateBox, cy, fishGeo, flat, put, signMesh, tBox } from './kit';
+import { bake, barrel, bx, crateBox, cy, fishGeo, flat, put, signMesh, tBox } from './kit';
 import { lampHead } from './worldLamps';
 import type { Build } from './worldParts';
 
@@ -90,6 +90,7 @@ function buildStallWings(w: Build): void {
       f.scale.setScalar(0.5);
       f.rotation.set(0, 0, Math.PI / 2);
     }
+    bake(g);
     build.stallWings.push(g);
     build.group.add(g);
   }
