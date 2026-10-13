@@ -216,6 +216,7 @@ export class Game {
     }
 
     this.events.handle(step(s, dt, this.rng));
+    this.audio.update(dt, this.player.pos.x, this.player.pos.z, s.dayTime, frozen);
     if (this.holdHour !== null) s.dayTime = (((this.holdHour - START_HOUR) % 24) + 24) % 24 * HOUR_SECONDS;
     this.frameMs += (dt * 1000 - this.frameMs) * 0.05;
     this.quality.sample(dt);
