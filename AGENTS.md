@@ -88,7 +88,7 @@ See "Code map" at the bottom for a file-by-file list.
    `view/textures.ts`, the panel code) before writing new ones.
 5. Changing the saved-state shape needs a version bump and a migration in
    `src/sim/save.ts`, with a test that an old save still loads. (Now at
-   version 3: version 3 added the day report's trip-cost line.)
+   version 4: version 3 added the day report's trip-cost line; version 4 added the tycoon stage: buildings, weather, contracts, goals, King Fish.)
 5b. `src/sim/` must not import from `view`, `ui`, Three.js or the DOM; a test
    (`src/sim/purity.test.ts`) scans the import lines and fails if it does.
 6. When prices, costs or timings change, run the pacing test. It drives the
@@ -214,6 +214,14 @@ tuning run (not in the game bundle); `docs/superpowers/specs/` design notes.
 - `staff.ts` — captains, workers, wages, and the workers' carrying jobs.
 - `save.ts` — save/load and migrations between save versions.
 - `bot.ts` — the scripted player used by the pacing test and `npm run tune`.
+- `goals.ts` — the goal chain (rules in `config.ts` GOALS), progress, rewards, old-save catch-up.
+- `buildings.ts` — the four buildings: build/upgrade, cold store, smokehouse, restaurant.
+- `routing.ts` — where an idle worker takes crates (restaurant, smoked pickup, smokehouse, storage, market).
+- `weather.ts` — weather and special days, the forecast, their effects on trips and prices.
+- `storm.ts` — broken boats, repair, the "stay home in storms" choice.
+- `contracts.ts` — contract offers, accepting, counting sales, reward and failure.
+- `ending.ts` — delivering the King Fish and the ending summary.
+- `income.ts` — money earned per minute.
 
 **src/ui/**
 - `text.ts` — all names and wording the player reads.
