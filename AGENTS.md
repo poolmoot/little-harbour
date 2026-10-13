@@ -245,6 +245,9 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `contracts.ts` — contract offers, accepting, counting sales, reward and failure.
 - `ending.ts` — delivering the King Fish and the ending summary.
 - `income.ts` — money earned per minute.
+- `away.ts` — earnings while the player is away (measures a rate on a copy, credits half of it).
+- `fishbook.ts` — fish sizes, stars, golden fish, the fish book figures and zone rewards.
+- `names.ts` — harbour and boat names and their checks.
 
 **src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
 - `text.ts` — all names and wording the player reads in the game.
