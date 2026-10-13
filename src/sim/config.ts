@@ -160,7 +160,7 @@ export const BUILDING_IDS: BuildingId[] = ['coldstore', 'smokehouse', 'restauran
 export const BUILDINGS: Record<BuildingId, { rank: number; cost: number[] }> = {
   coldstore: { rank: 1, cost: [0, 600, 2000, 6000] },
   smokehouse: { rank: 1, cost: [0, 900, 3000, 8000] },
-  restaurant: { rank: 2, cost: [0, 2500, 7000, 16000] },
+  restaurant: { rank: 2, cost: [0, 3000, 9000, 22000] },
   lighthouse: { rank: 3, cost: [0, 12000] },
 };
 export const COLD_CAPACITY = [0, 12, 24, 40];
@@ -194,7 +194,7 @@ export const BIG_CATCH_EXTRA = 2;
 export const CONTRACT_RANK = 1;
 export const CONTRACT_OFFERS = 2;
 export const CONTRACT_DAYS = [2, 3];
-export const CONTRACT_REWARD_MULT = 2.5;
+export const CONTRACT_REWARD_MULT = 1.5;
 export const CONTRACT_COOLDOWN_DAYS = 1;
 /** Share of what the fleet could catch of that fish in the time that a contract asks for. */
 export const CONTRACT_SHARE = 0.35;
@@ -205,7 +205,7 @@ export const CONTRACT_TURNAROUND = 12;
 export const CONTRACT_SAIL_HOURS = 14;
 
 // ---- King Fish and the money-per-minute figure ----------------------------------
-export const KING_CHANCE = 0.04;
+export const KING_CHANCE = 0.02;
 export const RATE_SAMPLE_SECONDS = 5;
 export const RATE_WINDOW_SECONDS = 120;
 

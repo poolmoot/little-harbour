@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { acceptContract, creditContract, makeOffer, stepContracts } from './contracts';
 import { addCrate } from './crates';
 import { sellCrate } from './market';
-import { DAY_SECONDS, FISH_PRICE } from './config';
+import { CONTRACT_REWARD_MULT, DAY_SECONDS, FISH_PRICE } from './config';
 import { Rng } from './rng';
 import { initialState } from './state';
 import type { GameState } from './state';
@@ -23,7 +23,7 @@ describe('contracts', () => {
     expect(s.contracts.offers).toHaveLength(2);
     expect(s.contracts.offers[0].species).not.toBe(s.contracts.offers[1].species);
     for (const o of s.contracts.offers) {
-      expect(o.reward).toBe(Math.round(o.baseValue * 2.5));
+      expect(o.reward).toBe(Math.round(o.baseValue * CONTRACT_REWARD_MULT));
       expect(o.days === 2 || o.days === 3).toBe(true);
     }
   });
@@ -35,7 +35,7 @@ describe('contracts', () => {
     const q = (st: GameState) => { const r = new Rng(5); return makeOffer(st, r, [])!.qty; };
     expect(q(big)).toBeGreaterThan(q(small));
   });
-  it('counts only matching crates sold at the market and pays 2.5x at the end', () => {
+  it('counts only matching crates sold at the market and pays the reward at the end', () => {
     const s = ready();
     s.contracts.active = { id: 50, species: 'herring', smoked: false, qty: 2, filled: 0, days: 2, deadline: 9999, reward: 300, baseValue: 120 };
     const sell = (sp: 'herring' | 'mackerel', smoked = false) => {
