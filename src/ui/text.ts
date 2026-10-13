@@ -371,6 +371,27 @@ export const FISH_BOOK = {
   goldenToast: (fish: string): string => `A golden ${fish}! It is worth five times as much.`,
   noSmoke: 'A golden fish is too special to smoke. Sell it at the market.',
   starsHelp: 'Bigger fish get more stars and sell for a little more.',
+  landed: (species: Species, cm: number, stars: number): string => `You caught a ${FISH_NAME[species]}! ${sizeText(cm)}, ${starText(stars)}.`,
+  goldenBanner: (fish: string): string => `Golden ${fish}!`,
+  goldenBannerSub: 'A rare catch. It is worth five times as much.',
+  zoneRewardEarned: 'Earned',
+  zoneRewardTodo: 'To earn',
+  zoneFound: (a: number, b: number): string => `Fish found: ${a} of ${b}`,
+  zoneStars: (a: number, b: number): string => `With 3 stars: ${a} of ${b}`,
+  rewardCaughtRow: 'Find every fish here',
+  rewardStarsRow: 'Get 3 stars on every fish here',
+  overall: 'Your fish book',
+  unseen: 'Not found yet',
+  notSold: 'Not sold yet',
+};
+
+/** How a crate's size and golden shine change its price, in words. */
+export const CRATE_TEXT = {
+  golden: 'Golden',
+  goldenPays: (mult: number): string => `Golden: pays ${mult} times as much`,
+  bigger: (pct: number): string => `pays ${pct}% more for its size`,
+  smaller: (pct: number): string => `pays ${pct}% less for its size`,
+  normalSize: 'A normal size, so a normal price',
 };
 
 // ---- welcome back (earnings while away) ---------------------------------------------------------

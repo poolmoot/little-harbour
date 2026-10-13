@@ -64,6 +64,7 @@ export const SMOKE_TEXT = {
   smoking: (secs: number): string => `Smoking… ${secs}s left`,
   ready: 'Ready!',
   smoke: 'Smoke it',
+  noGolden: 'Too special',
   take: 'Take it',
   takeAll: 'Take all',
   allFull: 'All racks are full.',
@@ -88,6 +89,7 @@ export const RESTAURANT_TEXT = {
     stale: `It must be at least ${RESTAURANT_MIN_FRESH}% fresh.`,
     full: 'It has bought all it wants today.',
     gone: 'That fish has gone bad.',
+    golden: 'A golden fish is too special for a meal. The market pays much more.',
   },
 };
 

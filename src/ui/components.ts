@@ -8,6 +8,9 @@ export type CardTone = 'orange' | 'blue' | 'purple' | 'green' | 'gold' | 'teal' 
 const cls = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' ');
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 
+/** Make a typed name safe to put in HTML. */
+export const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 export const money = (n: number): string => Math.round(n).toLocaleString('en-US');
 /** A multiplier without trailing zeros: 1.50 -> "1.5". */
 export const mult = (n: number): string => n.toFixed(2).replace(/\.?0+$/, '');
@@ -81,7 +84,7 @@ export interface ItemOpts {
   extra?: string;
   /** Right-hand side: prices and buttons. */
   right?: string;
-  state?: 'sel' | 'locked';
+  state?: 'sel' | 'locked' | 'gold';
 }
 
 export function item(o: ItemOpts): string {

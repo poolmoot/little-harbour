@@ -4,6 +4,7 @@ import { crateValue, sellAll, unitPrice } from '../../sim/market';
 import type { GameState } from '../../sim/state';
 import { hex, SPECIES_COLOUR } from '../../palette';
 import { button, chip, empty, freshMeter, item, money, price } from '../components';
+import { crateArt, crateFacts, crateRowState, crateTitle, priceEffect } from '../fishParts';
 import { fishIcon, icon } from '../icons';
 import { NPC_LOOK } from '../../view/people';
 import { portrait } from '../../view/portraits';
@@ -20,10 +21,11 @@ function sell(s: GameState): string {
     if (c.king) return item({ art: fishIcon(hex(SPECIES_COLOUR[c.species]), 26), title: 'King Fish', sub: KING.noSell });
     const wanted = s.orders.some((o) => o.species === c.species && o.filled < o.qty);
     return item({
-      art: fishIcon(hex(SPECIES_COLOUR[c.species]), 26),
-      title: `${FISH_NAME[c.species]}${c.smoked ? ' (smoked)' : ''}${wanted ? ` ${chip('<span class="warn">Order: double</span>')}` : ''}`,
+      art: crateArt(c, 26),
+      title: `${crateTitle(c)}${wanted ? ` ${chip('<span class="warn">Order: double</span>')}` : ''}`,
       sub: c.smoked ? 'Smoked. It never goes bad.' : c.freshness <= 0 ? 'Gone bad' : `${Math.round(c.freshness)}% fresh`,
-      extra: c.smoked ? '' : freshMeter(c.freshness),
+      state: crateRowState(c),
+      extra: `<div class="facts-row">${crateFacts(c)}<span>${priceEffect(c)}</span></div>${c.smoked ? '' : freshMeter(c.freshness)}`,
       right: `${price(money(crateValue(s, c)))}${button({ label: 'Sell', act: 'sell', a: c.id, size: 'sm' })}`,
     });
   }).join('');

@@ -2,16 +2,18 @@ import { HOUR_SECONDS } from '../sim/config';
 import { carryCapacity, handCrates } from '../sim/crates';
 import { holdSize } from '../sim/fleet';
 import { rankOf, rankProgress } from '../sim/rank';
-import type { Boat, GameState, Order } from '../sim/state';
+import type { Boat, Crate, GameState, Order } from '../sim/state';
 import { formatClock, isNight, phaseOf } from '../sim/time';
 import { hex, SPECIES_COLOUR } from '../palette';
-import { meter, money } from './components';
+import { esc, meter, money, stars } from './components';
+import { crateArt, crateTitle } from './fishParts';
+import { crateSize, crateStars } from '../sim/fishbook';
 import { fishIcon, HULL_ICONS, icon } from './icons';
 import { goalDoneHtml, goalHtml, rateHtml, weatherHtml } from './hudParts';
 import { HUD_TEXT } from './screenText';
 import { HINTS } from './menuText';
 import type { PanelKind } from './panels';
-import { FISH_NAME, LABEL, PHASE_NAME, RANK_NAME, boatType, crates } from './text';
+import { FISH_NAME, LABEL, PHASE_NAME, RANK_NAME, boatType, crates, sizeText, starText } from './text';
 
 /** Orders with less than this many seconds left are flagged as urgent. */
 const URGENT_SECONDS = 15;
@@ -56,9 +58,16 @@ function orderRow(state: GameState, o: Order): string {
     ${meter(frac, frac > 0.6 ? 'green' : frac > 0.3 ? 'amber' : 'red')}<div class="dim">by ${by} · ${Math.ceil(left)}s</div></div></div>`;
 }
 
+/** One carry slot: the fish picture, its stars, and how fresh it is. Golden fish shine. */
+export function slotHtml(c: Crate): string {
+  const label = c.king ? HUD_TEXT.carryKing : c.smoked ? HUD_TEXT.carrySmoked : `${Math.round(c.freshness)}%`;
+  const tip = c.king ? crateTitle(c) : `${crateTitle(c)}, ${sizeText(crateSize(c))}, ${starText(crateStars(c))}`;
+  return `<div class="slot full ol${c.golden ? ' golden' : ''}" title="${esc(tip)}">${crateArt(c, 18)}${c.king ? '' : stars(crateStars(c), 3, 9)}${label}</div>`;
+}
+
 function boatCard(b: Boat): string {
   const art = icon(HULL_ICONS[b.hull], 28);
-  const name = `${b.name}${b.captain && !b.captain.unpaid ? ` ${icon('anchor', 12)}` : ''}`;
+  const name = `${esc(b.name)}${b.captain && !b.captain.unpaid ? ` ${icon('anchor', 12)}` : ''}`;
   const title = `${boatType(b.hull)}, carries ${crates(holdSize(b))}`;
   if (b.status === 'returned') return `<div class="pn hud-boat back" title="${title}">${art}<div class="grow"><div class="ol">${name}</div><div class="ol">Back! Unload ${b.catch.length}</div></div></div>`;
   if (b.status === 'out') {
@@ -130,7 +139,7 @@ export class Hud {
 
     const rp = rankProgress(state);
     set(this.rank, `<div class="hud-shield">${icon('shield', 48)}<span class="ol">${rankOf(state) + 1}</span></div>
-      <div class="hud-rank"><div class="hud-rank-name ol">${RANK_NAME[rankOf(state)]} · Day ${state.day}</div>${meter(rp?.frac ?? 1, 'cyan', rp ? `$${money(rp.have)} / $${money(rp.need)}` : LABEL.topRank)}</div>`);
+      <div class="hud-rank"><div class="hud-harbour ol">${esc(state.harbourName)}</div><div class="hud-rank-name ol">${RANK_NAME[rankOf(state)]} · Day ${state.day}</div>${meter(rp?.frac ?? 1, 'cyan', rp ? `$${money(rp.have)} / $${money(rp.need)}` : LABEL.topRank)}</div>`);
 
     set(this.orders, `<div class="pn-head"><span class="ol warn">Orders</span><span class="ol">${state.orders.length}</span></div>${
       state.orders.length ? state.orders.map((o) => orderRow(state, o)).join('') : '<div class="hud-orders-row dim">No orders right now.</div>'}`);
@@ -144,7 +153,7 @@ export class Hud {
     let slots = '';
     for (let i = 0; i < cap; i++) {
       const c = hand[i];
-      slots += c ? `<div class="slot full ol">${fishIcon(hex(SPECIES_COLOUR[c.species]), 18)}${c.king ? HUD_TEXT.carryKing : c.smoked ? HUD_TEXT.carrySmoked : `${Math.round(c.freshness)}%`}</div>` : '<div class="slot empty">+</div>';
+      slots += c ? slotHtml(c) : '<div class="slot empty">+</div>';
     }
     set(this.carry, `<div class="ol">Carrying ${hand.length} / ${cap}</div><div class="hud-slots">${slots}</div>`);
   }

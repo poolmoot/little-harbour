@@ -3,9 +3,10 @@ import { smokeCrates } from '../../sim/crates';
 import { smokedPrice } from '../../sim/market';
 import type { GameState } from '../../sim/state';
 import { buildingIcon, fishArt, fishName, handsFull, levelNote, smokable, upgradeRow } from '../buildingParts';
+import { crateFacts, crateRowState } from '../fishParts';
 import { button, empty, item, meter, section } from '../components';
 import { PLOT_TEXT, SMOKE_TEXT } from '../screenText';
-import { BUILDING_NAME, FISH_NAME } from '../text';
+import { BUILDING_NAME, FISH_BOOK, FISH_NAME } from '../text';
 import type { ScreenView } from './types';
 
 export function smokehouseView(s: GameState): ScreenView {
@@ -34,8 +35,10 @@ export function smokehouseView(s: GameState): ScreenView {
   const room = rackRoom(s);
   const carried = smokable(s);
   const list = carried.length ? carried.map((c) => item({
-    art: fishArt(c), title: fishName(c), sub: `${Math.round(c.freshness)}% fresh`,
-    right: button({ label: room > 0 ? SMOKE_TEXT.smoke : SMOKE_TEXT.allFull, act: 'smokein', a: c.id, tone: 'info', size: 'sm', off: room <= 0 }),
+    art: fishArt(c), title: fishName(c), state: crateRowState(c),
+    sub: `${Math.round(c.freshness)}% fresh`,
+    extra: `<div class="facts-row">${crateFacts(c)}</div>${c.golden ? `<div class="item-sub">${FISH_BOOK.noSmoke}</div>` : ''}`,
+    right: button({ label: c.golden ? SMOKE_TEXT.noGolden : room > 0 ? SMOKE_TEXT.smoke : SMOKE_TEXT.allFull, act: 'smokein', a: c.id, tone: 'info', size: 'sm', off: room <= 0 || !!c.golden }),
   })).join('') : empty(PLOT_TEXT.nothingForThis);
   return {
     title: BUILDING_NAME.smokehouse,

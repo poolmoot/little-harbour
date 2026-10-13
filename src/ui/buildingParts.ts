@@ -4,11 +4,11 @@ import type { BuildingId } from '../sim/config';
 import { buildingMaxLevel, canBuyBuilding, nextBuildingCost } from '../sim/buildings';
 import { carryCapacity, handCrates, isSpoiled } from '../sim/crates';
 import type { Crate, GameState } from '../sim/state';
-import { hex, SPECIES_COLOUR } from '../palette';
 import { button, item, priceLabel } from './components';
-import { fishIcon, icon } from './icons';
+import { crateArt, crateTitle } from './fishParts';
+import { icon } from './icons';
 import { BUILDING_ICON, PLOT_TEXT } from './screenText';
-import { BUILDING_LABEL, BUILDING_LEVELS, FISH_NAME, LABEL, denyText } from './text';
+import { BUILDING_LABEL, BUILDING_LEVELS, LABEL, denyText } from './text';
 
 export const buildingIcon = (id: BuildingId, size = 28): string => icon(BUILDING_ICON[id], size);
 
@@ -33,8 +33,8 @@ export function upgradeRow(s: GameState, id: BuildingId): string {
 export const levelNote = (s: GameState, id: BuildingId): string => `${BUILDING_LABEL.level(s.buildings[id], buildingMaxLevel(id))}. ${BUILDING_LEVELS[id][s.buildings[id] - 1]}`;
 
 /** A fish row with the crate's art and name. */
-export const fishArt = (c: Crate, size = 26): string => fishIcon(hex(SPECIES_COLOUR[c.species]), size);
-export const fishName = (c: Crate): string => `${FISH_NAME[c.species]}${c.smoked ? ' (smoked)' : ''}`;
+export const fishArt = (c: Crate, size = 26): string => crateArt(c, size);
+export const fishName = (c: Crate): string => crateTitle(c);
 
 /** Crates the player carries that can go into a store or the smokehouse: fresh or not, but not smoked fish and not the King Fish. */
 export const storable = (s: GameState): Crate[] => handCrates(s).filter((c) => !c.smoked && !c.king);

@@ -1,15 +1,16 @@
 import { ICE_CAPACITY, UPGRADES } from '../../sim/config';
 import { handCrates, iceCrates } from '../../sim/crates';
 import type { Crate } from '../../sim/state';
-import { hex, SPECIES_COLOUR } from '../../palette';
 import { button, empty, freshMeter, item, section } from '../components';
-import { fishIcon, icon } from '../icons';
-import { FISH_NAME } from '../text';
+import { crateArt, crateFacts, crateRowState, crateTitle } from '../fishParts';
+import { icon } from '../icons';
 import type { Screen } from './types';
 
 const crateRow = (c: Crate, label: string, act: string): string => item({
-  art: fishIcon(hex(SPECIES_COLOUR[c.species]), 24),
-  title: FISH_NAME[c.species],
+  art: crateArt(c, 24),
+  title: crateTitle(c),
+  state: crateRowState(c),
+  sub: crateFacts(c),
   extra: freshMeter(c.freshness),
   right: button({ label, act, a: c.id, tone: 'info', size: 'sm' }),
 });

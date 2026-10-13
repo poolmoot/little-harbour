@@ -4,6 +4,7 @@ import { handCrates } from '../../sim/crates';
 import type { Crate, GameState } from '../../sim/state';
 import { hex, SPECIES_COLOUR } from '../../palette';
 import { buildingIcon, fishArt, levelNote, upgradeRow } from '../buildingParts';
+import { crateFacts, crateRowState, crateTitle } from '../fishParts';
 import { button, chip, empty, freshMeter, item, section } from '../components';
 import { fishIcon } from '../icons';
 import { PLOT_TEXT, RESTAURANT_TEXT } from '../screenText';
@@ -13,6 +14,7 @@ import type { ScreenView } from './types';
 /** Why the restaurant will not take this crate right now, or null when it will. */
 export function restaurantRefusal(s: GameState, c: Crate): string | null {
   if (c.king) return RESTAURANT_TEXT.refuse.king;
+  if (c.golden) return RESTAURANT_TEXT.refuse.golden;
   if (c.smoked) return RESTAURANT_TEXT.refuse.smoked;
   if (c.freshness <= 0) return RESTAURANT_TEXT.refuse.gone;
   if (c.freshness < RESTAURANT_MIN_FRESH) return RESTAURANT_TEXT.refuse.stale;
@@ -29,9 +31,10 @@ export function restaurantView(s: GameState): ScreenView {
     const why = restaurantRefusal(s, c);
     return item({
       art: fishArt(c),
-      title: `${FISH_NAME[c.species]}${c.smoked ? ' (smoked)' : ''}`,
-      sub: why ? `<span class="bad">${why}</span>` : RESTAURANT_TEXT.pays(restaurantPrice(s, c)),
-      extra: c.king || c.smoked ? '' : freshMeter(c.freshness),
+      title: crateTitle(c),
+      state: crateRowState(c),
+      sub: why ? `<span class="${c.golden ? 'warn' : 'bad'}">${why}</span>` : RESTAURANT_TEXT.pays(restaurantPrice(s, c)),
+      extra: `<div class="facts-row">${crateFacts(c)}</div>${c.king || c.smoked ? '' : freshMeter(c.freshness)}`,
       right: button({ label: RESTAURANT_TEXT.sell, act: 'restsell', a: c.id, size: 'sm', off: why !== null }),
     });
   }).join('') : empty(PLOT_TEXT.nothingInHands);

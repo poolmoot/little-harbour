@@ -2,6 +2,7 @@ import { coldCapacity } from '../../sim/buildings';
 import { coldCrates } from '../../sim/crates';
 import type { GameState } from '../../sim/state';
 import { buildingIcon, fishArt, fishName, handsFull, levelNote, storable, upgradeRow } from '../buildingParts';
+import { crateFacts, crateRowState } from '../fishParts';
 import { button, empty, freshMeter, item, meter, section } from '../components';
 import { COLD_TEXT, PLOT_TEXT } from '../screenText';
 import { BUILDING_NAME, LABEL } from '../text';
@@ -14,11 +15,11 @@ export function coldstoreView(s: GameState): ScreenView {
   const hands = storable(s);
   const hold = handsFull(s);
   const stored = inside.length ? inside.map((c) => item({
-    art: fishArt(c), title: fishName(c), extra: freshMeter(c.freshness),
+    art: fishArt(c), title: fishName(c), state: crateRowState(c), sub: crateFacts(c), extra: freshMeter(c.freshness),
     right: button({ label: COLD_TEXT.takeOut, act: 'coldout', a: c.id, tone: 'info', size: 'sm', off: hold }),
   })).join('') : empty(COLD_TEXT.empty);
   const carried = hands.length ? hands.map((c) => item({
-    art: fishArt(c), title: fishName(c), extra: freshMeter(c.freshness),
+    art: fishArt(c), title: fishName(c), state: crateRowState(c), sub: crateFacts(c), extra: freshMeter(c.freshness),
     right: button({ label: full ? LABEL.full : COLD_TEXT.putIn, act: 'coldin', a: c.id, tone: 'info', size: 'sm', off: full }),
   })).join('') : empty(PLOT_TEXT.nothingForThis);
   return {
