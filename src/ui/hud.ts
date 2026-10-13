@@ -7,6 +7,7 @@ import { formatClock, isNight, phaseOf } from '../sim/time';
 import { hex, SPECIES_COLOUR } from '../palette';
 import { meter, money } from './components';
 import { fishIcon, HULL_ICONS, icon } from './icons';
+import { HINTS } from './menuText';
 import type { PanelKind } from './panels';
 import { FISH_NAME, LABEL, PHASE_NAME, RANK_NAME, boatType, crates } from './text';
 
@@ -89,7 +90,7 @@ export class Hud {
     this.boats = div('hud-boats', right);
     const bl = div('hud-bl', root);
     this.carry = div('', bl);
-    div('hud-hints ol', bl).textContent = LABEL.hints;
+    div('hud-hints ol', bl).textContent = HINTS;
     this.prompt = div('prompt', root);
     this.toasts = div('toasts', root);
     this.tiles.addEventListener('pointerdown', (e) => {

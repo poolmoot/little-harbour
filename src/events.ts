@@ -3,6 +3,7 @@ import type { Ev, GameState } from './sim/sim';
 import type { DayStats } from './sim/state';
 import type { GameAudio } from './audio/index';
 import type { Hud } from './ui/hud';
+import { MENU } from './ui/menuText';
 import { RANK_NAME, denyText, say } from './ui/text';
 
 export interface EventDeps {
@@ -25,7 +26,7 @@ export class EventRouter {
   private lastStaffPop = 0;
 
   constructor(private d: EventDeps) {
-    d.audio.onMuteChange = (muted) => d.hud.toast(muted ? 'Sound is off. Press M to turn it on.' : 'Sound is on.');
+    d.audio.onMuteChange = (muted) => d.hud.toast(muted ? MENU.soundOff : MENU.soundOn);
   }
 
   handle(evs: Ev[]): void {

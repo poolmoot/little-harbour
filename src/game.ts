@@ -13,6 +13,8 @@ import { Hud } from './ui/hud';
 import { EventRouter } from './events';
 import { STATIONS, findTarget, interact, promptFor } from './interaction';
 import type { Target } from './interaction';
+import { escapeAction, isHalted } from './ui/menuFlow';
+import type { Mode } from './ui/menuFlow';
 import { Panels } from './ui/panels';
 import './ui/styles/index.css';
 import { say } from './ui/text';
@@ -28,6 +30,18 @@ import { World } from './view/world';
 import { Water, Wake } from './view/water';
 
 const SAVE_EVERY = 10;
+/** Set (for this tab only) when New game reloads the page, so the title screen is not shown a second time. */
+const SKIP_TITLE_KEY = 'harbour-skip-title';
+
+/** True when the title screen should be skipped: a fresh start after New game, or `?play` in the address (handy for scripted checks). */
+function skipTitle(): boolean {
+  let skip = new URLSearchParams(location.search).has('play');
+  try {
+    if (sessionStorage.getItem(SKIP_TITLE_KEY)) skip = true;
+    sessionStorage.removeItem(SKIP_TITLE_KEY);
+  } catch { /* storage blocked: show the title */ }
+  return skip;
+}
 
 export class Game {
   private state: GameState;
@@ -56,6 +70,10 @@ export class Game {
   private saveTimer = 0;
   private events!: EventRouter;
   private resetting = false;
+  /** Title screen, playing, or paused. Anything but 'play' freezes the sim, the clock and the music. */
+  private mode: Mode = 'title';
+  private hasSave = false;
+  private greeted = false;
   private started = false;
   private holdHour: number | null = null;
   private frameMs = 16;
@@ -63,6 +81,7 @@ export class Game {
 
   constructor(app: HTMLElement, uiRoot: HTMLElement) {
     const loaded = loadGame(localStorage, this.rng);
+    this.hasSave = loaded !== null;
     this.state = loaded ?? initialState();
     startGame(this.state, this.rng);
 
@@ -108,6 +127,14 @@ export class Game {
         getQuality: () => this.quality.mode,
         setQuality: (m) => { this.quality.setMode(m); this.panels.refresh(); },
         resetGame: () => this.reset(),
+        getAudio: () => this.audio.getSettings(),
+        setVolume: (k, v) => this.audio.setVolume(k, v),
+        setMuted: (m) => this.audio.setMuted(m),
+        hasSave: () => this.hasSave,
+        continueGame: () => this.beginPlay(),
+        newGame: () => this.newGame(),
+        resume: () => this.resume(),
+        toTitle: () => this.toTitle(),
         onClose: () => this.audio.click(),
       },
       () => this.state,
@@ -119,11 +146,14 @@ export class Game {
     window.addEventListener('keydown', unlock);
     this.input.onPress = (code) => this.onKey(code);
     window.addEventListener('beforeunload', () => {
-      if (!this.resetting) this.save();
+      // On the title screen nothing has been chosen yet, so leave any saved game alone.
+      if (!this.resetting && this.mode !== 'title') this.save();
     });
+    // Keep the settings screen in step when M is pressed while it is open.
+    this.audio.settings.subscribe(() => this.panels.refresh());
 
-    this.hud.toast(loaded ? say.welcomeBack : say.welcome, 'info');
-    if (loaded && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast(say.catchWaiting, 'good');
+    if (skipTitle()) this.beginPlay();
+    else this.panels.open('title');
     if (import.meta.env.DEV) {
       const self = this;
       void import('./debug').then((m) => m.installDebug({
@@ -154,8 +184,11 @@ export class Game {
 
   private onKey(code: string): void {
     if (code === 'Escape') {
-      this.panels.close();
-    } else if (code === 'KeyL') {
+      this.onEscape();
+      return;
+    }
+    if (isHalted(this.mode)) return;
+    if (code === 'KeyL') {
       this.panels.toggle('logbook');
     } else if (code === 'KeyE') {
       if (this.panels.isOpen()) {
@@ -167,6 +200,57 @@ export class Game {
       if ('evs' in r) this.run(r.evs);
       else this.panels.open(r.open, r.arg ?? 0);
     }
+  }
+
+  /** Esc: pause when nothing is open, resume from the pause menu, step back out of settings, or close a window. */
+  private onEscape(): void {
+    switch (escapeAction(this.mode, this.panels.current)) {
+      case 'pause':
+        this.mode = 'paused';
+        this.input.clear();
+        this.panels.open('pause');
+        break;
+      case 'resume': this.resume(); break;
+      case 'close': this.panels.close(); break;
+      case 'back': this.panels.back(); break;
+      case 'none': break;
+    }
+  }
+
+  // ---- title screen and pause menu ----------------------------------------
+
+  /** Start (or carry on) playing: from the title screen, or at once when the title is skipped. */
+  private beginPlay(): void {
+    this.mode = 'play';
+    this.input.clear();
+    this.panels.close();
+    if (this.greeted) return;
+    this.greeted = true;
+    this.hud.toast(this.hasSave ? say.welcomeBack : say.welcome, 'info');
+    if (this.hasSave && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast(say.catchWaiting, 'good');
+  }
+
+  private resume(): void {
+    this.mode = 'play';
+    this.input.clear();
+    this.panels.close();
+  }
+
+  private toTitle(): void {
+    this.save();
+    this.mode = 'title';
+    this.input.clear();
+    this.panels.open('title');
+  }
+
+  /** With a saved game this goes through the normal reset (clear the save and reload); without one the fresh game just starts. */
+  private newGame(): void {
+    if (!this.hasSave) {
+      this.beginPlay();
+      return;
+    }
+    try { sessionStorage.setItem(SKIP_TITLE_KEY, '1'); } catch { /* the title will show once more */ }
+    this.reset();
   }
 
   // ---- actions & events --------------------------------------------------
@@ -185,6 +269,7 @@ export class Game {
 
   private save(): void {
     saveGame(this.state, localStorage);
+    this.hasSave = true;
   }
 
   /** Floating text at a world position (projected to the screen). */
@@ -206,7 +291,10 @@ export class Game {
     this.now += dt;
     this.events.now = this.now;
     const s = this.state;
-    const frozen = this.panels.isOpen();
+    const halted = isHalted(this.mode);
+    const frozen = halted || this.panels.isOpen();
+    // While halted, movement in the scene stops but water and light keep their gentle motion.
+    const sdt = halted ? 0 : dt;
 
     this.player.figure.pose.carry = handCrates(s).length > 0 ? 1 : 0;
     const stepped = this.player.update(dt, this.input.moveVector(), frozen, s.fishing.phase !== 'idle');
@@ -215,8 +303,10 @@ export class Game {
       this.events.handle(cancelCast(s));
     }
 
-    this.events.handle(step(s, dt, this.rng));
-    this.audio.update(dt, this.player.pos.x, this.player.pos.z, s.dayTime, frozen);
+    if (!halted) this.events.handle(step(s, dt, this.rng));
+    // The music scheduler lives inside audio.update, so a paused game simply does not call it.
+    // The title screen still runs it (the clock is still, so the tune stays the same).
+    if (this.mode !== 'paused') this.audio.update(dt, this.player.pos.x, this.player.pos.z, s.dayTime, frozen);
     if (this.holdHour !== null) s.dayTime = (((this.holdHour - START_HOUR) % 24) + 24) % 24 * HOUR_SECONDS;
     this.frameMs += (dt * 1000 - this.frameMs) * 0.05;
     this.quality.sample(dt);
@@ -224,7 +314,7 @@ export class Game {
 
     this.target = frozen ? null : findTarget(s, this.player.pos);
 
-    this.saveTimer += dt;
+    if (!halted) this.saveTimer += dt;
     if (this.saveTimer >= SAVE_EVERY) {
       this.saveTimer = 0;
       this.save();
@@ -236,19 +326,19 @@ export class Game {
     const pxScale = this.rig.renderer.domElement.height * 0.5 / Math.tan((this.rig.camera.fov * Math.PI) / 360);
     this.world.update(this.now, this.rig.skyState, pxScale);
     this.water.update(this.now, this.rig.skyState, this.rig.fog.near, this.rig.fog.far, this.boatsView.foam, this.fishView.ripples);
-    this.wake.update(dt, this.now, this.rig.skyState.foam);
-    this.boatsView.sync(s, this.now, dt);
-    this.staffView.sync(s, dt);
-    this.cratesView.sync(s, this.now, dt);
+    this.wake.update(sdt, this.now, this.rig.skyState.foam);
+    this.boatsView.sync(s, this.now, sdt);
+    this.staffView.sync(s, sdt);
+    this.cratesView.sync(s, this.now, sdt);
     const stall = s.upgrades.stall2 ? 2 : s.upgrades.stall1 ? 1 : 0;
     if (stall !== this.stallShown) { this.stallShown = stall; this.world.setStall(stall); }
     const vane = rankOf(s) >= 4;
     if (vane !== this.vaneShown) { this.vaneShown = vane; this.world.setWeathervane(vane); }
-    this.fishView.update(dt, this.now, s.fishing);
+    this.fishView.update(sdt, this.now, s.fishing);
     this.marker.update(this.now, this.target ? { x: this.target.x, z: this.target.z } : null);
     const hand = handCrates(s);
     this.life.update(
-      dt,
+      sdt,
       this.now,
       this.player.pos,
       {

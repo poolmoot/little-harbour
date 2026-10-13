@@ -6,6 +6,8 @@ export class Input {
   constructor() {
     window.addEventListener('keydown', (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // A slider in a menu keeps its own arrow keys; only Esc still reaches the game.
+      if ((e.target as HTMLElement | null)?.tagName === 'INPUT' && e.code !== 'Escape') return;
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyE', 'KeyL', 'Escape', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
       if (!e.repeat) this.onPress(e.code);
       this.down.add(e.code);
