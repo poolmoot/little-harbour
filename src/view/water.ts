@@ -57,12 +57,12 @@ void main() {
   vec3 N = normalize(vNrm + vec3(dn.x, 0.0, dn.y) * 0.5);
 
   float d = shore(p);
-  vec3 col = mix(uShallow, uMid, smoothstep(0.5, 6.0, d));
-  col = mix(col, uDeep, smoothstep(4.0, 34.0, d));
+  vec3 col = mix(uShallow, uMid, smoothstep(0.3, 3.5, d));
+  col = mix(col, uDeep, smoothstep(3.0, 24.0, d));
   col *= 1.0 + vH * 1.6;                                   // crests lighter, troughs deeper
   col *= 0.92 + 0.12 * (N.y - 0.9) * 8.0 * 0.25 + 0.04;
   float light = clamp(uSun / 2.4, 0.0, 1.0);
-  col += uShallow * caustic(p, t) * 0.2 * (1.0 - smoothstep(0.0, 6.0, d)) * (0.35 + 0.65 * light);
+  col += uShallow * caustic(p, t) * 0.2 * (1.0 - smoothstep(0.0, 4.0, d)) * (0.35 + 0.65 * light);
 
   // Sky colour on grazing angles.
   float fr = pow(1.0 - max(dot(N, V), 0.0), 3.5);
@@ -72,20 +72,26 @@ void main() {
   vec3 R = reflect(-uSunDir, N);
   float spec = pow(max(dot(R, V), 0.0), 70.0);
   float sp = noise(p * 5.5 + vec2(t * 0.9, -t * 0.6)) * noise(p * 9.0 - vec2(t * 0.5, t * 0.8));
-  float spark = smoothstep(0.34, 0.48, sp) * smoothstep(-0.05, 0.12, vH + 0.06);
+  float spark = smoothstep(0.38, 0.5, sp) * smoothstep(-0.05, 0.12, vH + 0.06);
   float sparkAmt = clamp(uSun / 1.6, 0.25, 1.3);
-  col += uSunCol * (spec * 1.6 + spark * 0.55) * sparkAmt;
+  col += uSunCol * (spec * 1.2 + spark * 0.3) * sparkAmt;
 
   // Foam: shore + wave crests + hulls + ripples.
   float nz = noise(p * 1.7 + vec2(t * 0.12, 0.0));
   float nz2 = noise(p * 4.5 - vec2(0.0, t * 0.2));
   float foam = 0.0;
-  float wob = 0.1 * sin(t * 1.3 + p.x * 0.8 + nz * 6.0);
-  foam = max(foam, 1.0 - smoothstep(0.1, 0.55 + 0.4 * nz, d + wob));
-  float ring = 0.9 + 0.3 * sin(t * 0.8 + p.x * 0.35 + nz * 3.0);
-  foam = max(foam, (1.0 - smoothstep(0.0, 0.14, abs(d - ring))) * smoothstep(0.35, 0.6, nz2) * 0.8 * (1.0 - smoothstep(1.2, 2.0, d)));
+  float wob = 0.12 * sin(t * 1.3 + p.x * 0.8 + nz * 6.0);
+  // Posts along the pier edges.
+  vec2 pq = vec2(abs(p.x) - 1.95, mod(-p.y + 0.5, 3.0) - 1.5);
+  float dPost = (p.y < -0.4 && p.y > -17.0) ? length(pq) - 0.2 : 9.0;
+  float dd = min(d, dPost + 0.35);
+  // The quay wall hides the first half metre or so, so the foam sits a little out from the wall and laps in and out.
+  float lap = 0.55 + 0.35 * (0.5 + 0.5 * sin(t * 0.9 + p.x * 0.45 + nz * 3.0));
+  foam = max(foam, (1.0 - smoothstep(0.0, 0.3 + 0.35 * nz, abs(dd - lap - 0.15) - 0.05 + wob)) * smoothstep(0.15, 0.5, 0.35 + nz2 * 0.9));
+  float ring = 1.55 + 0.35 * sin(t * 0.7 + p.x * 0.35 + nz * 3.0);
+  foam = max(foam, (1.0 - smoothstep(0.0, 0.12, abs(dd - ring))) * smoothstep(0.3, 0.6, nz2) * 0.85 * (1.0 - smoothstep(1.8, 2.6, dd)));
   float crest = smoothstep(0.15, 0.23, vH + (nz2 - 0.5) * 0.09) * (0.55 + 0.45 * smoothstep(0.3, 0.7, nz));
-  foam = max(foam, crest * 0.8);
+  foam = max(foam, crest * 0.55);
   for (int i = 0; i < 2; i++) {
     vec4 b = uBoat[i];
     if (b.w > 0.0) {

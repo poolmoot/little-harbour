@@ -17,11 +17,11 @@ interface Key {
 const KEYS: Key[] = [
   { h: 0, zen: 0x070d22, hor: 0x1a2a52, sun: 0x9db4ff, sunI: 0.55, hemiSky: 0x4a63a8, hemiGnd: 0x1b2438, hemiI: 0.75, shallow: 0x2a7a96, mid: 0x1a4f7c, deep: 0x0d2552, expo: 1.0 },
   { h: 5.2, zen: 0x0b1530, hor: 0x25365f, sun: 0x9db4ff, sunI: 0.55, hemiSky: 0x4a63a8, hemiGnd: 0x1b2438, hemiI: 0.75, shallow: 0x2a7a96, mid: 0x1a4f7c, deep: 0x0d2552, expo: 1.0 },
-  { h: 6.3, zen: 0x6a7fd0, hor: 0xffa57e, sun: 0xffa064, sunI: 1.9, hemiSky: 0xffc8b0, hemiGnd: 0x7a6a58, hemiI: 1.0, shallow: 0x5cc8c0, mid: 0x3590b4, deep: 0x265494, expo: 1.05 },
+  { h: 6.3, zen: 0x6a7fd0, hor: 0xffa57e, sun: 0xffb27a, sunI: 1.9, hemiSky: 0xffd6c4, hemiGnd: 0x7a6e5e, hemiI: 1.05, shallow: 0x62d2c6, mid: 0x44a6c8, deep: 0x2e68a8, expo: 1.05 },
   { h: 8.5, zen: 0x4aa6ee, hor: 0xcdeaf6, sun: 0xfff0d6, sunI: 2.2, hemiSky: 0xbfe0ff, hemiGnd: 0x8c9a5a, hemiI: 1.0, shallow: 0x4fcfc0, mid: 0x1f9ec2, deep: 0x1058a0, expo: 1.0 },
   { h: 13, zen: 0x3a9ae8, hor: 0xbfe6ff, sun: 0xffffff, sunI: 2.3, hemiSky: 0xbfe0ff, hemiGnd: 0x8c9a5a, hemiI: 1.0, shallow: 0x4fd2c2, mid: 0x1c9cc4, deep: 0x0e56a2, expo: 1.0 },
   { h: 17.5, zen: 0x4f8cd8, hor: 0xffd29c, sun: 0xffbf80, sunI: 2.0, hemiSky: 0xffe0b8, hemiGnd: 0x8a8a52, hemiI: 0.95, shallow: 0x4fc8b8, mid: 0x2492b8, deep: 0x185294, expo: 1.0 },
-  { h: 19.3, zen: 0x4a4488, hor: 0xff8a72, sun: 0xff7a58, sunI: 1.3, hemiSky: 0xe8a0b8, hemiGnd: 0x6a5a58, hemiI: 1.0, shallow: 0x4cb0bc, mid: 0x2e72a0, deep: 0x213d7a, expo: 1.05 },
+  { h: 19.3, zen: 0x4a4488, hor: 0xff8a72, sun: 0xff9a68, sunI: 1.45, hemiSky: 0xc4a2d0, hemiGnd: 0x6a5e5e, hemiI: 1.1, shallow: 0x4cb0bc, mid: 0x2e72a0, deep: 0x213d7a, expo: 1.05 },
   { h: 21, zen: 0x0b1530, hor: 0x25365f, sun: 0x9db4ff, sunI: 0.55, hemiSky: 0x4a63a8, hemiGnd: 0x1b2438, hemiI: 0.75, shallow: 0x2a7a96, mid: 0x1a4f7c, deep: 0x0d2552, expo: 1.0 },
   { h: 24, zen: 0x070d22, hor: 0x1a2a52, sun: 0x9db4ff, sunI: 0.55, hemiSky: 0x4a63a8, hemiGnd: 0x1b2438, hemiI: 0.75, shallow: 0x2a7a96, mid: 0x1a4f7c, deep: 0x0d2552, expo: 1.0 },
 ];

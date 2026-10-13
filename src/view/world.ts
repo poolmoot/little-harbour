@@ -54,6 +54,9 @@ export class World {
     const L = LAYOUT, M = this.M, s = this.stat;
     tBox(L.quayMaxX - L.quayMinX, 1.4, L.quayMaxZ, M.cobble, 2.4, 0, -0.7, L.quayMaxZ / 2, s).castShadow = false;
     tBox(L.quayMaxX - L.quayMinX + 0.2, 0.16, 0.6, M.lip, 2, 0, 0.0, 0.3, s).castShadow = false;
+    // flagstone avenue from the pier to the green, and a worn forecourt in front of each building
+    tBox(5.2, 0.03, 14, M.lip, 2, 0, 0.012, 7, s).castShadow = false;
+    for (const [bx0, bz0, bw, bd] of [[-8, 4.6, 6, 3.2], [-15, 3.6, 8, 5], [10.5, 3.6, 8.4, 5.4]] as const) tBox(bw, 0.02, bd, M.lip, 2, bx0, 0.01, bz0 + 1.5, s).castShadow = false;
     // retaining wall between quay and the green verge
     tBox(L.quayMaxX - L.quayMinX, 0.5, 0.35, M.wall, 1.6, 0, 0.1, L.quayMaxZ + 0.15, s);
     tBox(L.quayMaxX - L.quayMinX + 0.3, 0.1, 0.55, M.lip, 2, 0, 0.38, L.quayMaxZ + 0.15, s);

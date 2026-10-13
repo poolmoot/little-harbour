@@ -22,7 +22,7 @@ export const lampMat = new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissiv
 
 export function mats() {
   return {
-    cobble: tex('cobble', TX.cobble(), 0.95),
+    cobble: tex('cobble', TX.cobble(), 0.95, 0xffeed8),
     lip: tex('lip', TX.quayLip(), 0.9),
     wall: tex('stonewall', TX.stoneWall(), 0.95),
     pier: tex('pier', TX.pierPlanks(), 0.85),
