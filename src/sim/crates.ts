@@ -14,19 +14,18 @@ export function isSpoiled(c: Crate): boolean {
   return c.freshness <= 0;
 }
 
-export function cratesAt(state: GameState, loc: CrateLoc): Crate[] {
+function cratesAt(state: GameState, loc: CrateLoc): Crate[] {
   return state.crates.filter((c) => c.loc === loc);
 }
 export const handCrates = (s: GameState) => cratesAt(s, 'hand');
 export const iceCrates = (s: GameState) => cratesAt(s, 'ice');
 export const dockCrates = (s: GameState) => cratesAt(s, 'dock');
-export const haulCrates = (s: GameState) => cratesAt(s, 'haul');
 
 export function carryCapacity(state: GameState): number {
   return state.upgrades.handcart ? CARRY_HANDCART : CARRY_BASE;
 }
 
-export function slotPosition(berth: number, slot: number): { x: number; z: number; layer: number } {
+function slotPosition(berth: number, slot: number): { x: number; z: number; layer: number } {
   const b = LAYOUT.berths[berth];
   const per = b.slotX.length * LAYOUT.slotRows;
   const s = slot % per;

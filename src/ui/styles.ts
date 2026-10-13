@@ -1,4 +1,4 @@
-export const CSS = `
+const CSS = `
 :root { --ink:#3b2f25; --paper:#fdf6e3; --paper2:#f3e8cb; --edge:#8c6a4a; --accent:#2f6f8f; --good:#4f8a52; --warn:#c0572d; --gold:#e0a82e; }
 #ui, #ui * { box-sizing: border-box; }
 #ui { font-family: "Trebuchet MS", system-ui, sans-serif; color: var(--ink); user-select: none; -webkit-user-select: none; }

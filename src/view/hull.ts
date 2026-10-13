@@ -49,5 +49,3 @@ export function gunwale(hw = 0.8, H = 0.72, side = 1, r = 0.04): THREE.BufferGeo
   return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 30, r, 6, false);
 }
 
-export function gunwaleY(u: number, H = 0.72): number { return topAt(u, H); }
-export function hullWidth(u: number, hw = 0.8): number { return widthAt(u, hw); }

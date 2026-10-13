@@ -8,7 +8,7 @@ import type { Phase, Species, Track, Trait, UpgradeId, ZoneId } from '../sim/con
 import type { Boat } from '../sim/state';
 
 const pct = (x: number): number => Math.round(x * 100);
-export const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;
 export const crates = (n: number): string => plural(n, 'crate');
 
 // ---- names ---------------------------------------------------------------
@@ -26,7 +26,7 @@ export const PHASE_NAME: Record<Phase, string> = { dawn: 'Morning', day: 'Day', 
 const BOAT_TYPE = ['Rowboat', 'Sloop', 'Cutter', 'Trawler'];
 const BOAT_HINT = ['small boat', 'medium boat', 'large boat', 'big boat'];
 export const boatType = (level: number): string => `${BOAT_TYPE[level]} (${BOAT_HINT[level]})`;
-export const boatTypeShort = (level: number): string => BOAT_TYPE[level];
+const boatTypeShort = (level: number): string => BOAT_TYPE[level];
 
 export const TRACK_NAME: Record<Track, string> = { hull: 'Boat size', hold: 'Crate space', gear: 'Nets', sails: 'Speed' };
 
@@ -91,12 +91,10 @@ export const LABEL = {
   full: 'Full',
   maxed: 'Maxed',
   open: 'Open',
-  hire: 'Hire',
   endJob: 'End job',
   locked: 'Locked',
   tripCost: 'Trip cost',
   tripCostNote: 'Trip cost pays for food and supplies. You pay it when the boat leaves.',
-  worker: 'Worker',
   captain: 'Captain',
   moneyIn: 'Money in',
   moneyOut: 'Money out',

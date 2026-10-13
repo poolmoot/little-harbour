@@ -149,7 +149,7 @@ export interface Check {
 
 export const STATE_VERSION = 3;
 
-export function perSpecies<T>(f: () => T): Record<Species, T> {
+function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
   for (const s of SPECIES) o[s] = f();
   return o;

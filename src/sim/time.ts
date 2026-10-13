@@ -8,7 +8,7 @@ export function hourOf(dayTime: number): number {
   return (START_HOUR + dayTime / HOUR_SECONDS) % 24;
 }
 
-export function phaseOfHour(h: number): Phase {
+function phaseOfHour(h: number): Phase {
   const p = PHASE_HOURS;
   if (h >= p.dawnStart && h < p.dayStart) return 'dawn';
   if (h >= p.dayStart && h < p.duskStart) return 'day';
