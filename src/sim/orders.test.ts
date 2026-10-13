@@ -6,15 +6,15 @@ import { Rng } from './rng';
 import { initialState } from './state';
 
 describe('orders', () => {
-  it('starts with two orders, qty 2-5, deadline 2-4 hours out', () => {
+  it('starts with two orders, qty 2-5, deadline 8-14 hours out', () => {
     const s = initialState();
     fillOrders(s, new Rng(1));
     expect(s.orders).toHaveLength(2);
     for (const o of s.orders) {
       expect(o.qty).toBeGreaterThanOrEqual(2);
       expect(o.qty).toBeLessThanOrEqual(5);
-      expect(o.deadline).toBeGreaterThanOrEqual(30);
-      expect(o.deadline).toBeLessThanOrEqual(60);
+      expect(o.deadline).toBeGreaterThanOrEqual(120);
+      expect(o.deadline).toBeLessThanOrEqual(210);
     }
     expect(spawnOrder(s, new Rng(2))).toHaveLength(0); // never more than 2
   });

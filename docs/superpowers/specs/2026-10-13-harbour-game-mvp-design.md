@@ -116,7 +116,7 @@ mackerel 30.
 - The notice board holds up to 2 open orders. A new one appears 20 s after a
   slot frees, and both slots are filled at the start.
 - An order asks for 2–5 crates of one species the player can currently reach,
-  with a deadline 2–4 in-game hours away, from a named townsperson.
+  with a deadline 8–14 in-game hours away, from a named townsperson.
 - Selling a matching crate at the market counts toward the order
   automatically and pays double for that crate.
 - A completed order pays a bonus of 50% of the order's base value. A missed
