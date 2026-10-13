@@ -35,7 +35,17 @@ npm test         # unit tests, including the pacing test
 npm run build    # type check, then production build into dist/
 npm run check    # type check + tests, the quick pre-commit check
 npm run tune     # scripted player on several seeds: prints minutes to each rank (scripts/tune.mjs)
+npm run package  # build, then zip dist/ into release/little-harbour-web.zip (scripts/package.mjs)
 ```
+
+`npm run package` needs the system `zip` command and prints a plain message if it
+is missing. `release/` is git-ignored. The build uses relative paths (`base: './'`
+in `vite.config.ts`), so the zip works from any folder on a web server; keep asset
+paths relative (no leading `/`). Nothing is ever uploaded by a script.
+
+The game opens on the title screen with the world paused. Dev shortcut: add
+`?play` to the address (`http://localhost:5173/?play`) to skip it, which is what
+scripted checks that use `window.__debug` should do.
 
 Tests and the build must pass before any commit.
 
@@ -53,14 +63,29 @@ The most important rule: **game rules and drawing are separate.**
 - `src/ui/` — the HTML HUD and panels drawn over the canvas. **All names and
   repeated wording live in `src/ui/text.ts`** (fish, zones, ranks, boat sizes,
   upgrade tracks, traits, townspeople lines, toasts, prompts). Edit wording
-  there. The sim keeps only ids, numbers and person/boat names, and gives short
+  there. The wording of the title screen, pause menu, settings, how-to-play page,
+  the controls hint and the mute toast lives in `src/ui/menuText.ts`. The sim keeps only ids, numbers and person/boat names, and gives short
   plain "why not" reasons (plus a `needRank` number) that the UI words.
-- `src/audio.ts` — sounds made with Web Audio. No audio files.
+- `src/audio/` — sound and music made with Web Audio. No audio files. `GameAudio` in `index.ts` is the one door into it.
 - `src/game.ts` — owns the state, steps the sim each frame, and wires view, UI
   and audio together. Event routing is in `src/events.ts`, targeting and the
   E-key action in `src/interaction.ts`, and the dev-only `__debug` hook in
   `src/debug.ts`.
 - `src/main.ts` — start-up and the frame loop.
+
+### Title screen and pause
+
+`Game.mode` in `src/game.ts` is `'title'`, `'play'` or `'paused'` (rules in
+`src/ui/menuFlow.ts`, unit tested). The game starts on `'title'`. While the mode is
+not `'play'` the frame skips `step()` (so the sim and the clock stand still), stops
+the autosave and holds the walkers, boats and crates in the view; water and light
+keep their gentle motion. Esc with no window open pauses; Esc again resumes; Esc in
+Settings or How to play goes back to the menu that opened it. Esc with an ordinary
+window open just closes it. The music scheduler runs inside `audio.update()`, so
+`game.ts` does not call it while paused (it does run on the title screen, where the
+clock is still). Continue loads the save that `loadGame` already read. New game with a
+save asks first, then uses the normal reset (`clearSave` and reload) and sets a
+one-tab flag so the title is not shown again. Do not write a second save path.
 
 See "Code map" at the bottom for a file-by-file list.
 
@@ -81,7 +106,7 @@ See "Code map" at the bottom for a file-by-file list.
    (High, Medium, Low; `src/view/quality.ts`): pixel ratio cap, shadow size or
    off, anti-aliasing samples, bloom. Auto mode starts on High and steps down
    (never up) when frames average over 22 ms for 3 seconds. The setting
-   (Auto/High/Medium/Low) is in the fish book panel and saved in `localStorage`
+   (Auto/High/Medium/Low) is on the Settings screen and saved in `localStorage`
    under its own key, apart from the game save. The HUD only rewrites the DOM
    when its text changes, and rebuilds its panels about 8 times a second.
 4. Reuse the existing helpers (`view/kit.ts`, `view/figures.ts`,
@@ -182,8 +207,9 @@ catch, a legendary fish as the end goal, music.
 
 <!-- Keep this list current when files are added, split or removed. -->
 
-Root: `index.html` page shell; `vite.config.ts` test settings; `scripts/tune.mjs`
-tuning run (not in the game bundle); `docs/superpowers/specs/` design notes.
+Root: `index.html` page shell; `vite.config.ts` base path (`./`) and test settings;
+`scripts/tune.mjs` tuning run and `scripts/package.mjs` zip maker (neither is in the
+game bundle); `docs/superpowers/specs/` design notes.
 
 **src/**
 - `main.ts` — start-up: finds the page elements and starts the game.
@@ -191,8 +217,7 @@ tuning run (not in the game bundle); `docs/superpowers/specs/` design notes.
 - `events.ts` — turns sim events into sounds, toasts, pop-ups and saves.
 - `interaction.ts` — what is near the player, the prompt text, and what E does.
 - `debug.ts` — dev-only `window.__debug` helpers (never in production builds).
-- `audio.ts` — sound effects made with Web Audio.
-- `input.ts` — keyboard state.
+- `input.ts` — keyboard state (sliders keep their own arrow keys).
 - `palette.ts` — fish colours shared by view and UI.
 
 **src/sim/** (pure rules, all unit tested)
@@ -223,11 +248,32 @@ tuning run (not in the game bundle); `docs/superpowers/specs/` design notes.
 - `ending.ts` — delivering the King Fish and the ending summary.
 - `income.ts` — money earned per minute.
 
-**src/ui/**
-- `text.ts` — all names and wording the player reads.
-- `hud.ts` — money, clock, carrying, orders, boats, rank bar, prompt, toasts.
-- `panels.ts` — the panels: boat, hire, market, shipyard, notices, fish book, ice box, day report.
-- `styles.ts` — the CSS for the HUD and panels.
+**src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
+- `text.ts` — all names and wording the player reads in the game.
+- `menuText.ts` — wording for the title screen, pause menu, settings, how to play, the controls hint and the mute toast.
+- `hud.ts` — money, clock, carrying, orders, boats, rank bar, prompt, controls hint, toasts.
+- `panels.ts` — the window manager: opens a screen, draws it, routes button and slider events to game actions (`PanelKind`, `SCREENS`, `Panels.act`).
+- `menuFlow.ts` — pure rules for title / play / paused and what Esc does in each.
+- `components.ts` — reusable HTML builders (button, meter, slider, card, item, chip, section, stat).
+- `icons.ts` — the chunky SVG icon set and fish icons.
+- `screens/types.ts` — `ScreenCtx` and `ScreenView`.
+- `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts`, `icebox.ts` — the in-game windows.
+- `screens/logbook.ts` — the fish book. `screens/ledger.ts` — the day report.
+- `screens/title.ts` — the title screen. `screens/pause.ts` — the pause menu.
+- `screens/settings.ts` — volumes, mute, picture quality, reset game.
+- `screens/howto.ts` — the how-to-play page.
+- `styles/index.css` — pulls in the other style files. `tokens.css` — every colour, size and timing. `base.css` — base text and animations.
+- `styles/components.css` — buttons, meters, sliders, cards, rows. `hud.css` — the HUD. `window.css` — windows. `menu.css` — title, pause, settings, how-to-play.
+- Tests: `components.test.ts`, `menus.test.ts` (menu screens), `menuFlow.test.ts`, `textTycoon.test.ts`.
+
+**src/audio/** (all through `GameAudio` in `index.ts`: `getSettings`, `setVolume`, `setMuted`, `toggleMute`, `settings.subscribe`)
+- `index.ts` — `GameAudio`, the one entry point; per-frame `update`, the M key, sound-effect calls.
+- `engine.ts` — the Web Audio context and the shared mixing buses.
+- `settings.ts` — volumes and mute, saved under their own `localStorage` key.
+- `effects.ts` — sound effects. `ambience.ts` — sea, wind, gulls, weather beds.
+- `music.ts` — plays the music with look-ahead scheduling. `musicPlan.ts` — chooses the chords and melody.
+- `mix.ts` — pure maths for how sound follows position, clock and weather. `random.ts` — small seeded random numbers.
+- Tests: `mix.test.ts`, `musicPlan.test.ts`, `settings.test.ts`.
 
 **src/view/** (Three.js drawing)
 - `scene.ts` — renderer, sky, sun, post-processing, quality settings applied.

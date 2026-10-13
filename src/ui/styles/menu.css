@@ -1,0 +1,22 @@
+/* Title screen, pause menu, settings and how-to-play: a darker dim and a narrower window than the game's windows. */
+.overlay.menu { background: rgba(8, 20, 60, 0.5); }
+.win.menu { width: min(460px, 92vw); }
+.win.menu.wide { width: min(620px, 94vw); }
+
+.menu-hero { padding: 6px 0 2px; text-align: center; font-size: 46px; line-height: 1; color: var(--gold-hi); }
+.menu-tag { text-align: center; color: var(--text-dim); margin-bottom: 14px; font-size: var(--fs-md); }
+.menu-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 6px 6px; }
+.menu-list .btn .ic { margin-bottom: 3px; }
+.menu-save { margin-top: -6px; text-align: center; color: var(--text-dim); font-size: var(--fs-sm); }
+.menu-ask { text-align: center; font-size: var(--fs-lg); padding: 4px 0 0; }
+.menu-warn { text-align: center; color: var(--text-dim); margin-bottom: 4px; }
+
+.win.menu.fresh .menu-list > * { animation: pop-in 0.24s var(--ease-pop) backwards; }
+.win.menu.fresh .menu-list > :nth-child(2) { animation-delay: 0.05s; }
+.win.menu.fresh .menu-list > :nth-child(3) { animation-delay: 0.1s; }
+.win.menu.fresh .menu-list > :nth-child(4) { animation-delay: 0.15s; }
+.win.menu.fresh .menu-list > :nth-child(n + 5) { animation-delay: 0.2s; }
+
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; margin-bottom: 4px; }
+.keys .caps { display: flex; gap: 4px; }
+.howto-about { font-size: var(--fs-md); line-height: 1.35; margin-bottom: 6px; }

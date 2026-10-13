@@ -1,3 +1,4 @@
+import type { AudioSettings } from '../../audio/settings';
 import type { DayStats, GameState } from '../../sim/state';
 import type { QualityMode } from '../../view/quality';
 
@@ -11,9 +12,15 @@ export interface ScreenCtx {
   /** Requested tab id ('' on open). */
   tab: string;
   confirmReset: boolean;
-  /** Current picture-quality setting (shown in the fish book). */
+  /** Current picture-quality setting (shown in settings). */
   quality: QualityMode;
   summary: { day: number; stats: DayStats } | null;
+  /** True when a saved game exists (title screen). */
+  hasSave: boolean;
+  /** The title screen is asking whether to delete the save for a new game. */
+  confirmNew: boolean;
+  /** Current volumes and mute switch (settings screen). */
+  audio: Readonly<AudioSettings>;
 }
 
 export interface ScreenView {
@@ -29,6 +36,10 @@ export interface ScreenView {
   note?: string;
   body: string;
   foot?: string;
+  /** A menu screen (title, pause, settings, how to play): no close button, stronger dim, narrower window. */
+  menu?: boolean;
+  /** Leave out the header bar (the title screen draws its own name). */
+  bare?: boolean;
 }
 
 export type Screen = (ctx: ScreenCtx) => ScreenView;

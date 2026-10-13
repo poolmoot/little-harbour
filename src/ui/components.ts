@@ -91,3 +91,23 @@ export function item(o: ItemOpts): string {
 export function stat(label: string, value: string, total = false): string {
   return `<div class="${cls('stat', total && 'total')}"><span>${label}</span><span class="ol">${value}</span></div>`;
 }
+
+export interface SliderOpts {
+  /** Which setting the slider changes; sent back with each input event as data-slider. */
+  id: string;
+  /** Current value from 0 to 1. */
+  value: number;
+  /** Screen-reader name. */
+  label: string;
+  /** Greyed out (for example while sound is muted). */
+  off?: boolean;
+}
+
+/** Whole percent for a 0-1 value. */
+export const percent = (v: number): number => Math.round(clamp01(v) * 100);
+
+/** A sunken track with a filled part and a chunky handle. The window manager listens for its input events. */
+export function slider(o: SliderOpts): string {
+  const p = percent(o.value);
+  return `<span class="${cls('slider-wrap', o.off && 'dim')}"><input class="slider" type="range" min="0" max="100" step="5" value="${p}" data-slider="${o.id}" aria-label="${o.label}" style="--fill:${p}%"><span class="slider-val ol">${p}%</span></span>`;
+}
