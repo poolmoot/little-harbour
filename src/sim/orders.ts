@@ -6,11 +6,13 @@ import type { Species } from './config';
 import type { Rng } from './rng';
 import type { Ev, GameState, Order } from './state';
 import { nextId } from './state';
+import { earnBonus } from './ledger';
+import { maxHullOwned } from './fleet';
 
 export function reachableSpecies(state: GameState): Species[] {
   const out = new Set<Species>();
   for (const z of ZONE_IDS) {
-    if (ZONES[z].needsHull && !state.upgrades.hull) continue;
+    if (ZONES[z].needsHull > maxHullOwned(state)) continue;
     for (const s of Object.keys(ZONES[z].table) as Species[]) out.add(s);
   }
   return [...out];
@@ -76,8 +78,7 @@ export function creditOrder(state: GameState, species: Species): Ev[] {
   o.filled += 1;
   if (o.filled < o.qty) return [];
   const bonus = Math.round(o.baseValue * ORDER_BONUS);
-  state.money += bonus;
-  state.stats.earned += bonus;
+  earnBonus(state, bonus);
   state.stats.filled += 1;
   state.orders = state.orders.filter((x) => x.id !== o.id);
   state.orderCooldowns.push(ORDER_REFILL_DELAY);

@@ -1,11 +1,10 @@
-import { LAYOUT, SPECIES } from './config';
-import { rollCatch } from './catch';
-import { recordCaught } from './boats';
+import { BOAT_NAMES, LAYOUT, SPECIES } from './config';
+import { recordCaught, rollBoatCatch } from './boats';
+import { rankIndex } from './rank';
+import { resetDockhands } from './staff';
 import type { Rng } from './rng';
-import { STATE_VERSION, initialState } from './state';
+import { STATE_VERSION, initialState, newBoat } from './state';
 import type { GameState } from './state';
-import { phaseOf } from './time';
-import { holdSize } from './state';
 
 export const SAVE_KEY = 'harbour-game-save';
 
@@ -19,32 +18,55 @@ export function serialize(state: GameState): string {
   return JSON.stringify(state);
 }
 
-/** Merge parsed data over a fresh state so missing fields (older saves) get defaults. */
+/** Merge parsed data over a fresh state so missing fields (older saves) get defaults. v1 saves move their global Hold/Hull levels onto every boat. */
 export function migrate(raw: unknown): GameState | null {
   if (!raw || typeof raw !== 'object') return null;
-  const d = raw as Partial<GameState>;
+  const d = raw as Partial<GameState> & { upgrades?: Record<string, boolean> };
   if (typeof d.version !== 'number' || d.version > STATE_VERSION) return null;
   const base = initialState();
+  const old = d.version < 2;
   const s: GameState = { ...base, ...d, version: STATE_VERSION } as GameState;
-  s.upgrades = { ...base.upgrades, ...(d.upgrades ?? {}) };
+  s.upgrades = { icebox: !!d.upgrades?.icebox, handcart: !!d.upgrades?.handcart, stall1: !!d.upgrades?.stall1, stall2: !!d.upgrades?.stall2 };
   s.demand = { ...base.demand, ...(d.demand ?? {}) };
   s.book = { ...base.book, ...(d.book ?? {}) };
   for (const sp of SPECIES) s.book[sp] = { ...base.book[sp], ...s.book[sp] };
   s.stats = { ...base.stats, ...(d.stats ?? {}) };
-  s.boats = Array.isArray(d.boats) && d.boats.length ? d.boats : base.boats;
+  s.stats.income = { ...base.stats.income, ...(d.stats?.income ?? {}) };
+  s.stats.best = { ...base.stats.best, ...(d.stats?.best ?? {}) };
+  const boats = Array.isArray(d.boats) && d.boats.length ? d.boats : base.boats;
+  const holdLvl = d.upgrades?.hold2 ? 2 : d.upgrades?.hold1 ? 1 : 0;
+  const hullLvl = d.upgrades?.hull ? 1 : 0;
+  s.boats = boats.map((b, i) => {
+    const nb = { ...newBoat(b.id, b.berth ?? i, b.name ?? BOAT_NAMES[i] ?? `Boat ${i + 1}`), ...b };
+    if (old) {
+      nb.hold = holdLvl;
+      nb.hull = hullLvl;
+    }
+    nb.captain = b.captain ?? null;
+    return nb;
+  });
   s.crates = Array.isArray(d.crates) ? d.crates : [];
   s.orders = Array.isArray(d.orders) ? d.orders : [];
   s.orderCooldowns = Array.isArray(d.orderCooldowns) ? d.orderCooldowns : [];
+  s.dockhands = Array.isArray(d.dockhands) ? d.dockhands : [];
+  s.candidates = Array.isArray(d.candidates) ? d.candidates : [];
+  if (old) {
+    // Lifetime earnings were not tracked: use what was spent on upgrades plus the money in hand as a floor.
+    const spent = (d.upgrades?.icebox ? 120 : 0) + (d.upgrades?.handcart ? 200 : 0) + (holdLvl >= 1 ? 150 : 0) + (holdLvl >= 2 ? 400 : 0) + (hullLvl ? 500 : 0) + (d.upgrades?.boat2 ? 800 : 0);
+    s.lifetime = Math.max(s.lifetime ?? 0, spent + (d.money ?? 0));
+    s.rank = rankIndex(s.lifetime);
+  }
   return s;
 }
 
-/** Boats that were at sea come home with their catch ready; any cast line is reset. */
+/** Boats that were at sea come home with their catch ready; any cast line is reset; hauled crates go back on the dock. */
 export function settleLoaded(state: GameState, rng: Rng): void {
+  resetDockhands(state);
   for (const b of state.boats) {
     if (b.status === 'out') {
       b.status = 'returned';
       b.progress = b.tripTime;
-      b.catch = rollCatch(b.zone ?? 'shallows', phaseOf(state.dayTime), holdSize(state), rng);
+      b.catch = rollBoatCatch(state, b, rng);
       for (const sp of b.catch) recordCaught(state, sp);
     }
     b.berth = Math.min(b.berth, LAYOUT.berths.length - 1);

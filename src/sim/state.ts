@@ -1,7 +1,7 @@
 import { SPECIES } from './config';
-import type { Phase, Species, UpgradeId, ZoneId } from './config';
+import type { Phase, Species, Track, Trait, UpgradeId, ZoneId } from './config';
 
-export type CrateLoc = 'dock' | 'hand' | 'ice';
+export type CrateLoc = 'dock' | 'hand' | 'ice' | 'haul';
 export interface Crate {
   id: number;
   species: Species;
@@ -10,11 +10,46 @@ export interface Crate {
   x?: number; // dock position
   z?: number;
   layer?: number;
+  carrier?: number; // dockhand id that has claimed (or is carrying) this crate
 }
+
+export interface Captain {
+  id: number;
+  name: string;
+  trait: Trait;
+  wage: number;
+  unpaid?: boolean; // could not be paid at the last 06:00, so idle today
+}
+
+export interface Pt { x: number; z: number }
+export interface Job {
+  phase: 'out' | 'haul' | 'back';
+  path: Pt[];
+  len: number;
+  d: number; // distance walked along path
+  crateIds: number[];
+  dest: 'market' | 'ice';
+}
+export interface Dockhand {
+  id: number;
+  name: string;
+  slot: number; // idle spot index at the pier head
+  unpaid?: boolean;
+  job: Job | null;
+}
+
+export type HaulPolicy = 'market' | 'ice';
 
 export interface Boat {
   id: number;
+  name: string;
   berth: number;
+  hull: number; // 0..3
+  hold: number; // 0..3
+  gear: number; // 0..2
+  sails: number; // 0..2
+  target: ZoneId; // zone it sails to when sent or captained
+  captain: Captain | null;
   status: 'docked' | 'out' | 'returned';
   zone: ZoneId | null;
   progress: number; // seconds into trip
@@ -38,11 +73,16 @@ export interface FishingState {
 }
 
 export interface DayStats {
-  earned: number;
+  earned: number; // all income, including order bonuses
   sold: number;
   spoiled: number;
   filled: number;
   missed: number;
+  income: Record<Species, number>; // sale income by fish
+  bonus: number; // order bonuses
+  wages: number;
+  spent: number; // upgrades, boats and market stall
+  best: { species: Species | null; price: number };
 }
 
 export interface GameState {
@@ -53,6 +93,11 @@ export interface GameState {
   clock: number; // monotonic seconds
   nextId: number;
   upgrades: Record<UpgradeId, boolean>;
+  lifetime: number; // lifetime earnings, drives rank
+  rank: number; // highest rank announced so far
+  dockhands: Dockhand[];
+  candidates: Captain[];
+  haulPolicy: HaulPolicy;
   boats: Boat[];
   crates: Crate[];
   demand: Record<Species, number>;
@@ -66,13 +111,13 @@ export interface GameState {
 }
 
 export type Ev =
-  | { type: 'boatDispatched'; boatId: number; zone: ZoneId }
-  | { type: 'boatReturned'; boatId: number; count: number }
-  | { type: 'boatUnloaded'; boatId: number; count: number }
+  | { type: 'boatDispatched'; boatId: number; zone: ZoneId; auto?: boolean }
+  | { type: 'boatReturned'; boatId: number; count: number; auto?: boolean }
+  | { type: 'boatUnloaded'; boatId: number; count: number; auto?: boolean }
   | { type: 'cratePicked'; crateId: number }
   | { type: 'crateStored'; crateId: number }
   | { type: 'crateTaken'; crateId: number }
-  | { type: 'crateSold'; species: Species; price: number; freshness: number; orderBonus: boolean }
+  | { type: 'crateSold'; species: Species; price: number; freshness: number; orderBonus: boolean; staff: boolean }
   | { type: 'crateSpoiled'; crateId: number; species: Species }
   | { type: 'crateDiscarded'; species: Species }
   | { type: 'orderPosted'; orderId: number }
@@ -83,20 +128,30 @@ export type Ev =
   | { type: 'fishLanded'; species: Species }
   | { type: 'fishLost'; reason: 'early' | 'late' | 'full' | 'cancelled' }
   | { type: 'upgradeBought'; id: UpgradeId }
+  | { type: 'boatBought'; boatId: number }
+  | { type: 'boatUpgraded'; boatId: number; track: Track; level: number }
+  | { type: 'hired'; role: 'captain' | 'dockhand'; name: string }
+  | { type: 'fired'; role: 'captain' | 'dockhand'; name: string }
+  | { type: 'rankUp'; rank: number }
+  | { type: 'wagesPaid'; paid: number; unpaid: number }
   | { type: 'phaseChanged'; phase: Phase }
   | { type: 'dayEnded'; day: number; stats: DayStats }
   | { type: 'denied'; reason: string };
 
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 
-export function emptyStats(): DayStats {
-  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0 };
-}
-
-function perSpecies<T>(f: () => T): Record<Species, T> {
+export function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
   for (const s of SPECIES) o[s] = f();
   return o;
+}
+
+export function emptyStats(): DayStats {
+  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, spent: 0, best: { species: null, price: 0 } };
+}
+
+export function newBoat(id: number, berth: number, name: string): Boat {
+  return { id, name, berth, hull: 0, hold: 0, gear: 0, sails: 0, target: 'shallows', captain: null, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [] };
 }
 
 export function initialState(): GameState {
@@ -107,8 +162,13 @@ export function initialState(): GameState {
     dayTime: 0,
     clock: 0,
     nextId: 3,
-    upgrades: { icebox: false, handcart: false, hold1: false, hold2: false, hull: false, boat2: false },
-    boats: [{ id: 1, berth: 0, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [] }],
+    upgrades: { icebox: false, handcart: false, stall1: false, stall2: false },
+    lifetime: 0,
+    rank: 0,
+    dockhands: [],
+    candidates: [],
+    haulPolicy: 'market',
+    boats: [newBoat(1, 0, 'Gull')],
     crates: [],
     demand: perSpecies(() => 1),
     demandTimer: 0,
@@ -123,8 +183,4 @@ export function initialState(): GameState {
 
 export function nextId(state: GameState): number {
   return state.nextId++;
-}
-
-export function holdSize(state: GameState): number {
-  return state.upgrades.hold2 ? 8 : state.upgrades.hold1 ? 6 : 4;
 }

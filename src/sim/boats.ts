@@ -1,41 +1,49 @@
 import { ZONES } from './config';
-import type { ZoneId } from './config';
+import type { Species, ZoneId } from './config';
 import { rollCatch } from './catch';
 import { addCrate } from './crates';
+import { holdSize, rareMult, tripTimeFor, zoneUnlockedFor } from './fleet';
 import type { Rng } from './rng';
-import { holdSize } from './state';
 import type { Boat, Ev, GameState } from './state';
 import { isNight, phaseOf } from './time';
 
+export { zoneUnlockedFor };
+/** Does any owned boat's hull reach this zone? */
 export function zoneUnlocked(state: GameState, zone: ZoneId): boolean {
-  return !ZONES[zone].needsHull || state.upgrades.hull;
+  return state.boats.some((b) => zoneUnlockedFor(b, zone));
 }
 
-export function dispatchBoat(state: GameState, boatId: number, zone: ZoneId): Ev[] {
+export function dispatchBoat(state: GameState, boatId: number, zone?: ZoneId, auto = false): Ev[] {
   const boat = state.boats.find((b) => b.id === boatId);
   if (!boat) return [{ type: 'denied', reason: 'No such boat.' }];
+  const z = zone ?? boat.target;
   if (boat.status === 'out') return [{ type: 'denied', reason: 'That boat is already at sea.' }];
   if (boat.status === 'returned') return [{ type: 'denied', reason: 'Unload the boat first.' }];
   if (isNight(state)) return [{ type: 'denied', reason: 'Too dark to sail. Wait for dawn.' }];
-  if (!zoneUnlocked(state, zone)) return [{ type: 'denied', reason: 'You need the reinforced hull for that zone.' }];
+  if (!zoneUnlockedFor(boat, z)) return [{ type: 'denied', reason: 'This boat needs a bigger hull for that zone.' }];
   boat.status = 'out';
-  boat.zone = zone;
+  boat.zone = z;
+  boat.target = z;
   boat.progress = 0;
-  boat.tripTime = ZONES[zone].trip;
+  boat.tripTime = tripTimeFor(boat, z);
   boat.catch = [];
-  return [{ type: 'boatDispatched', boatId, zone }];
+  return [{ type: 'boatDispatched', boatId, zone: z, auto }];
 }
 
-export function recordCaught(state: GameState, species: import('./config').Species): void {
+export function recordCaught(state: GameState, species: Species): void {
   state.book[species].caught += 1;
+}
+
+export function rollBoatCatch(state: GameState, boat: Boat, rng: Rng): Species[] {
+  return rollCatch(boat.zone ?? 'shallows', phaseOf(state.dayTime), holdSize(boat), rng, rareMult(boat));
 }
 
 function returnBoat(state: GameState, boat: Boat, rng: Rng): Ev[] {
   boat.status = 'returned';
   boat.progress = boat.tripTime;
-  boat.catch = rollCatch(boat.zone ?? 'shallows', phaseOf(state.dayTime), holdSize(state), rng);
+  boat.catch = rollBoatCatch(state, boat, rng);
   for (const s of boat.catch) recordCaught(state, s);
-  return [{ type: 'boatReturned', boatId: boat.id, count: boat.catch.length }];
+  return [{ type: 'boatReturned', boatId: boat.id, count: boat.catch.length, auto: !!boat.captain && !boat.captain.unpaid }];
 }
 
 export function stepBoats(state: GameState, dt: number, rng: Rng): Ev[] {
@@ -48,7 +56,7 @@ export function stepBoats(state: GameState, dt: number, rng: Rng): Ev[] {
   return evs;
 }
 
-export function unloadBoat(state: GameState, boatId: number): Ev[] {
+export function unloadBoat(state: GameState, boatId: number, auto = false): Ev[] {
   const boat = state.boats.find((b) => b.id === boatId);
   if (!boat || boat.status !== 'returned') return [{ type: 'denied', reason: 'Nothing to unload.' }];
   const n = boat.catch.length;
@@ -57,5 +65,7 @@ export function unloadBoat(state: GameState, boatId: number): Ev[] {
   boat.status = 'docked';
   boat.zone = null;
   boat.progress = 0;
-  return [{ type: 'boatUnloaded', boatId, count: n }];
+  return [{ type: 'boatUnloaded', boatId, count: n, auto }];
 }
+
+export { ZONES };

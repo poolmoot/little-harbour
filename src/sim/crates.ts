@@ -20,6 +20,7 @@ export function cratesAt(state: GameState, loc: CrateLoc): Crate[] {
 export const handCrates = (s: GameState) => cratesAt(s, 'hand');
 export const iceCrates = (s: GameState) => cratesAt(s, 'ice');
 export const dockCrates = (s: GameState) => cratesAt(s, 'dock');
+export const haulCrates = (s: GameState) => cratesAt(s, 'haul');
 
 export function carryCapacity(state: GameState): number {
   return state.upgrades.handcart ? CARRY_HANDCART : CARRY_BASE;
@@ -31,10 +32,10 @@ export function slotPosition(berth: number, slot: number): { x: number; z: numbe
   const s = slot % per;
   const row = Math.floor(s / b.slotX.length);
   const col = s % b.slotX.length;
-  return { x: b.slotX[col], z: LAYOUT.slotZ0 + LAYOUT.slotDZ * row, layer: Math.floor(slot / per) };
+  return { x: b.slotX[col], z: b.slotZ0 + LAYOUT.slotDZ * row, layer: Math.floor(slot / per) };
 }
 
-function freeDockSlot(state: GameState, berth: number): { x: number; z: number; layer: number } {
+export function freeDockSlot(state: GameState, berth: number): { x: number; z: number; layer: number } {
   const used = dockCrates(state);
   for (let i = 0; ; i++) {
     const p = slotPosition(berth, i);
@@ -63,7 +64,7 @@ export function decayCrates(state: GameState, dt: number): Ev[] {
   const evs: Ev[] = [];
   for (const c of state.crates) {
     if (c.freshness <= 0) continue;
-    const secs = c.loc === 'ice' ? ICE_DECAY_SECONDS : DOCK_DECAY_SECONDS;
+    const secs = c.loc === 'ice' ? ICE_DECAY_SECONDS : DOCK_DECAY_SECONDS; // hauled crates spoil like dock crates
     c.freshness = Math.max(0, c.freshness - (100 / secs) * dt);
     if (c.freshness <= 0) {
       state.stats.spoiled += 1;
@@ -101,6 +102,7 @@ export function pickUp(state: GameState, crateId: number): Ev[] {
   if (handCrates(state).length >= carryCapacity(state)) return [{ type: 'denied', reason: 'Your hands are full.' }];
   c.loc = 'hand';
   c.x = c.z = c.layer = undefined;
+  c.carrier = undefined;
   return [{ type: 'cratePicked', crateId: c.id }];
 }
 

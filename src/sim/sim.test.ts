@@ -1,3 +1,4 @@
+import { buyBoatUpgrade } from './fleet';
 import { describe, expect, it } from 'vitest';
 import { Rng } from './rng';
 import {
@@ -16,13 +17,15 @@ describe('whole-sim playthrough', () => {
       if (Math.round(t * 10) % 20 === 0) {
         for (const b of s.boats) {
           if (b.status === 'returned') unloadBoat(s, b.id);
-          else if (b.status === 'docked') dispatchBoat(s, b.id, s.upgrades.hull ? 'reef' : 'shallows');
+          else if (b.status === 'docked') dispatchBoat(s, b.id, b.hull ? 'reef' : 'shallows');
         }
         for (const c of dockCrates(s)) pickUp(s, c.id);
         sellAll(s);
         castLine(s, rng);
         hook(s, rng);
-        for (const u of ['handcart', 'hold1', 'hull', 'boat2', 'hold2', 'icebox'] as const) buyUpgrade(s, u);
+        for (const u of ['handcart', 'icebox'] as const) buyUpgrade(s, u);
+        buyBoatUpgrade(s, 1, 'hold');
+        buyBoatUpgrade(s, 1, 'hull');
       }
       if (t % 60 === 0) expect(Number.isFinite(s.money)).toBe(true);
     }

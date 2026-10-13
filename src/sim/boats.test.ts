@@ -33,14 +33,13 @@ describe('boat lifecycle', () => {
   it('reef needs the hull and takes 50 s', () => {
     const s = initialState();
     expect(dispatchBoat(s, 1, 'reef')[0].type).toBe('denied');
-    s.upgrades.hull = true;
+    s.boats[0].hull = 1;
     dispatchBoat(s, 1, 'reef');
     expect(s.boats[0].tripTime).toBe(50);
   });
   it('hold upgrades change the catch size', () => {
     const s = initialState();
-    s.upgrades.hold1 = true;
-    s.upgrades.hold2 = true;
+    s.boats[0].hold = 2;
     dispatchBoat(s, 1, 'shallows');
     stepBoats(s, 30, new Rng(2));
     expect(s.boats[0].catch).toHaveLength(8);

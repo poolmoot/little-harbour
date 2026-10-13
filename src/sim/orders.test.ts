@@ -21,7 +21,7 @@ describe('orders', () => {
   it('only asks for reachable species (no reef fish without the hull)', () => {
     const s = initialState();
     expect(reachableSpecies(s)).not.toContain('lobster');
-    s.upgrades.hull = true;
+    s.boats[0].hull = 1;
     expect(reachableSpecies(s)).toContain('lobster');
   });
   it('a matching sale pays double and completion pays a 50% bonus', () => {
