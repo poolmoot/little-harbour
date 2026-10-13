@@ -1,6 +1,7 @@
 import { FISH_HOOK_WINDOW, FISH_WAIT_MAX, FISH_WAIT_MIN } from './config';
 import { rollPier } from './catch';
 import { recordCaught } from './boats';
+import { rollFish } from './fishbook';
 import { addCrate, carryCapacity, handCrates } from './crates';
 import type { Rng } from './rng';
 import type { Ev, GameState } from './state';
@@ -28,10 +29,13 @@ export function hook(state: GameState, rng: Rng): Ev[] {
   state.fishing = { phase: 'idle', timer: 0 };
   if (handCrates(state).length >= carryCapacity(state)) return [{ type: 'fishLost', reason: 'full' }];
   const species = rollPier(rng);
-  addCrate(state, species, 'hand');
-  recordCaught(state, species);
+  const fish = rollFish(species, rng);
+  addCrate(state, species, 'hand', 0, fish);
+  recordCaught(state, species, fish.size, fish.golden);
   state.tally.pier += 1;
-  return [{ type: 'fishLanded', species }];
+  const evs: Ev[] = [{ type: 'fishLanded', species }];
+  if (fish.golden) evs.push({ type: 'goldenCaught', species });
+  return evs;
 }
 
 export function stepFishing(state: GameState, dt: number): Ev[] {

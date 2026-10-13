@@ -1,4 +1,4 @@
-import { DEFAULT_SMOKE_LIST, SPECIES, START_MONEY, ZONE_IDS } from './config';
+import { DEFAULT_HARBOUR_NAME, DEFAULT_SMOKE_LIST, SPECIES, START_MONEY, ZONE_IDS } from './config';
 import type { BuildingId, Phase, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from './config';
 
 export type CrateLoc = 'dock' | 'hand' | 'ice' | 'haul' | 'cold' | 'smoke';
@@ -69,6 +69,7 @@ export interface Boat {
   tripBonus?: number; // extra crates from a Big catch day
   nightTrip?: boolean; // left at night (lighthouse)
   king?: boolean; // the King Fish is in the catch
+  catchInfo?: { size: number; golden: boolean }[]; // size and golden for each fish in `catch` (same order)
 }
 
 export interface Order {
@@ -133,6 +134,9 @@ export interface Tally {
   zoneSent: Record<ZoneId, number>;
 }
 
+/** Fish book entry: biggest in cm and best stars are 0 until one is caught. */
+export interface BookEntry { caught: number; bestSale: number; biggest: number; bestStars: number; golden: number }
+
 export interface GameState {
   version: number;
   money: number;
@@ -153,7 +157,8 @@ export interface GameState {
   orders: Order[];
   orderCooldowns: number[];
   fishing: FishingState;
-  book: Record<Species, { caught: number; bestSale: number }>;
+  book: Record<Species, BookEntry>;
+  bookClaims: Record<ZoneId, { caught: boolean; stars: boolean }>; // zone rewards already paid
   stats: DayStats;
   lastPhase: Phase;
   // ---- tycoon stage
@@ -170,6 +175,7 @@ export interface GameState {
   king: { found: boolean; delivered: boolean; day: number };
   incomeLog: number[]; // lifetime earnings sampled every few seconds (for money per minute)
   incomeTimer: number;
+  harbourName: string;
   savedAt: number; // wall-clock milliseconds when last saved, given by the caller (0 = unknown)
 }
 
@@ -222,6 +228,10 @@ export type Ev =
   | { type: 'kingFishFound'; boatId: number }
   | { type: 'endingReached'; days: number; earned: number; fishCaught: number; boats: number }
   | { type: 'awayEarnings'; seconds: number; earned: number; perMinute: number }
+  | { type: 'goldenCaught'; species: Species }
+  | { type: 'bookReward'; zone: ZoneId; kind: 'caught' | 'stars'; amount: number }
+  | { type: 'harbourRenamed'; name: string }
+  | { type: 'boatRenamed'; boatId: number; name: string }
   | { type: 'denied'; reason: string; needRank?: number };
 
 /** Result of a "can the player do this" check. needRank is set when only a higher rank is missing. */
@@ -275,7 +285,8 @@ export function initialState(): GameState {
     orders: [],
     orderCooldowns: [],
     fishing: { phase: 'idle', timer: 0 },
-    book: perSpecies(() => ({ caught: 0, bestSale: 0 })),
+    book: perSpecies(() => ({ caught: 0, bestSale: 0, biggest: 0, bestStars: 0, golden: 0 })),
+    bookClaims: Object.fromEntries(ZONE_IDS.map((z) => [z, { caught: false, stars: false }])) as GameState['bookClaims'],
     stats: emptyStats(),
     lastPhase: 'dawn',
     buildings: { coldstore: 0, smokehouse: 0, restaurant: 0, lighthouse: 0 },
@@ -291,6 +302,7 @@ export function initialState(): GameState {
     king: { found: false, delivered: false, day: 0 },
     incomeLog: [],
     incomeTimer: 0,
+    harbourName: DEFAULT_HARBOUR_NAME,
     savedAt: 0,
   };
 }

@@ -7,7 +7,7 @@ import { creditOrder } from './orders';
 
 describe('rank', () => {
   it('maps lifetime earnings to the five ranks', () => {
-    expect([0, 499, 500, 2999, 3000, 14999, 15000, 59999, 60000].map(rankIndex)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4]);
+    expect([0, 499, 500, 3299, 3300, 17999, 18000, 71999, 72000].map(rankIndex)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4]);
   });
   it('sales and order bonuses add to lifetime earnings; spending does not subtract', () => {
     const s = initialState();
@@ -23,12 +23,12 @@ describe('rank', () => {
   it('announces each new rank once, and reports progress', () => {
     const s = initialState();
     expect(stepRank(s)).toHaveLength(0);
-    s.lifetime = 3200;
+    s.lifetime = 3500;
     const evs = stepRank(s);
     expect(evs.map((e) => e.type === 'rankUp' && e.rank)).toEqual([1, 2]);
     expect(stepRank(s)).toHaveLength(0);
-    expect(rankProgress(s)!.frac).toBeCloseTo(200 / 12000);
-    s.lifetime = 70000;
+    expect(rankProgress(s)!.frac).toBeCloseTo(200 / 14700);
+    s.lifetime = 80000;
     expect(rankProgress(s)).toBeNull();
   });
 });

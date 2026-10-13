@@ -1,10 +1,13 @@
 // Development-only helpers: window.__debug. Loaded only in dev builds (see game.ts), never shipped.
-import { BUILDING_IDS, GOALS, HOUR_SECONDS, START_HOUR } from './sim/config';
+import { BUILDING_IDS, FISH_SIZE, GOALS, HOUR_SECONDS, RANK_THRESHOLDS, SPECIES, START_HOUR } from './sim/config';
 import type { BuildingId, Track, Trait, WeatherId, ZoneId } from './sim/config';
 import { applyAway, awayEarnings } from './sim/away';
+import { setHarbourName, renameBoat } from './sim/names';
 import { acceptContract, buyBuilding, bestZone, buyBoat, currentGoal, deliverKingFish, hireDockhand, moneyPerMinute, repairBoat, step } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { makeOffer } from './sim/contracts';
+import { addCrate } from './sim/crates';
+import { bookCompletion, crateStars } from './sim/fishbook';
 import { grantKingFish } from './sim/ending';
 import { earnReward } from './sim/ledger';
 import { rollSpecial } from './sim/weather';
@@ -58,7 +61,7 @@ export function installDebug(g: DebugHost): void {
       g.panels.refresh();
     },
     /** Jump to a rank (0-4) by setting lifetime earnings. */
-    rank: (r: number) => { g.state.lifetime = Math.max(g.state.lifetime, [0, 500, 3000, 15000, 60000][r] ?? 0); },
+    rank: (r: number) => { g.state.lifetime = Math.max(g.state.lifetime, RANK_THRESHOLDS[r] ?? 0); },
     /** Add boats (as rowboats) until there are n. */
     fleet: (n: number) => { g.state.lifetime = Math.max(g.state.lifetime, 15000); g.state.money += 20000; while (g.state.boats.length < n) buyBoat(g.state); },
     hireDockhands: (n = 1) => { g.state.lifetime = Math.max(g.state.lifetime, 500); for (let i = 0; i < n; i++) hireDockhand(g.state, g.rng); },
@@ -125,6 +128,32 @@ export function installDebug(g: DebugHost): void {
       if (pay) g.handle(r.events);
       const x = r.result;
       return x ? `Away ${Math.round(x.seconds)} s: earned $${x.earned} at $${x.perMinute.toFixed(1)} a minute${pay ? ' (paid)' : ' (not paid)'}` : 'Too short to count (under 60 seconds).';
+    },
+    /** Put a golden crate of a fish in your hands (or on the dock if your hands are full). */
+    golden: (species: import('./sim/config').Species = 'tuna') => {
+      const full = g.state.crates.filter((c) => c.loc === 'hand').length >= 2;
+      addCrate(g.state, species, full ? 'dock' : 'hand', 0, { golden: true });
+    },
+    /** Set the size (cm) of the first crate you carry, or of crate number `index` in the list of all crates. */
+    setSize: (cm: number, index?: number) => {
+      const c = index === undefined ? g.state.crates.find((k) => k.loc === 'hand') : g.state.crates[index];
+      if (c) c.size = cm;
+      return c ? `${c.species}: ${cm} cm, ${crateStars(c)} stars` : 'No crate found.';
+    },
+    /** Rename the harbour, or a boat: rename('Seagull Bay') or rename('Spray', 0). */
+    rename: (name: string, boat?: number) => {
+      const evs = boat === undefined ? setHarbourName(g.state, name) : renameBoat(g.state, g.state.boats[boat]?.id ?? 0, name);
+      g.handle(evs);
+      return evs[0]?.type === 'denied' ? (evs[0] as { reason: string }).reason : 'ok';
+    },
+    /** Print the fish book as text. */
+    fishBook: (): string => {
+      const c = bookCompletion(g.state);
+      const rows = SPECIES.map((s) => {
+        const b = g.state.book[s];
+        return `${s.padEnd(11)} caught ${String(b.caught).padStart(3)}  biggest ${b.biggest ? b.biggest + ' cm' : '-'} (range ${FISH_SIZE[s].join('-')})  stars ${b.bestStars}  golden ${b.golden}  best sale $${b.bestSale}`;
+      });
+      return `Seen ${c.seen}/${c.total}, 3-star ${c.threeStar}/${c.total}, golden ${c.golden}/${c.total}\n` + rows.join('\n');
     },
     /** A short text summary of goals, buildings, weather, contracts, and money per minute. */
     summary: (): string => {

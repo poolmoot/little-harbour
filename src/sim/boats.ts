@@ -1,6 +1,7 @@
 import { KING_CHANCE, STORM_CATCH_MULT, STORM_DAMAGE_CHANCE } from './config';
 import type { Species, ZoneId } from './config';
 import { rollCatch } from './catch';
+import { midSize, recordCatch, rollFish } from './fishbook';
 import { addCrate } from './crates';
 import { holdSize, rareMult, tripCostFor, tripTimeFor, zoneUnlockedFor } from './fleet';
 import { spendOnTrip } from './ledger';
@@ -37,13 +38,25 @@ export function dispatchBoat(state: GameState, boatId: number, zone?: ZoneId, au
   boat.tripBonus = bigCatchExtra(state, z);
   boat.nightTrip = isNight(state);
   boat.catch = [];
+  boat.catchInfo = undefined;
   state.tally.dispatched += 1;
   state.tally.zoneSent[z] += 1;
   return [{ type: 'boatDispatched', boatId, zone: z, cost, auto }];
 }
 
-export function recordCaught(state: GameState, species: Species): void {
-  state.book[species].caught += 1;
+export function recordCaught(state: GameState, species: Species, size = midSize(species), golden = false): void {
+  recordCatch(state, species, size, golden);
+}
+
+/** Write the boat's whole catch into the fish book; returns an event for each golden fish. */
+export function recordBoatCatch(state: GameState, boat: Boat): Ev[] {
+  const evs: Ev[] = [];
+  boat.catch.forEach((sp, i) => {
+    const info = boat.catchInfo?.[i];
+    recordCaught(state, sp, info?.size, info?.golden);
+    if (info?.golden) evs.push({ type: 'goldenCaught', species: sp });
+  });
+  return evs;
 }
 
 export function rollBoatCatch(state: GameState, boat: Boat, rng: Rng): Species[] {
@@ -51,7 +64,9 @@ export function rollBoatCatch(state: GameState, boat: Boat, rng: Rng): Species[]
   let n = holdSize(boat);
   if (boat.tripWeather === 'storm' && isStormZone(zone)) n = Math.round(n * STORM_CATCH_MULT);
   n += boat.tripBonus ?? 0;
-  return rollCatch(zone, phaseOf(state.dayTime), n, rng, rareMult(boat));
+  const fish = rollCatch(zone, phaseOf(state.dayTime), n, rng, rareMult(boat));
+  boat.catchInfo = fish.map((sp) => rollFish(sp, rng, rareMult(boat)));
+  return fish;
 }
 
 function returnBoat(state: GameState, boat: Boat, rng: Rng): Ev[] {
@@ -66,7 +81,7 @@ function returnBoat(state: GameState, boat: Boat, rng: Rng): Ev[] {
     evs.push({ type: 'boatDamaged', boatId: boat.id });
   } else {
     boat.catch = rollBoatCatch(state, boat, rng);
-    for (const s of boat.catch) recordCaught(state, s);
+    evs.push(...recordBoatCatch(state, boat));
     if (stormTrip) state.tally.storm += 1;
     // The King Fish: a night trip to the Deep Sea with the lighthouse lit.
     if (zone === 'deep' && boat.nightTrip && state.buildings.lighthouse > 0 && !state.king.found && rng.next() < KING_CHANCE * rareMult(boat)) {
@@ -94,13 +109,14 @@ export function unloadBoat(state: GameState, boatId: number, auto = false): Ev[]
   const boat = state.boats.find((b) => b.id === boatId);
   if (!boat || boat.status !== 'returned') return [{ type: 'denied', reason: 'Nothing to unload.' }];
   const n = boat.catch.length;
-  for (const s of boat.catch) addCrate(state, s, 'dock', boat.berth);
+  boat.catch.forEach((s, i) => addCrate(state, s, 'dock', boat.berth, boat.catchInfo?.[i]));
   if (boat.king) {
     const k = addCrate(state, 'sturgeon', 'dock', boat.berth);
     k.king = true;
     boat.king = false;
   }
   boat.catch = [];
+  boat.catchInfo = undefined;
   if (n > 0) state.tally.unloaded += 1;
   boat.status = 'docked';
   boat.zone = null;

@@ -345,6 +345,35 @@ export const ENDING = {
 
 export const perMinute = (n: number): string => `$${Math.round(n).toLocaleString('en')} a minute`;
 
+// ---- names and the fish book -------------------------------------------------------------------
+
+export const NAME_PROBLEM: Record<string, string> = {
+  empty: 'Please type a name.',
+  long: 'That name is too long. Use 16 letters or fewer.',
+  chars: 'Please use only letters, numbers and spaces.',
+  nothing: 'That boat is not here.',
+};
+export const NAME_LABEL = { harbour: 'Harbour name', boat: 'Boat name', save: 'Save name', rename: 'Rename' };
+
+export const starText = (n: number): string => (n <= 0 ? 'No stars yet' : `${n} ${n === 1 ? 'star' : 'stars'}`);
+export const sizeText = (cm: number): string => `${Math.round(cm)} cm`;
+export const FISH_BOOK = {
+  caught: 'Caught',
+  biggest: 'Biggest',
+  stars: 'Best stars',
+  golden: 'Golden ones',
+  bestSale: 'Best price',
+  goldenName: 'Golden',
+  seen: (a: number, b: number): string => `Fish found: ${a} of ${b}`,
+  threeStar: (a: number, b: number): string => `Fish with 3 stars: ${a} of ${b}`,
+  goldenFound: (a: number, b: number): string => `Golden fish found: ${a} of ${b}`,
+  rewardCaught: (zone: string, amount: number): string => `You have found every fish in ${zone}! Reward +$${amount}`,
+  rewardStars: (zone: string, amount: number): string => `3 stars on every fish in ${zone}! Reward +$${amount}`,
+  goldenToast: (fish: string): string => `A golden ${fish}! It is worth five times as much.`,
+  noSmoke: 'A golden fish is too special to smoke. Sell it at the market.',
+  starsHelp: 'Bigger fish get more stars and sell for a little more.',
+};
+
 // ---- welcome back (earnings while away) ---------------------------------------------------------
 
 export const AWAY = {

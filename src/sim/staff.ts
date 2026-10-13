@@ -257,7 +257,7 @@ function finishPhase(state: GameState, d: Dockhand, evs: Ev[]): void {
         evs.push(...sellCrateObj(state, c, true));
       } else if (job.dest === 'restaurant' && restaurantWants(state, c)) {
         evs.push(...serveRestaurantCrate(state, c, true));
-      } else if (job.dest === 'smoke' && rackRoom(state) > 0 && !c.smoked && !isSpoiled(c)) {
+      } else if (job.dest === 'smoke' && rackRoom(state) > 0 && !c.smoked && !c.golden && !isSpoiled(c)) {
         startSmoking(state, c);
         evs.push({ type: 'crateSmoking', crateId: c.id });
       } else if (job.dest === 'cold' && coldRoom(state) > 0 && !isSpoiled(c)) {

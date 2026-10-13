@@ -111,3 +111,20 @@ export function slider(o: SliderOpts): string {
   const p = percent(o.value);
   return `<span class="${cls('slider-wrap', o.off && 'dim')}"><input class="slider" type="range" min="0" max="100" step="5" value="${p}" data-slider="${o.id}" aria-label="${o.label}" style="--fill:${p}%"><span class="slider-val ol">${p}%</span></span>`;
 }
+
+export interface TickOpts {
+  label: string;
+  on: boolean;
+  act: string;
+  a?: string | number;
+  b?: string | number;
+  /** Small picture before the label (a fish icon, say). */
+  art?: string;
+  off?: boolean;
+}
+
+/** A tick box with a label. The whole thing is one button; the window manager sees it like any other action. */
+export function tick(o: TickOpts): string {
+  const data = ` data-act="${o.act}"${o.a !== undefined ? ` data-a="${o.a}"` : ''}${o.b !== undefined ? ` data-b="${o.b}"` : ''}`;
+  return `<button class="${cls('tick ol', o.on && 'on', o.off && 'off')}" role="checkbox" aria-checked="${o.on}"${data}><span class="tick-box">${o.on ? icon('check', 18) : ''}</span>${o.art ?? ''}<span>${o.label}</span></button>`;
+}

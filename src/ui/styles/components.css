@@ -95,3 +95,12 @@
 .slider:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--text); outline-offset: 2px; }
 .slider:focus-visible::-moz-range-thumb { outline: 2px solid var(--text); outline-offset: 2px; }
 @media (max-width: 640px) { .slider { width: 130px; } }
+
+/* Tick box with a label: one big button, so it is easy to hit. */
+.tick { display: inline-flex; align-items: center; gap: 7px; padding: 3px 11px 5px 5px; margin: 0 6px 6px 0; background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), var(--lift-sm); color: var(--text); font: inherit; font-size: var(--fs-sm); cursor: pointer; transition: transform var(--t-fast) var(--ease-out); }
+.tick:hover { transform: translateY(-1px); }
+.tick:active { transform: translateY(2px); }
+.tick.on { background: linear-gradient(#2a8a3a, #1b6a2c); }
+.tick.off { opacity: 0.5; pointer-events: none; }
+.tick-box { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: var(--well); border: var(--line); border-radius: 7px; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35); }
+.tick-box .ic { filter: none; stroke-width: 1; }

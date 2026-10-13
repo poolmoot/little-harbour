@@ -4,6 +4,7 @@ import {
 import type { Species } from './config';
 import type { Crate, CrateLoc, Ev, GameState } from './state';
 import { nextId } from './state';
+import { midSize } from './fishbook';
 
 export function freshnessMultiplier(f: number): number {
   const c = Math.max(0, Math.min(100, f));
@@ -44,8 +45,9 @@ export function freeDockSlot(state: GameState, berth: number): { x: number; z: n
   }
 }
 
-export function addCrate(state: GameState, species: Species, loc: CrateLoc, berth = 0): Crate {
-  const c: Crate = { id: nextId(state), species, freshness: 100, loc };
+export function addCrate(state: GameState, species: Species, loc: CrateLoc, berth = 0, fish?: { size?: number; golden?: boolean }): Crate {
+  const c: Crate = { id: nextId(state), species, freshness: 100, loc, size: fish?.size ?? midSize(species) };
+  if (fish?.golden) c.golden = true;
   if (loc === 'dock') {
     const p = freeDockSlot(state, berth);
     c.x = p.x;

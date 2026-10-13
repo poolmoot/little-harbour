@@ -73,6 +73,7 @@ export function smokeCrate(state: GameState, crateId: number): Ev[] {
   if (!c) return [{ type: 'denied', reason: 'You are not carrying that.' }];
   if (c.smoked) return [{ type: 'denied', reason: 'That is already smoked.' }];
   if (c.king) return [{ type: 'denied', reason: 'Not the King Fish!' }];
+  if (c.golden) return [{ type: 'denied', reason: 'A golden fish is too special to smoke. Sell it at the market.' }];
   if (isSpoiled(c)) return [{ type: 'denied', reason: 'That fish has gone bad.' }];
   if (rackRoom(state) <= 0) return [{ type: 'denied', reason: 'All racks are full.' }];
   startSmoking(state, c);
@@ -133,7 +134,7 @@ export function restaurantPrice(state: GameState, c: Crate): number {
 
 /** Would the restaurant buy this crate today? */
 export function restaurantWants(state: GameState, c: Crate): boolean {
-  return state.buildings.restaurant > 0 && restaurantRoom(state) > 0 && !c.smoked && !c.king && c.freshness >= RESTAURANT_MIN_FRESH;
+  return state.buildings.restaurant > 0 && restaurantRoom(state) > 0 && !c.smoked && !c.king && !c.golden && c.freshness >= RESTAURANT_MIN_FRESH;
 }
 
 export function serveRestaurantCrate(state: GameState, c: Crate, staff: boolean): Ev[] {

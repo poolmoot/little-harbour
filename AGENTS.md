@@ -144,17 +144,15 @@ stepping on each other:
 
 ### Waiting for the graphics agent
 
-- Close-up look of the business-stage boat parts (nets, sails, crates on
-  deck, captain figures), the worker figures and cart, the wider market
-  stall and the weathervane: built without being looked at closely.
-- The grass in the two quay beds can look dark and spiky in some light.
-- An odd white-and-grey shape was seen near the pier end in screenshots
-  (possibly a gull close to the camera, possibly a broken model).
-- The foam band around the pier is still a little wide and bright at night.
-- Real frame rate on the owner's machine has never been measured, and the
-  automatic quality step-down has not been seen working in a browser.
-- `__debug.stats()` reports 1 draw call and 1 triangle because the last
-  post-processing pass overwrites the renderer's counters.
+- Storm damage shown on a boat (`damaged` on the boat).
+- The King Fish hanging on the inn wall once `state.king.delivered` is set.
+- A distinct look for golden crates and the King Fish crate.
+- Rougher water in good wind and storms.
+- The world's cartoon restyle (in progress).
+
+Measured by the graphics agent on High at the market: about 630–690 draw
+calls and 410k triangles, holding 60 fps with some dropped frames; shadows
+roughly double the draw calls.
 
 ## Checking things without playing by hand
 
@@ -247,6 +245,9 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `contracts.ts` — contract offers, accepting, counting sales, reward and failure.
 - `ending.ts` — delivering the King Fish and the ending summary.
 - `income.ts` — money earned per minute.
+- `away.ts` — earnings while the player is away (measures a rate on a copy, credits half of it).
+- `fishbook.ts` — fish sizes, stars, golden fish, the fish book figures and zone rewards.
+- `names.ts` — harbour and boat names and their checks.
 
 **src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
 - `text.ts` — all names and wording the player reads in the game.
