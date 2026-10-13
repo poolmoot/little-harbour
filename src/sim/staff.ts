@@ -125,7 +125,7 @@ export function stepCaptains(state: GameState): Ev[] {
   for (const b of state.boats) {
     if (!activeCaptain(b)) continue;
     if (b.status === 'returned') evs.push(...unloadBoat(state, b.id, true));
-    if (b.status === 'docked' && !isNight(state)) {
+    if (b.status === 'docked' && (!isNight(state) || state.buildings.lighthouse > 0)) {
       const r = dispatchBoat(state, b.id, undefined, true);
       if (r[0].type === 'boatDispatched') evs.push(r[0]);
     }

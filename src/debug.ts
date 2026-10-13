@@ -1,8 +1,14 @@
 // Development-only helpers: window.__debug. Loaded only in dev builds (see game.ts), never shipped.
-import { HOUR_SECONDS, START_HOUR } from './sim/config';
-import type { Track, Trait, ZoneId } from './sim/config';
-import { bestZone, buyBoat, hireDockhand, step } from './sim/sim';
+import { BUILDING_IDS, GOALS, HOUR_SECONDS, START_HOUR } from './sim/config';
+import type { BuildingId, Track, Trait, WeatherId, ZoneId } from './sim/config';
+import { acceptContract, buyBuilding, bestZone, buyBoat, currentGoal, deliverKingFish, hireDockhand, moneyPerMinute, repairBoat, step } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
+import { makeOffer } from './sim/contracts';
+import { grantKingFish } from './sim/ending';
+import { earnReward } from './sim/ledger';
+import { rollSpecial } from './sim/weather';
+import { BUILDING_NAME, GOAL_TEXT, WEATHER, contractProgress, contractText, specialName } from './ui/text';
+import type { Special } from './sim/state';
 import type { Rng } from './sim/rng';
 import type { Hud } from './ui/hud';
 import type { Panels } from './ui/panels';
@@ -68,6 +74,65 @@ export function installDebug(g: DebugHost): void {
     toast: (t: string) => g.hud.toast(t, 'good'),
     stats: () => ({ ms: +g.frameMs().toFixed(2), calls: g.rig.renderer.info.render.calls, tris: g.rig.renderer.info.render.triangles, geometries: g.rig.renderer.info.memory.geometries }),
     state: () => g.state,
+
+    // ---- tycoon stage (rules only; the screens come later)
+    /** Build or upgrade a building to a level for free: build('smokehouse', 2). Level 0 removes it. */
+    build: (id: BuildingId, level = 1) => {
+      const max = BUILDING_IDS.includes(id) ? (id === 'lighthouse' ? 1 : 3) : 0;
+      if (!max) return;
+      g.state.buildings[id] = Math.max(0, Math.min(max, level));
+      g.handle([{ type: 'buildingBuilt', id, level: g.state.buildings[id] }]);
+    },
+    /** Buy the next level the proper way (rank and money checked). */
+    buy: (id: BuildingId) => g.handle(buyBuilding(g.state, id)),
+    /** Set today's weather and special day, and optionally tomorrow's: weather('storm', 'market', 'fog'). Specials: 'market', a zone name for a big catch day, or null. */
+    weather: (w: WeatherId, special: 'market' | ZoneId | null = null, tomorrow?: WeatherId, tomorrowSpecial?: 'market' | ZoneId | null) => {
+      const sp = (x: 'market' | ZoneId | null | undefined): Special => (x === 'market' ? { kind: 'market' } : x ? { kind: 'bigcatch', zone: x } : null);
+      g.state.weather = w;
+      g.state.special = sp(special);
+      if (tomorrow) { g.state.nextWeather = tomorrow; g.state.nextSpecial = sp(tomorrowSpecial); }
+    },
+    /** Roll tomorrow's special day again. */
+    rerollSpecial: () => { g.state.nextSpecial = rollSpecial(g.rng); },
+    /** Finish the current goal and pay its reward. */
+    completeGoal: () => {
+      const st = g.state;
+      const goal = GOALS[st.goal];
+      if (!goal) return;
+      earnReward(st, goal.reward);
+      g.handle([{ type: 'goalDone', index: st.goal, id: goal.id, reward: goal.reward }]);
+      st.goal += 1;
+    },
+    /** Put two new contract offers on the board (ignores rank and cool-down). */
+    offerContract: () => {
+      const c = g.state.contracts;
+      c.offers = [];
+      const avoid: import('./sim/config').Species[] = [];
+      for (let i = 0; i < 2; i++) { const o = makeOffer(g.state, g.rng, avoid); if (o) { avoid.push(o.species); c.offers.push(o); } }
+      g.handle([{ type: 'contractOffered' }]);
+    },
+    acceptContract: (index = 0) => { const o = g.state.contracts.offers[index]; if (o) g.handle(acceptContract(g.state, o.id)); },
+    /** Put the King Fish in your hands (carry it to the inn), or deliverKing() to end the story at once. */
+    kingFish: () => grantKingFish(g.state),
+    deliverKing: () => { grantKingFish(g.state); g.handle(deliverKingFish(g.state)); },
+    /** Break a boat as if a storm hurt it, then pay to fix it with repair(). */
+    breakBoat: (boat = 0) => { const b = g.state.boats[boat]; if (b) { b.damaged = true; b.repairLeft = undefined; } },
+    repair: (boat = 0) => g.handle(repairBoat(g.state, g.state.boats[boat]?.id ?? 0)),
+    /** A short text summary of goals, buildings, weather, contracts, and money per minute. */
+    summary: (): string => {
+      const st = g.state;
+      const lines: string[] = [];
+      const goal = currentGoal(st);
+      lines.push(goal ? `Goal ${goal.index + 1}/${goal.total} [${goal.id}] ${GOAL_TEXT[goal.id]} (${goal.have}/${goal.need}, reward $${goal.reward}${goal.arrow ? `, arrow: ${goal.arrow}` : ''})` : 'All goals done.');
+      lines.push('Buildings: ' + BUILDING_IDS.map((b) => `${BUILDING_NAME[b]} ${st.buildings[b] || '-'}`).join(', '));
+      lines.push(`Smoke list: ${st.smokeList.join(', ') || '(none)'}; racks used ${st.crates.filter((c) => c.loc === 'smoke').length}; cold store ${st.crates.filter((c) => c.loc === 'cold').length}; restaurant served ${st.restaurant.served}`);
+      lines.push(`Day ${st.day}: ${WEATHER[st.weather].name} / ${specialName(st.special)}. Tomorrow: ${WEATHER[st.nextWeather].name} / ${specialName(st.nextSpecial)}.`);
+      lines.push('Boats: ' + st.boats.map((b) => `${b.name}${b.damaged ? ' (broken)' : ''}${b.stayInStorms ? '' : ' (sails in storms)'}`).join(', '));
+      const c = st.contracts;
+      lines.push(c.active ? `Contract: ${contractText(c.active)} ${contractProgress(c.active)}` : c.offers.length ? `Offers: ${c.offers.map((o) => contractText(o)).join(' | ')}` : 'Contract: none');
+      lines.push(`King Fish: ${st.king.delivered ? 'delivered' : st.king.found ? 'found' : 'not found'}. Money per minute: ${Math.round(moneyPerMinute(st))}.`);
+      return lines.join('\n');
+    },
   };
   (window as unknown as { __debug: typeof dbg }).__debug = dbg;
 }
