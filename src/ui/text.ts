@@ -354,6 +354,11 @@ export const NAME_PROBLEM: Record<string, string> = {
 };
 export const NAME_LABEL = { harbour: 'Harbour name', boat: 'Boat name', save: 'Save name', rename: 'Rename' };
 
+export const NAME_TOAST = {
+  harbour: (name: string): string => `Your harbour is now called ${name}.`,
+  boat: (name: string): string => `The boat is now called ${name}.`,
+};
+
 export const starText = (n: number): string => (n <= 0 ? 'No stars yet' : `${n} ${n === 1 ? 'star' : 'stars'}`);
 export const sizeText = (cm: number): string => `${Math.round(cm)} cm`;
 export const FISH_BOOK = {

@@ -7,7 +7,8 @@ import type { Hud } from './ui/hud';
 import type { PanelKind } from './ui/panels';
 import { MENU } from './ui/menuText';
 import { SAY2 } from './ui/screenText';
-import { KING, RANK_NAME, denyText, say, sayTycoon } from './ui/text';
+import { AWAY, FISH_BOOK, FISH_NAME, KING, NAME_TOAST, RANK_NAME, ZONE_NAME, denyText, say, sayTycoon } from './ui/text';
+import { crateSize, crateStars } from './sim/fishbook';
 
 /** How loud each weather layer is for a kind of weather (0 to 1). */
 export function weatherSound(w: WeatherId): { rain: number; wind: number; fog: number } {
@@ -116,9 +117,39 @@ export class EventRouter {
           break;
         case 'castStarted': a.fx.cast(); break;
         case 'biteStarted': a.fx.bite(); break;
-        case 'fishLanded':
+        case 'fishLanded': {
           a.fx.land();
-          h.toast(say.caught(e.species), 'good');
+          // The newest crate of that kind in hand is the one just landed. A golden one gets its own toast below.
+          const c = this.d.getState().crates.filter((k) => k.species === e.species && k.loc === 'hand').sort((x, y) => y.id - x.id)[0];
+          if (c?.golden) break;
+          h.toast(c ? FISH_BOOK.landed(e.species, crateSize(c), crateStars(c)) : say.caught(e.species), 'good');
+          break;
+        }
+        case 'goldenCaught':
+          a.fx.goalComplete();
+          a.fx.coins(400);
+          if (this.due('golden', 3)) h.banner(FISH_BOOK.goldenBanner(FISH_NAME[e.species]), FISH_BOOK.goldenBannerSub);
+          h.toast(FISH_BOOK.goldenToast(FISH_NAME[e.species]), 'good');
+          break;
+        case 'bookReward':
+          a.fx.goalComplete();
+          h.toast((e.kind === 'caught' ? FISH_BOOK.rewardCaught : FISH_BOOK.rewardStars)(ZONE_NAME[e.zone], e.amount), 'good');
+          saveNow = true;
+          break;
+        case 'awayEarnings':
+          a.fx.coins(e.earned);
+          h.toast(AWAY.earned(e.earned), 'good');
+          saveNow = true;
+          break;
+        case 'harbourRenamed':
+          a.fx.upgrade();
+          h.toast(NAME_TOAST.harbour(e.name), 'good');
+          saveNow = true;
+          break;
+        case 'boatRenamed':
+          a.fx.upgrade();
+          h.toast(NAME_TOAST.boat(e.name), 'good');
+          saveNow = true;
           break;
         case 'fishLost':
           if (e.reason === 'cancelled') break;

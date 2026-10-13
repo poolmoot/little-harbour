@@ -33,6 +33,40 @@ function setup() {
   return { router: new EventRouter(deps), calls, toasts, opened, state };
 }
 
+describe('return-feature events', () => {
+  it('toasts the size and stars of a landed fish, and a golden one gets its own toast', () => {
+    const t = setup();
+    addCrate(t.state, 'cod', 'hand', 0, { size: 115 });
+    t.router.handle([{ type: 'fishLanded', species: 'cod' }]);
+    expect(t.toasts).toEqual(['You caught a Cod! 115 cm, 3 stars.']);
+    const g = setup();
+    addCrate(g.state, 'tuna', 'hand', 0, { golden: true });
+    g.router.handle([{ type: 'fishLanded', species: 'tuna' }, { type: 'goldenCaught', species: 'tuna' }]);
+    expect(g.toasts.filter((x) => x.startsWith('banner'))).toHaveLength(1);
+    expect(g.toasts.some((x) => x.includes('golden Tuna'))).toBe(true);
+    expect(g.toasts.some((x) => x.startsWith('You caught'))).toBe(false);
+    expect(g.calls).toContain('fx.goalComplete');
+  });
+
+  it('plays a sound, toasts and saves for away money, book rewards and renames', () => {
+    const t = setup();
+    t.router.handle([
+      { type: 'awayEarnings', seconds: 3600, earned: 250, perMinute: 8 },
+      { type: 'bookReward', zone: 'reef', kind: 'stars', amount: 300 },
+      { type: 'harbourRenamed', name: 'Seagull Bay' },
+      { type: 'boatRenamed', boatId: 0, name: 'Spray' },
+    ]);
+    expect(t.toasts).toEqual([
+      'Your harbour earned $250 while you were away.',
+      '3 stars on every fish in Coral Reef! Reward +$300',
+      'Your harbour is now called Seagull Bay.',
+      'The boat is now called Spray.',
+    ]);
+    expect(t.calls).toContain('fx.coins');
+    expect(t.calls).toContain('save');
+  });
+});
+
 describe('weather sound', () => {
   it('turns on rain and wind for storms and fog for fog, and nothing for calm', () => {
     expect(weatherSound('storm')).toEqual({ rain: 1, wind: 1, fog: 0 });
