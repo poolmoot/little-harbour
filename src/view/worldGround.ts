@@ -25,14 +25,14 @@ export function buildGround(w: Build): void {
   tBox(L.quayMaxX - L.quayMinX, 0.5, 0.35, M.wall, 1.6, 0, 0.1, L.quayMaxZ + 0.15, s);
   tBox(L.quayMaxX - L.quayMinX + 0.3, 0.1, 0.55, M.lip, 2, 0, 0.38, L.quayMaxZ + 0.15, s);
   const gtex = M.grass.map as THREE.Texture;
-  w.group.add(landPatch(gtex, -100, -22, -8, 110), landPatch(gtex, 22, 100, -8, 110), landPatch(gtex, -22, 22, 14, 110));
+  w.group.add(landPatch(gtex, -100, L.quayMinX, -8, 110), landPatch(gtex, L.quayMaxX, 100, -8, 110), landPatch(gtex, L.quayMinX, L.quayMaxX, 14, 110));
   // stone skirts where the land meets the water
-  tBox(78, 1.5, 0.4, M.wall, 1.8, 61, -0.78, -8.2, s);
-  tBox(78, 1.5, 0.4, M.wall, 1.8, -61, -0.78, -8.2, s);
-  tBox(0.4, 1.5, 8.2, M.wall, 1.8, 22.2, -0.78, -4, s);
-  tBox(0.4, 1.5, 8.2, M.wall, 1.8, -22.2, -0.78, -4, s);
+  tBox(78, 1.5, 0.4, M.wall, 1.8, L.quayMaxX + 39, -0.78, -8.2, s);
+  tBox(78, 1.5, 0.4, M.wall, 1.8, L.quayMinX - 39, -0.78, -8.2, s);
+  tBox(0.4, 1.5, 8.2, M.wall, 1.8, L.quayMaxX + 0.2, -0.78, -4, s);
+  tBox(0.4, 1.5, 8.2, M.wall, 1.8, L.quayMinX - 0.2, -0.78, -4, s);
   // quay end steps down to the rocks
-  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) tBox(1.6, 0.18, 6 - i, M.lip, 2, sx * (21.2 - i * 0.2), -0.1 - i * 0.18, 3.5, s).castShadow = false;
+  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) tBox(1.6, 0.18, 6 - i, M.lip, 2, sx * (L.quayMaxX - 0.8 - i * 0.2), -0.1 - i * 0.18, 3.5, s).castShadow = false;
 }
 
 export function buildPier(w: Build): void {

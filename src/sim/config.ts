@@ -135,18 +135,18 @@ export const LAYOUT = {
   iceDrop: { x: -3.6, z: 3.6 },
   noticeBoard: { x: 5.2, z: 5.2 },
   iceBox: { x: -3.6, z: 2.4 },
-  /** Four building plots on the quay. The door is where workers stop (in front, towards the camera). */
+  /** Four building plots in the waterfront row with the market and the inn; the lighthouse stands at the seaward corner. The door is where workers stop (in front, towards the camera). */
   plots: {
-    coldstore: { x: -15, z: 10.5, doorX: -15, doorZ: 12.9 },
-    smokehouse: { x: 15.5, z: 9.5, doorX: 15.5, doorZ: 11.9 },
-    restaurant: { x: 18.5, z: 3.5, doorX: 18.5, doorZ: 5.9 },
-    lighthouse: { x: 19.5, z: 11.5, doorX: 19.5, doorZ: 13.2 },
+    coldstore: { x: -27, z: 3, doorX: -27, doorZ: 5.5 },
+    smokehouse: { x: 26, z: 3, doorX: 26.9, doorZ: 5.4 },
+    restaurant: { x: 19.5, z: 3, doorX: 18, doorZ: 5.4 },
+    lighthouse: { x: 30, z: 2.6, doorX: 30, doorZ: 4.5 },
   },
   /** Workers walk east-west along this line when going between buildings. */
   corridorZ: 7.4,
   playerStart: { x: 0, z: 6 },
-  quayMinX: -22,
-  quayMaxX: 22,
+  quayMinX: -32,
+  quayMaxX: 32,
   quayMaxZ: 14,
 };
 export const INTERACT_RANGE = 2.8;

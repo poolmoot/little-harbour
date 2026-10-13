@@ -186,7 +186,7 @@ class Cat {
 
   private pickWander(): void {
     for (let i = 0; i < 12; i++) {
-      const x = LAYOUT.quayMinX + 3 + Math.random() * 38, z = 6 + Math.random() * 6;
+      const x = LAYOUT.quayMinX + 3 + Math.random() * (LAYOUT.quayMaxX - LAYOUT.quayMinX - 6), z = 6 + Math.random() * 6;
       if (this.world.walkable(x, z, 0.3)) {
         this.tx = x;
         this.tz = z;

@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { SEA_Y, WAVE_GLSL, waveAt } from './waves';
 import { blob } from './textures';
 import type { SkyState } from './scene';
+import { LAYOUT } from '../sim/config';
+
+/** Half-width of the quay as a GLSL number, so the shoreline foam follows the real quay edge. */
+const QUAY_SIDE = LAYOUT.quayMaxX.toFixed(1);
 
 /** Lantern positions along the pier (x, z); each casts a light pool on the water. */
 const LAMPS: [number, number][] = [[-1.85, -4], [1.85, -10.5], [-1.85, -16], [1.85, -4], [-1.85, -10.5], [1.85, -16]];
@@ -60,9 +64,9 @@ float noise(vec2 p) {
 float sdBox(vec2 p, vec2 c, vec2 hb) { vec2 q = abs(p - c) - hb; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0); }
 // Distance to the solid land: quay and side shores.
 float landDist(vec2 p) {
-  float d = sdBox(p, vec2(0.0, 10.0), vec2(22.0, 10.0));
-  d = min(d, sdBox(p, vec2(56.0, 41.0), vec2(34.0, 49.0)));
-  return min(d, sdBox(p, vec2(-56.0, 41.0), vec2(34.0, 49.0)));
+  float d = sdBox(p, vec2(0.0, 10.0), vec2(${QUAY_SIDE}, 10.0));
+  d = min(d, sdBox(p, vec2(${QUAY_SIDE} + 34.0, 41.0), vec2(34.0, 49.0)));
+  return min(d, sdBox(p, vec2(-${QUAY_SIDE} - 34.0, 41.0), vec2(34.0, 49.0)));
 }
 // Distance to the nearest post along the pier edges (the pier stands on posts; water runs under it).
 float postDist(vec2 p) {

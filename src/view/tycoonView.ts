@@ -253,6 +253,9 @@ export class TycoonView {
       group.position.set(LAYOUT.plots[id].x, 0, LAYOUT.plots[id].z);
       rig.scene.add(group);
       this.plots.set(id, { group, level: -1 });
+      // The lot is solid even while empty (it is fenced), so nobody is standing inside when the building goes up.
+      const { x, z } = LAYOUT.plots[id], plan = PLANS[id];
+      world.addObstacle({ x0: x - plan.w / 2, x1: x + plan.w / 2, z0: z - plan.d / 2, z1: z + plan.d / 2 });
     }
     const cone = new THREE.Mesh(
       new THREE.ConeGeometry(1.3, 22, 16, 1, true),
@@ -278,8 +281,6 @@ export class TycoonView {
     if (level === 0) emptyLot(plot.group, plan);
     else {
       plan.build(plot.group, level, this, plot.group.position.x, plot.group.position.z);
-      const { x, z } = plot.group.position;
-      this.world.addObstacle({ x0: x - plan.w / 2, x1: x + plan.w / 2, z0: z - plan.d / 2, z1: z + plan.d / 2 });
     }
     bake(plot.group);
   }

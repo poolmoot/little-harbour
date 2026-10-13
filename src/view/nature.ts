@@ -1,13 +1,19 @@
+import { LAYOUT } from '../sim/config';
 import * as THREE from 'three';
 import { addWind } from './fx';
 
 /** Rolling ground height. The quay is flat; the land behind it rises into green hills. */
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+/** Half-width of the quay. The meadows, hills and trees on either side are laid out relative to it. */
+const QUAY_SIDE = LAYOUT.quayMaxX;
+/** Things placed out on the side meadows were authored for a quay 22 wide; this moves them out with the quay edge. */
+const beside = (x: number): number => (Math.abs(x) > 22 ? x + Math.sign(x) * (QUAY_SIDE - 22) : x);
+
 export function groundH(x: number, z: number): number {
   let h = -0.02;
   h += sm(15, 46, z) * 5.5 * (0.75 + 0.25 * Math.sin(x * 0.09 + 1));
   h += Math.sin(x * 0.17) * Math.cos(z * 0.13) * 0.45 * sm(14, 24, z);
-  h += sm(26, 62, Math.abs(x)) * 4.5 * (0.6 + 0.4 * Math.sin(z * 0.1));
+  h += sm(QUAY_SIDE + 4, QUAY_SIDE + 40, Math.abs(x)) * 4.5 * (0.6 + 0.4 * Math.sin(z * 0.1));
   return h;
 }
 
@@ -96,7 +102,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   const spots: [number, number][] = [];
   const tryAdd = (x: number, z: number) => { if (onGround(x, z)) spots.push([x, z]); };
   for (let i = 0; i < 7000; i++) tryAdd((r() - 0.5) * 100, 14.4 + Math.pow(r(), 1.5) * 38);
-  for (let i = 0; i < 2600; i++) tryAdd((r() < 0.5 ? -1 : 1) * (22.3 + r() * 24), -7.6 + r() * 21.5);
+  for (let i = 0; i < 2600; i++) tryAdd((r() < 0.5 ? -1 : 1) * (QUAY_SIDE + 0.3 + r() * 24), -7.6 + r() * 21.5);
   const grass = new THREE.InstancedMesh(tuft(5, false), gm, spots.length);
   const pal = [0x3f8f3a, 0x5aa83e, 0x78bf45, 0x92cf55, 0x4a9a52];
   spots.forEach(([x, z], i) => {
@@ -133,7 +139,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   }
 
   // --- flowers
-  const centres: [number, number, number][] = [[-16, 16.5, 2.4], [-6, 17.5, 2], [4, 16.2, 2.6], [13, 17.5, 2.2], [20, 16, 2], [-24, 20, 2.5], [9, 22, 2.5], [-31, 6, 2.2], [31, 5, 2.4], [28, 11, 2], [-28, 11, 2]];
+  const centres: [number, number, number][] = [[-16, 16.5, 2.4], [-6, 17.5, 2], [4, 16.2, 2.6], [13, 17.5, 2.2], [20, 16, 2], [-24, 20, 2.5], [9, 22, 2.5], [-31, 6, 2.2], [31, 5, 2.4], [28, 11, 2], [-28, 11, 2]].map(([x, z, s]) => [beside(x), z, s]);
   const fl: [number, number, number][] = [];
   for (const [cx, cz, rad] of centres) for (let i = 0; i < 70; i++) {
     const a = r() * 6.28, d = Math.sqrt(r()) * rad;
@@ -162,7 +168,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   scene.add(stems, heads);
 
   // --- trees (instanced trunks + foliage blobs)
-  const trees: [number, number, number][] = [[-18, 17, 1.2], [-12, 20, 1], [-5, 18.5, 1.3], [3, 21, 1], [9, 17.5, 1.2], [16, 19, 1.1], [22.6, 16, 1.3], [-25, 12, 1.2], [27, 10, 1.2], [-8, 26, 1.5], [14, 25, 1.4], [-21, 25, 1.3], [-33, 4, 1.4], [34, 2, 1.3], [0, 31, 1.6], [-30, 20, 1.5], [30, 22, 1.5], [24, 30, 1.7], [-12, 33, 1.7]];
+  const trees: [number, number, number][] = [[-18, 17, 1.2], [-12, 20, 1], [-5, 18.5, 1.3], [3, 21, 1], [9, 17.5, 1.2], [16, 19, 1.1], [22.6, 16, 1.3], [-25, 12, 1.2], [27, 10, 1.2], [-8, 26, 1.5], [14, 25, 1.4], [-21, 25, 1.3], [-33, 4, 1.4], [34, 2, 1.3], [0, 31, 1.6], [-30, 20, 1.5], [30, 22, 1.5], [24, 30, 1.7], [-12, 33, 1.7]].map(([x, z, s]) => [beside(x), z, s]);
   for (const b of beds) trees.push([(b[0] + b[1]) / 2, (b[2] + b[3]) / 2, 0.8]);
   const blobG = new THREE.IcosahedronGeometry(1, 2);
   {
@@ -219,7 +225,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
     }
     rockG.computeVertexNormals();
   }
-  const rocks: [number, number, number][] = [[-26, 3, 1.3], [27, 4, 1.1], [-9, 14.8, 0.8], [24, -3, 1.4], [-24.5, -3.5, 1.2], [26, -6.5, 1.0], [-27, -6, 1.5], [-23, -1, 0.9], [25.5, 0.5, 0.8], [-15, 19, 0.7], [18, 21, 0.9], [6, 27, 1.2], [-34, 14, 1.8], [33, 16, 1.6]];
+  const rocks: [number, number, number][] = [[-26, 3, 1.3], [27, 4, 1.1], [-9, 14.8, 0.8], [24, -3, 1.4], [-24.5, -3.5, 1.2], [26, -6.5, 1.0], [-27, -6, 1.5], [-23, -1, 0.9], [25.5, 0.5, 0.8], [-15, 19, 0.7], [18, 21, 0.9], [6, 27, 1.2], [-34, 14, 1.8], [33, 16, 1.6]].map(([x, z, r]) => [beside(x), z, r]);
   const rockM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true });
   const rk = new THREE.InstancedMesh(rockG, rockM, rocks.length);
   const rpal = [0x8a9096, 0x7d8387, 0x9a9890, 0x6f767c];

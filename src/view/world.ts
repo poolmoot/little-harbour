@@ -44,7 +44,7 @@ export class World implements Build {
     bake(this.stat);
     const n = buildNature(this.group, (x, z) => {
       if (z < -8) return false;
-      if (Math.abs(x) < 22.2 && z < 14.2) return false;
+      if (Math.abs(x) < LAYOUT.quayMaxX + 0.2 && z < LAYOUT.quayMaxZ + 0.2) return false;
       return true;
     }, BEDS);
     this.fireflies = new Fireflies(this.group, [...n.fireflies, [-1.85, 0, -4], [1.85, 0, -10.5], [-13, 0, 8.5], [13, 0, 9]], 5);
