@@ -77,8 +77,8 @@ export const LAYOUT = {
   pierHalfWidth: 2,
   pierEndZ: -18,
   berths: [
-    { boatX: -3.7, boatZ: -8, edgeX: -1.9, edgeZ: -8.2, slotX: [-1.6, -1.0, -0.4] },
-    { boatX: 3.7, boatZ: -8, edgeX: 1.9, edgeZ: -8.2, slotX: [1.6, 1.0, 0.4] },
+    { boatX: -3.4, boatZ: -8, edgeX: -1.9, edgeZ: -8.2, slotX: [-1.6, -1.0, -0.4] },
+    { boatX: 3.4, boatZ: -8, edgeX: 1.9, edgeZ: -8.2, slotX: [1.6, 1.0, 0.4] },
   ],
   slotRows: 4,
   slotZ0: -3.0,
