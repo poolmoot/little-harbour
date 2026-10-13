@@ -97,6 +97,40 @@ See "Code map" at the bottom for a file-by-file list.
 7. Commit small, working steps with clear messages. Do not push unless the
    owner asks.
 
+## Several agents work in this folder at once
+
+The owner runs more than one agent session on this project. To avoid
+stepping on each other:
+
+- **Graphics agent** owns how things look: `src/view/` (models, materials,
+  shaders, lighting, water, animation, effects) and `src/palette.ts`.
+- **Gameplay agent** owns the rules, text and sound: `src/sim/`, `src/ui/`,
+  `src/audio*`, `src/events.ts`, `src/interaction.ts`, `src/game.ts`, the
+  specs and the tests. When a new feature needs something drawn, the
+  gameplay agent adds a plain placeholder in `src/view/` built from the
+  existing helpers and lists it under "Waiting for the graphics agent"
+  below; the graphics agent then makes it look good.
+- Commit only the files you changed (`git add <paths>`, never `git add -A`),
+  so one agent never commits another's half-finished work. Pull in the
+  other's commits by simply working on the current files; there is one
+  branch.
+- If you must change a file the other agent owns, keep the change small and
+  say so in the commit message.
+
+### Waiting for the graphics agent
+
+- Close-up look of the business-stage boat parts (nets, sails, crates on
+  deck, captain figures), the worker figures and cart, the wider market
+  stall and the weathervane: built without being looked at closely.
+- The grass in the two quay beds can look dark and spiky in some light.
+- An odd white-and-grey shape was seen near the pier end in screenshots
+  (possibly a gull close to the camera, possibly a broken model).
+- The foam band around the pier is still a little wide and bright at night.
+- Real frame rate on the owner's machine has never been measured, and the
+  automatic quality step-down has not been seen working in a browser.
+- `__debug.stats()` reports 1 draw call and 1 triangle because the last
+  post-processing pass overwrites the renderer's counters.
+
 ## Checking things without playing by hand
 
 In development builds, `window.__debug` gives shortcuts from the browser
