@@ -4,35 +4,20 @@ import type { Species, Trait } from '../sim/config';
 import { activeCaptain, holdSize } from '../sim/fleet';
 import type { Boat, GameState } from '../sim/state';
 import { SPECIES_COLOUR } from '../palette';
-import { bx, cy, flat, net, put, tex, windowMat } from './kit';
+import { cy, flat, net, put, tex } from './kit';
 import { boards } from './textures';
+import { BOAT_TIERS, buildBoat } from './boatModels';
+import type { BoatBuild } from './boatModels';
 import { Figure } from './figures';
-import { gunwale, hullGeometry, hullLid } from './hull';
 import { SEA_Y, waveAt } from './waves';
 import type { BoatFoam, Wake } from './water';
 
-/** Hull tiers: rowboat, sloop, cutter, trawler. Scale is applied to the shared curved hull. */
-const TIERS = [
-  { sx: 1, sy: 1, sz: 1, mastH: 2.8, mastZ: -0.5, cap: [2, 4, 1.0, -0.5, 0.56] },
-  { sx: 1.1, sy: 1.05, sz: 1.2, mastH: 4.0, mastZ: -0.6, cap: [2, 4, 1.45, -0.5, 0.6] },
-  { sx: 1.3, sy: 1.2, sz: 1.5, mastH: 4.6, mastZ: -0.8, cap: [3, 4, 1.7, -0.5, 0.55] },
-  { sx: 1.55, sy: 1.4, sz: 1.75, mastH: 3.9, mastZ: 0.4, cap: [3, 4, -0.5, -0.5, 0.6] },
-] as const;
-const HULL_KEYS = [['hullA', [158, 100, 66]], ['hullB', [78, 112, 148]], ['hullC', [86, 128, 98]], ['hullD', [150, 62, 54]]] as const;
 const TRAIT_HAT: Record<Trait, number> = { swift: 0x4aa3d8, lucky: 0x4f9a5a, careful: 0xd9a53a, thrifty: 0x9a6ab0 };
-const deckY = (t: number) => 0.28 * TIERS[t].sy;
-const halfBeam = (t: number) => 0.8 * TIERS[t].sx;
+const deckY = (t: number) => BOAT_TIERS[t].deckY;
+const halfBeam = (t: number) => BOAT_TIERS[t].shape.hw;
+/** Boat length relative to the rowboat: sizes the foam ring, the wake and where the hull samples the waves. */
+const ROWBOAT_LENGTH = BOAT_TIERS[0].shape.len;
 
-let hullGeo: THREE.BufferGeometry | null = null;
-let rimGeo: THREE.BufferGeometry[] = [];
-let lidGeo: THREE.BufferGeometry | null = null;
-// Writes depth but no colour: drawn after the boat and before the sea, it stops the water surface showing inside the hull.
-const lidMat = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
-const hullMat = (t: number) => {
-  const m = tex(HULL_KEYS[t][0], boards(HULL_KEYS[t][0], [...HULL_KEYS[t][1]], 8, false), 0.8);
-  m.side = THREE.DoubleSide;
-  return m;
-};
 const crateBodyGeo = new THREE.BoxGeometry(0.5, 0.32, 0.4);
 const crateTopGeo = new THREE.BoxGeometry(0.4, 0.05, 0.3);
 const floatGeo = new THREE.SphereGeometry(0.09, 8, 6);
@@ -98,9 +83,8 @@ class Sail {
 class BoatModel {
   readonly group = new THREE.Group();
   private inner = new THREE.Group();
-  private shells: THREE.Group[] = [];
-  private fit: THREE.Group[] = []; // per-tier fittings (oars, cabin, winch)
-  private oars: THREE.Group[] = [];
+  /** One model per boat size, built the first time this boat reaches that size. */
+  private builds: (BoatBuild | null)[] = [null, null, null, null];
   private mast = new THREE.Group();
   private mastMesh: THREE.Mesh;
   private main = new Sail();
@@ -123,59 +107,7 @@ class BoatModel {
 
   constructor() {
     this.group.add(this.inner);
-    hullGeo ??= hullGeometry(0.8, 0.72);
-    if (!rimGeo.length) rimGeo = [gunwale(0.8, 0.72, -1), gunwale(0.8, 0.72, 1)];
-    lidGeo ??= hullLid(0.8, 0.72);
-    const rim = flat(0xd9b27a, 0.7);
-    const floor = tex('hullfloor', boards('hullfloor', [196, 160, 110], 5, true), 0.9);
-    for (let t = 0; t < 4; t++) {
-      const T = TIERS[t];
-      const sh = new THREE.Group();
-      sh.scale.set(T.sx, T.sy, T.sz);
-      put(hullGeo, hullMat(t), 0, 0, 0, sh);
-      for (const g of rimGeo) put(g, rim, 0, 0, 0, sh);
-      const lid = new THREE.Mesh(lidGeo, lidMat);
-      lid.renderOrder = 1;
-      sh.add(lid);
-      bx(1.1, 0.04, 2.7, floor, 0, 0.2, 0.1, sh);
-      for (const z of [-1.2, 1.55]) bx(1.5, 0.08, 0.3, flat(0xb98a55, 0.85), 0, 0.46, z, sh);
-      this.inner.add(sh);
-      this.shells.push(sh);
-      const f = new THREE.Group();
-      this.inner.add(f);
-      this.fit.push(f);
-    }
-    // rowboat oars
-    for (const s of [-1, 1]) {
-      const lock = new THREE.Group();
-      lock.position.set(s * 0.82, 0.72, -1.15);
-      cy(0.025, 0.03, 0.14, flat(0x2d3236, 0.5), 0, 0, 0, lock, 5);
-      const oar = new THREE.Group();
-      cy(0.028, 0.028, 2.4, flat(0xc89c62, 0.7), s * 0.45, 0, 0, oar, 6).rotation.z = Math.PI / 2;
-      bx(0.7, 0.012, 0.16, flat(0xe8d6b0, 0.7), s * 1.55, 0, 0, oar);
-      lock.add(oar);
-      this.fit[0].add(lock);
-      this.oars.push(oar);
-    }
-    bx(0.12, 0.3, 0.12, flat(0x5a4330), 0, 0.3, 1.6, this.fit[0]);
-    cy(0.04, 0.05, 0.5, flat(0x5a4330), 0, 0.9, -2.0, this.fit[0], 6);
-    // sloop: bowsprit and cleats; cutter: low hatch and boom crutch
-    const wood = flat(0x6a4a30, 0.8), trim = flat(0xe9e0c8, 0.7);
-    bx(0.1, 0.1, 1.2, wood, 0, 0.8, -3.2, this.fit[1]);
-    bx(0.7, 0.4, 0.9, trim, 0, 0.62, 0.3, this.fit[2]);
-    bx(0.62, 0.05, 0.82, wood, 0, 0.85, 0.3, this.fit[2]);
-    bx(0.1, 0.1, 1.8, wood, 0, 0.9, -4.0, this.fit[2]);
-    // trawler: wheelhouse, funnel, winch and gantry
-    const cab = this.fit[3];
-    bx(1.9, 1.3, 2.2, flat(0xeee6d2, 0.8), 0, 1.3, 1.5, cab);
-    bx(2.05, 0.1, 2.35, flat(0x2f4f78, 0.7), 0, 1.99, 1.5, cab);
-    bx(1.95, 0.45, 0.06, windowMat, 0, 1.55, 0.37, cab);
-    for (const s of [-1, 1]) bx(0.06, 0.45, 1.2, windowMat, s * 0.96, 1.55, 1.3, cab);
-    cy(0.16, 0.2, 0.7, flat(0xc0572d, 0.7), 0.4, 2.4, 2.1, cab, 8);
-    cy(0.28, 0.28, 0.55, flat(0x2d3236, 0.5), 0, 0.85, -2.7, cab, 10).rotation.z = Math.PI / 2;
-    for (const s of [-1, 1]) bx(0.1, 0.8, 0.1, flat(0x2d3236, 0.5), s * 0.4, 0.7, -2.7, cab);
-    for (const s of [-1, 1]) bx(0.08, 1.9, 0.08, flat(0x2d3236, 0.5), s * 1.0, 1.5, 3.2, cab).rotation.z = -s * 0.15;
-    bx(2.0, 0.08, 0.08, flat(0x2d3236, 0.5), 0, 2.4, 3.2, cab);
+    const wood = flat(0x6a4a30, 0.8);
     // mast (unit cylinder scaled), sails, pennant
     this.mastMesh = cy(0.06, 0.09, 1, wood, 0, 0.5, 0, this.mast, 8);
     this.mast.add(this.main.mesh, this.jib.mesh);
@@ -200,10 +132,13 @@ class BoatModel {
 
   private setHull(t: number): void {
     this.tier = t;
-    const T = TIERS[t];
-    this.shells.forEach((s, i) => (s.visible = i === t));
-    this.fit.forEach((f, i) => (f.visible = i === t || (i === 1 && t >= 2 && false)));
-    this.scale = T.sz;
+    let build = this.builds[t];
+    if (!build) {
+      build = this.builds[t] = buildBoat(t);
+      this.inner.add(build.group);
+    }
+    this.builds.forEach((b, i) => { if (b) b.group.visible = i === t; });
+    this.scale = BOAT_TIERS[t].shape.len / ROWBOAT_LENGTH;
     this.inner.scale.setScalar(1);
     this.key.sails = -1;
     this.key.gear = -1;
@@ -212,7 +147,7 @@ class BoatModel {
 
   /** Mast, sails and pennant for this hull and Sails level. */
   private setRig(sails: number): void {
-    const t = this.tier, T = TIERS[t];
+    const t = this.tier, T = BOAT_TIERS[t];
     const hasMast = t >= 1 || sails >= 1;
     this.mast.visible = hasMast;
     this.mast.position.set(0, deckY(t) - 0.1, T.mastZ);
@@ -234,8 +169,8 @@ class BoatModel {
     this.key.gear = level;
     this.gearGroup.clear();
     if (level === 0) return;
-    const t = this.tier, T = TIERS[t];
-    const hw = halfBeam(t) + 0.02, ry = 0.72 * T.sy + 0.06, zr = 1.0 * T.sz;
+    const t = this.tier, T = BOAT_TIERS[t];
+    const hw = halfBeam(t) + 0.02, ry = T.shape.H + 0.06, zr = this.scale;
     const orange = flat(0xe9772e, 0.6);
     const sides = level >= 2 ? [-1, 1] : [-1];
     for (const s of sides) {
@@ -243,14 +178,14 @@ class BoatModel {
       net(this.gearGroup, zr * 1.5, 0.55, s * (hw + 0.03), ry - 0.3, zr * 0.1, s * Math.PI / 2);
     }
     if (level >= 2) {
-      const pile = put(floatGeo, flat(0xc9b58a, 0.95), 0, deckY(t) + 0.1, T.cap[2] - 3 * Math.abs(T.cap[3]) - 0.2 + (t === 3 ? 0 : 0.0), this.gearGroup);
+      const pile = put(floatGeo, flat(0xc9b58a, 0.95), 0, deckY(t) + 0.1, T.crates[2] - 3 * Math.abs(T.crates[3]) - 0.2, this.gearGroup);
       pile.scale.set(4, 1.6, 3.2);
       pile.visible = t < 3;
     }
   }
 
   private layoutCrates(n: number, catchList: string[]): void {
-    const t = this.tier, [cols, rows, z0, dz, dx] = TIERS[t].cap;
+    const t = this.tier, [cols, rows, z0, dz, dx] = BOAT_TIERS[t].crates;
     this.bodies.count = this.tops.count = Math.min(n, 14);
     const dy = deckY(t);
     for (let i = 0; i < this.bodies.count; i++) {
@@ -289,7 +224,7 @@ class BoatModel {
       this.layoutCrates(b.status === 'returned' ? b.catch.length : holdSize(b), b.status === 'returned' ? b.catch : []);
     }
     this.setCaptain(cap ? cap.trait : null);
-    if (this.captain) this.captain.group.position.set(0, deckY(this.tier), TIERS[this.tier].sz * 1.45 + (this.tier === 3 ? 0.3 : 0));
+    if (this.captain) this.captain.group.position.set(0, deckY(this.tier), BOAT_TIERS[this.tier].captainZ);
   }
 
   /** Pop the "unload me" badge in or out, and bob it gently while it shows. */
@@ -297,7 +232,7 @@ class BoatModel {
     this.alertAmt += ((waiting ? 1 : 0) - this.alertAmt) * Math.min(1, dt * 8);
     this.alert.visible = this.alertAmt > 0.02;
     if (!this.alert.visible) return;
-    const top = this.mast.visible ? deckY(this.tier) + TIERS[this.tier].mastH + 0.5 : 2.3;
+    const top = this.mast.visible ? deckY(this.tier) + BOAT_TIERS[this.tier].mastH + 0.5 : 2.3;
     this.alert.position.y = top + Math.sin(t * 3.2) * 0.14;
     this.alert.scale.setScalar(ALERT_SIZE * this.alertAmt * (1 + Math.sin(t * 6.4) * 0.05));
   }
@@ -308,7 +243,7 @@ class BoatModel {
     if (moving) this.row += dt * 4.2;
     if (this.tier === 0 && !this.mast.visible) {
       const phi = this.row;
-      this.oars.forEach((oar, i) => {
+      this.builds[0]?.oars.forEach((oar, i) => {
         const s = i === 0 ? -1 : 1;
         const rest = s * -1.35;
         const sweep = s === -1 ? -0.5 * Math.cos(phi) : 0.5 * Math.cos(phi);
@@ -317,7 +252,8 @@ class BoatModel {
         oar.rotation.z = (s === -1 ? 0.1 : -0.1) * (1 - this.rowAmt) + dive * this.rowAmt;
       });
     }
-    this.fit[0].children.forEach((c) => { if (c.type === 'Group') c.visible = !this.mast.visible; });
+    const oarRig = this.builds[0]?.oarRig;
+    if (oarRig) oarRig.visible = !this.mast.visible;
     if (this.main.mesh.visible) this.main.update(t);
     if (this.jib.mesh.visible) this.jib.update(t + 1.3);
     if (this.flag.visible) {
@@ -390,7 +326,7 @@ export class BoatsView {
       const hl = at(-hwid, 0, this.pts[2]).h, hr = at(hwid, 0, this.pts[3]).h;
       const pitch = Math.atan2(hb - hs, 3.6 * sc) * 1.25;
       const roll = Math.atan2(hr - hl, 2 * hwid) * 1.25;
-      m.group.position.set(p.x, SEA_Y - 0.36 + this.ws.h, p.z);
+      m.group.position.set(p.x, SEA_Y - BOAT_TIERS[m.tier].shape.draft + this.ws.h, p.z);
       m.group.rotation.set(pitch, m.heading, roll, 'YXZ');
       m.animate(dt, now, moving);
       m.animateAlert(dt, now, b.status === 'returned');
