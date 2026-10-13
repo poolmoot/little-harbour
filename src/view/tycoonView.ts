@@ -255,11 +255,11 @@ export class TycoonView {
       this.plots.set(id, { group, level: -1 });
     }
     const cone = new THREE.Mesh(
-      new THREE.ConeGeometry(2.6, 26, 16, 1, true),
-      new THREE.MeshBasicMaterial({ color: 0xfff0b8, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false }),
+      new THREE.ConeGeometry(1.3, 22, 16, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xfff0b8, transparent: true, opacity: 0.06, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false }),
     );
     cone.rotation.z = Math.PI / 2;
-    cone.position.x = -13;
+    cone.position.x = -11;
     cone.userData.keep = true;
     this.beam.add(cone);
     this.beam.userData.keep = true;

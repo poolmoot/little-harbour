@@ -3,7 +3,7 @@ import { LAYOUT } from '../sim/config';
 import { Smoke } from './fx';
 import { hullGeometry } from './hull';
 import { BOAT_TIERS } from './boatModels';
-import { barrel, bx, chimney, crateBox, cy, doorAt, flat, gableRoof, net, put, signMesh, tBox, windowAt } from './kit';
+import { barrel, bx, chimney, crateBox, cy, doorAt, flat, gableRoof, net, put, signMesh, tBox, toon, windowAt } from './kit';
 import type { Build } from './worldParts';
 
 export function buildShipyard(w: Build): void {
@@ -88,7 +88,7 @@ export function buildInn(w: Build): void {
   pole.castShadow = false;
   const fg = new THREE.PlaneGeometry(0.9, 0.5, 6, 2);
   fg.translate(0.45, 0, 0);
-  w.flag = new THREE.Mesh(fg, new THREE.MeshStandardMaterial({ color: 0xd24a3a, side: THREE.DoubleSide, roughness: 0.9 }));
+  w.flag = new THREE.Mesh(fg, toon(new THREE.MeshStandardMaterial({ color: 0xd24a3a, side: THREE.DoubleSide, roughness: 0.9 })));
   w.flag.position.set(x + 3.1, 8.4, z);
   w.flag.userData.keep = true;
   w.group.add(w.flag);

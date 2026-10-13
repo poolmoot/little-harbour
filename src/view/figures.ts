@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { flat } from './kit';
 
 /** Kept for older call sites: a lit flat-colour material. */
@@ -84,10 +85,39 @@ function ball(r: number, color: number, x: number, y: number, z: number, parent:
 const slab = (w: number, h: number, d: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D) =>
   part(new THREE.BoxGeometry(w, h, d), color, x, y, z, parent, false);
 
-function addOutlines(root: THREE.Object3D): void {
-  const meshes: THREE.Mesh[] = [];
-  root.traverse((o) => { if ((o as Part).isMesh && (o as Part).userData.outline) meshes.push(o as THREE.Mesh); });
-  for (const m of meshes) m.add(new THREE.Mesh(m.geometry, OUTLINE));
+/** One material draws every figure: each part's colour is stored in its vertices. */
+const BODY = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: RAMP });
+
+/**
+ * Fuse the many small parts hanging off each joint into one coloured mesh plus one outline mesh per joint.
+ * A figure is then about two dozen draw calls instead of nearly a hundred, with no change to how it looks or moves.
+ */
+function fuse(root: THREE.Object3D): void {
+  const joints: THREE.Object3D[] = [];
+  root.traverse((o) => joints.push(o));
+  for (const joint of joints) {
+    const parts = joint.children.filter((c) => (c as Part).isMesh) as Part[];
+    if (!parts.length) continue;
+    const all: THREE.BufferGeometry[] = [], inked: THREE.BufferGeometry[] = [];
+    for (const m of parts) {
+      m.updateMatrix();
+      const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+      g.deleteAttribute('uv');
+      g.applyMatrix4(m.matrix);
+      const c = (m.material as THREE.MeshToonMaterial).color, n = g.attributes.position.count;
+      const col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      all.push(g);
+      if (m.userData.outline) inked.push(g);
+      joint.remove(m);
+      m.geometry.dispose();
+    }
+    const body = new THREE.Mesh(mergeGeometries(all), BODY);
+    body.castShadow = true;
+    joint.add(body);
+    if (inked.length) joint.add(new THREE.Mesh(mergeGeometries(inked), OUTLINE));
+  }
 }
 
 /** Code-built cartoon person with a full procedural rig: big head, expressive face, cel shading and ink outlines. Front faces +z. */
@@ -128,7 +158,7 @@ export class Figure {
     this.buildHead(o, skin);
     this.buildHat(o);
     this.buildLimbs(o, skin);
-    addOutlines(this.group);
+    fuse(this.group);
     if (o.scale) this.group.scale.setScalar(o.scale);
   }
 
