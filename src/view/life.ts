@@ -35,6 +35,99 @@ const ell = (rx: number, ry: number, rz: number, color: number, x: number, y: nu
   return m;
 };
 
+type FigureLook = ConstructorParameters<typeof Figure>[0];
+
+/** Townsfolk who stroll around the quay: outfits, and how briskly each one walks (m/s). */
+const WALKERS: { look: FigureLook; pace: number }[] = [
+  { look: { shirt: 0xe8c14a, pants: 0x5a4a6a, hair: 0x3a2a1a, scarf: 0x3f8fbf }, pace: 1.5 },
+  { look: { shirt: 0xd9705a, pants: 0x3f4f5f, hat: 'cap', hatColor: 0x3f5f7f, hair: 0x8a5a2a, scale: 0.94 }, pace: 1.75 },
+  { look: { shirt: 0x6fae7e, pants: 0x6a5238, overalls: 0x6a5238, hat: 'straw', hatColor: 0xe6d08a, beard: 0xd8d2c4, skin: 0xe8b890 }, pace: 1.15 },
+  { look: { shirt: 0xb58ad6, pants: 0x4a4038, hair: 0xd9a03a, skin: 0xf2d2b4, scale: 0.9 }, pace: 1.6 },
+];
+/** Places people like to walk to: stalls, doors, the board, the pier head. */
+const HAUNTS: [number, number][] = [
+  [LAYOUT.market.x, LAYOUT.market.z + 2.8], [LAYOUT.noticeBoard.x, LAYOUT.noticeBoard.z + 1.4], [LAYOUT.inn.x - 1, LAYOUT.inn.z + 5],
+  [LAYOUT.shipyard.x + 3, LAYOUT.shipyard.z + 5.5], [0, 2], [0, -3], [-1, -10], [1, -6], [-14, 10], [14, 10], [6, 11], [-6, 11.5],
+];
+const WALKER_RADIUS = 0.32;
+
+/** A passer-by: picks somewhere to go, walks there round obstacles, stands a while looking about, then moves on. */
+class Walker {
+  private figure: Figure;
+  private x = 0;
+  private z = 0;
+  private tx = 0;
+  private tz = 0;
+  private heading = Math.random() * 6.28;
+  private speed = 0;
+  private pause = Math.random() * 4;
+  private stuck = 0;
+  private greeted = false;
+  private waveUntil = -1;
+
+  constructor(scene: THREE.Scene, private world: World, look: FigureLook, private pace: number) {
+    this.figure = new Figure(look);
+    this.pickTarget();
+    this.x = this.tx;
+    this.z = this.tz;
+    this.pickTarget();
+    scene.add(this.figure.group);
+  }
+
+  private pickTarget(): void {
+    for (let i = 0; i < 16; i++) {
+      const haunt = HAUNTS[Math.floor(Math.random() * HAUNTS.length)];
+      const anywhere = Math.random() < 0.35;
+      const x = anywhere ? LAYOUT.quayMinX + 2 + Math.random() * (LAYOUT.quayMaxX - LAYOUT.quayMinX - 4) : haunt[0] + (Math.random() - 0.5) * 2.4;
+      const z = anywhere ? 5.5 + Math.random() * (LAYOUT.quayMaxZ - 7) : haunt[1] + (Math.random() - 0.5) * 2;
+      if (this.world.walkable(x, z, WALKER_RADIUS + 0.1) && Math.hypot(x - this.x, z - this.z) > 3) {
+        this.tx = x;
+        this.tz = z;
+        return;
+      }
+    }
+  }
+
+  update(dt: number, now: number, px: number, pz: number): void {
+    const dx = this.tx - this.x, dz = this.tz - this.z;
+    const d = Math.hypot(dx, dz);
+    const toPlayer = Math.hypot(px - this.x, pz - this.z);
+    const playerAngle = Math.atan2(px - this.x, pz - this.z);
+    let want = 0;
+    if (this.pause > 0) {
+      this.pause -= dt;
+      if (this.pause <= 0) this.pickTarget();
+    } else if (d < 0.35) {
+      this.pause = 2 + Math.random() * 6;
+    } else if (!(toPlayer < 1.1 && Math.abs(angDiff(playerAngle, this.heading)) < 1)) {
+      want = this.pace; // keep walking unless the player is standing right in the way
+    }
+    this.speed += (want - this.speed) * Math.min(1, dt * 4);
+    if (this.speed > 0.05 && d > 0.01) {
+      this.heading += angDiff(Math.atan2(dx, dz), this.heading) * Math.min(1, dt * 5);
+      // Walk the way the body faces, so turns are arcs and not sidesteps.
+      const step = this.speed * dt;
+      const r = this.world.resolve(this.x, this.z, this.x + Math.sin(this.heading) * step, this.z + Math.cos(this.heading) * step, WALKER_RADIUS);
+      const moved = Math.hypot(r.x - this.x, r.z - this.z);
+      this.x = r.x;
+      this.z = r.z;
+      // Blocked by a wall or a crate stack for a moment: give up on this spot and choose another.
+      this.stuck = moved < step * 0.4 && want > 0 ? this.stuck + dt : 0;
+      if (this.stuck > 0.8) { this.stuck = 0; this.pickTarget(); }
+    }
+    // Notice the player: glance over, and wave once each time they come close.
+    const near = toPlayer < 3.2;
+    if (near && !this.greeted) this.waveUntil = now + 1.6;
+    this.greeted = near;
+    this.figure.pose.wave = now < this.waveUntil && this.speed < 0.6;
+    if (toPlayer < 5) this.figure.look(angDiff(playerAngle, this.heading) * 0.9, -0.05);
+    else this.figure.look(this.pause > 0 ? Math.sin(now * 0.6 + this.tx) * 0.7 : 0, 0);
+    this.figure.group.position.set(this.x, 0, this.z);
+    this.figure.group.rotation.y = this.heading;
+    this.figure.update(dt, this.speed);
+  }
+}
+
 class Cat {
   group = new THREE.Group();
   private body = new THREE.Group();
@@ -287,6 +380,7 @@ class Gull {
 export class Life {
   private npcs: Npc[] = [];
   private cat: Cat;
+  private walkers: Walker[] = [];
   private gulls: Gull[] = [];
   private tmp = new THREE.Vector3();
   private landing = new THREE.Vector3();
@@ -308,6 +402,7 @@ export class Life {
       this.npcs.push({ role: d.role, title: d.title, figure, x: d.x, z: d.z, el, lineN: Math.floor(Math.random() * 5), lineAt: -99, lastKey: '', yaw: 0, wasNear: false, waveUntil: 0 });
     }
     this.cat = new Cat(scene, world);
+    for (const w of WALKERS) this.walkers.push(new Walker(scene, world, w.look, w.pace));
     for (let i = 0; i < 4; i++) this.gulls.push(new Gull(scene, i));
   }
 
@@ -350,6 +445,7 @@ export class Life {
       }
     }
     this.cat.update(dt, player.x, player.z, ctx.handSpecies.length > 0);
+    for (const wk of this.walkers) wk.update(dt, now, player.x, player.z);
     const fresh = dockCrates.find((c) => c.freshness > 0);
     const land = fresh ? this.landing.set(fresh.x ?? 0, 0.46 + (fresh.layer ?? 0) * 0.42, fresh.z ?? 0) : null;
     for (const g of this.gulls) {

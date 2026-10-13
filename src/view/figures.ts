@@ -39,6 +39,8 @@ export interface Pose {
 }
 
 const ease = (x: number) => x * x * (3 - 2 * x);
+/** Speeds (m/s) between which the gait blends from a walk into a run. */
+const RUN_FROM = 2, RUN_FULL = 4.6;
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
 /** Three-step light ramp that gives characters their cel-shaded look. */
@@ -111,6 +113,10 @@ export class Figure {
   private lookPitch = 0;
   private blink = 0;
   private fishBlend = 0;
+  private lastSpeed = 0;
+  private accel = 0;
+  private headSteady = 0;
+  private headNod = 0;
   pose: Pose = { carry: 0, fish: null, wave: false };
 
   constructor(o: FigureOpts) {
@@ -248,50 +254,67 @@ export class Figure {
   update(dt: number, speed: number): void {
     const k = (r: number) => Math.min(1, dt * r);
     const moving = speed > 0.15;
-    this.amp += ((moving ? 1 : 0) - this.amp) * k(10);
-    const sp = Math.min(1.3, speed / 5.2);
-    if (moving) this.phase += dt * (6 + speed * 1.15);
+    this.amp += ((moving ? 1 : 0) - this.amp) * k(7);
+    // Run blend: a stroll below ~2 m/s, a full run above ~4.5 m/s.
+    const run = ease(Math.min(1, Math.max(0, (speed - RUN_FROM) / (RUN_FULL - RUN_FROM))));
+    // The step cycle advances with distance covered, so feet match the ground instead of sliding.
+    const stepLen = lerp(0.62, 1.12, run);
+    if (moving) this.phase += (Math.PI * speed * dt) / stepLen;
     this.idle += dt;
     this.carry += (this.pose.carry - this.carry) * k(9);
     const fishing = this.pose.fish !== null;
     this.fishBlend += ((fishing ? 1 : 0) - this.fishBlend) * k(8);
+    // Speeding up leans the body in; slowing down rocks it back.
+    this.accel += ((speed - this.lastSpeed) / Math.max(dt, 1e-3) - this.accel) * k(6);
+    this.lastSpeed = speed;
     const a = this.amp, ph = this.phase, s = Math.sin(ph), c = Math.cos(ph);
     const breath = Math.sin(this.idle * 1.9);
     const still = 1 - a;
 
-    // legs
+    // legs: the thigh swings from the hip; the knee folds as the foot comes through and gives a little as it lands
+    const stride = lerp(0.5, 0.82, run);
     for (let i = 0; i < 2; i++) {
-      const sg = i === 0 ? 1 : -1;
       const p = ph + (i === 0 ? 0 : Math.PI);
-      this.leg[i].rotation.x = -Math.sin(p) * 0.8 * a;
-      this.knee[i].rotation.x = Math.max(0, Math.cos(p)) * 1.0 * a + 0.04 * still;
-      void sg;
+      const sp = Math.sin(p), cp = Math.cos(p);
+      const swing = Math.max(0, cp);                       // 0 while the foot is planted, up to 1 mid-swing
+      const landing = Math.max(0, Math.sin(p - 0.5)) ** 3; // brief knee give just after the foot lands in front
+      this.leg[i].rotation.x = (-sp * stride - 0.1 * run - swing * lerp(0.1, 0.3, run)) * a;
+      this.leg[i].rotation.z = (i === 0 ? 1 : -1) * 0.03 * a;
+      this.knee[i].rotation.x = (swing ** 0.8 * lerp(0.75, 1.5, run) + landing * 0.22) * a + 0.04 * still;
     }
-    // body motion
-    this.hips.position.y = 0.6 - 0.025 * a + 0.05 * (1 - Math.abs(s)) * a * sp + breath * 0.004 * still;
-    this.hips.rotation.y = -0.12 * s * a;
-    this.hips.rotation.z = 0.04 * c * a + Math.sin(this.idle * 0.5) * 0.015 * still;
-    const targetLean = 0.16 * sp * a;
+    // body: drops as weight lands on a foot and rises as it passes over; sways towards the standing leg
+    const bob = lerp(0.03, 0.075, run);
+    this.hips.position.y = 0.6 - 0.03 * a - bob * Math.abs(s) * a + bob * 0.5 * a + breath * 0.004 * still;
+    this.hips.position.x = -0.035 * c * a * (1 - run * 0.5);
+    this.hips.rotation.y = -0.16 * s * a;
+    this.hips.rotation.z = 0.05 * c * a + Math.sin(this.idle * 0.5) * 0.015 * still;
+    const targetLean = (lerp(0.04, 0.24, run) + Math.max(-0.12, Math.min(0.16, this.accel * 0.012))) * a - 0.02 * this.carry;
     this.lean += (targetLean - this.lean) * k(8);
-    this.torso.rotation.x = this.lean;
-    this.torso.rotation.y = 0.16 * s * a;
+    this.torso.rotation.x = this.lean + 0.025 * Math.cos(ph * 2) * a;
+    this.torso.rotation.y = lerp(0.22, 0.3, run) * s * a * (1 - this.carry * 0.7);
     this.torso.scale.y = 1 + breath * 0.012 * still;
-    this.torso.rotation.z = -this.hips.rotation.z * 0.7;
+    this.torso.rotation.z = -this.hips.rotation.z * 0.8;
 
-    // arms
+    // arms: swing opposite the legs, a beat behind them; elbows hang loose at a walk and pump at a run
+    const reach = lerp(0.5, 0.95, run);
     for (let i = 0; i < 2; i++) {
-      const p = ph + (i === 0 ? 0 : Math.PI);
-      const swing = Math.sin(p) * 0.7 * a * (1 - this.carry);
-      let ax = swing + breath * 0.03 * still;
-      let ex = -(0.18 + 0.35 * Math.max(0, Math.cos(p))) * a * (1 - this.carry) - 0.08 * still;
-      let az = (i === 0 ? -1 : 1) * (0.06 + 0.03 * breath * still);
+      const side = i === 0 ? -1 : 1;
+      const p = ph + (i === 0 ? 0 : Math.PI) - 0.25;
+      const sw = Math.sin(p);
+      let ax = (sw * reach + 0.08 * run) * a * (1 - this.carry) + breath * 0.03 * still;
+      // The forearm folds more as the arm comes forward, and trails straighter behind.
+      let ex = -(lerp(0.22, 1.25, run) + Math.max(0, -sw) * lerp(0.35, 0.45, run)) * a * (1 - this.carry) - 0.08 * still;
+      let az = side * (0.07 + 0.03 * breath * still + 0.05 * run * a);
       // carrying: forearms forward, hugging the crates
-      ax = lerp(ax, -1.15, this.carry);
+      ax = lerp(ax, -1.15 + 0.04 * Math.sin(ph * 2) * a, this.carry);
       ex = lerp(ex, -0.55, this.carry);
-      az = lerp(az, (i === 0 ? 1 : -1) * 0.22, this.carry);
+      az = lerp(az, -side * 0.22, this.carry);
       this.arm[i].rotation.set(ax, 0, az);
       this.elbow[i].rotation.set(ex, 0, 0);
     }
+    // The head stays level and faces forward while the shoulders twist beneath it.
+    this.headSteady = -this.torso.rotation.y * 0.85;
+    this.headNod = -0.03 * Math.cos(ph * 2) * a;
 
     // wave hello
     if (this.pose.wave) {
@@ -320,7 +343,7 @@ export class Figure {
     // head follows the look target, with a little idle bob and blink
     this.yaw += (this.lookYaw - this.yaw) * k(7);
     this.pitch += (this.lookPitch - this.pitch) * k(7);
-    this.head.rotation.set(this.pitch - this.lean * 0.6 + Math.sin(this.idle * 1.2) * 0.02 * still, this.yaw + Math.sin(this.idle * 0.7) * 0.05 * still, 0);
+    this.head.rotation.set(this.pitch - this.lean * 0.6 + this.headNod + Math.sin(this.idle * 1.2) * 0.02 * still, this.yaw + this.headSteady + Math.sin(this.idle * 0.7) * 0.05 * still, -this.torso.rotation.z);
     this.blink -= dt;
     this.eyes.scale.y = this.blink > 0 && this.blink < 0.09 ? 0.12 : 1;
     if (this.blink < -3.5) this.blink = 0.1;
