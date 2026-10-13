@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
 import type { FishingState } from '../sim/state';
 import { Figure, mat } from './figures';
+import { SEA_Y, waveAt } from './waves';
+import type { Ripple } from './water';
 import type { World } from './world';
 
 const SPEED = 5.2;
@@ -16,20 +18,32 @@ export class Player {
   speed = 0;
   private stepDist = 0;
   private rod = new THREE.Group();
+  private rodSegs: THREE.Group[] = [];
+  private tipObj = new THREE.Object3D();
+  private hand = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, private world: World) {
-    this.figure = new Figure({ shirt: 0x3f7fbf, pants: 0x4a4a5a, hat: 'straw' });
+    this.figure = new Figure({ shirt: 0x3f7fbf, pants: 0x4a4a5a, hat: 'straw', boots: 0x5a4330 });
     this.group.add(this.figure.group, this.carryGroup);
-    const pivot = this.rod;
-    pivot.position.set(0.4, 1.0, 0.25);
-    pivot.rotation.order = 'YXZ';
-    pivot.rotation.x = 1.15;
-    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 2.6, 5), mat(0x6b4a2f));
-    stick.position.y = 1.3;
-    stick.castShadow = true;
-    pivot.add(stick);
-    pivot.visible = false;
-    this.group.add(pivot);
+    // Fishing rod: three tapered segments that bend towards the tip.
+    this.rod.rotation.order = 'YXZ';
+    let parent: THREE.Object3D = this.rod;
+    for (let i = 0; i < 3; i++) {
+      const seg = new THREE.Group();
+      seg.position.y = i === 0 ? 0 : 0.9;
+      const len = 0.9;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.02 - i * 0.005, 0.03 - i * 0.006, len, 5), mat(i === 0 ? 0x5a4330 : 0x7b5a3a));
+      m.position.y = len / 2;
+      m.castShadow = true;
+      seg.add(m);
+      parent.add(seg);
+      this.rodSegs.push(seg);
+      parent = seg;
+    }
+    this.tipObj.position.y = 0.9;
+    parent.add(this.tipObj);
+    this.rod.visible = false;
+    this.group.add(this.rod);
     scene.add(this.group);
     this.sync();
   }
@@ -46,16 +60,17 @@ export class Player {
       const moved = Math.hypot(r.x - this.pos.x, r.z - this.pos.z);
       this.pos.x = r.x;
       this.pos.z = r.z;
-      this.speed = moved / Math.max(dt, 1e-4);
-      this.facing = this.turn(this.facing, Math.atan2(m.x, m.z), dt * 14);
+      this.speed += (moved / Math.max(dt, 1e-4) - this.speed) * Math.min(1, dt * 14);
+      this.facing = this.turn(this.facing, Math.atan2(m.x, m.z), dt * 9);
       this.stepDist += moved;
       if (this.stepDist > 1.5) {
         this.stepDist = 0;
         stepped = true;
       }
     } else {
-      this.speed = 0;
-      if (faceSea) this.facing = this.turn(this.facing, Math.PI, dt * 10);
+      this.speed += (0 - this.speed) * Math.min(1, dt * 14);
+      if (this.speed < 0.05) this.speed = 0;
+      if (faceSea) this.facing = this.turn(this.facing, Math.PI, dt * 8);
     }
     this.figure.update(dt, this.speed);
     this.sync();
@@ -72,33 +87,45 @@ export class Player {
     this.group.position.copy(this.pos);
     this.figure.group.rotation.y = this.facing;
     this.carryGroup.rotation.y = this.facing;
-    this.rod.rotation.y = this.facing;
-    this.rod.position.set(0.4 * Math.cos(this.facing) + 0.25 * Math.sin(this.facing), 1.0, -0.4 * Math.sin(this.facing) + 0.25 * Math.cos(this.facing));
   }
 
   setRodVisible(v: boolean): void {
     this.rod.visible = v;
   }
 
+  /** Put the rod in the right hand, tilted `theta` rad from vertical towards the facing direction, bent `bend` rad per segment. */
+  placeRod(theta: number, bend: number): void {
+    this.figure.handWorld(this.hand);
+    this.group.worldToLocal(this.hand);
+    this.rod.position.copy(this.hand);
+    this.rod.rotation.set(theta, this.facing, 0, 'YXZ');
+    this.rodSegs.forEach((s, i) => { s.rotation.x = i === 0 ? 0 : bend; });
+  }
+
   rodTip(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);
-    return this.rod.localToWorld(out.set(0, 2.6, 0));
+    return this.tipObj.getWorldPosition(out);
   }
 }
 
-/** Float, line, bite marker and ripple for pier fishing. */
+/** Float, line, bite marker and water ripples for pier fishing. */
 export class FishingView {
-  private float = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), mat(0xe04a3a));
+  private float = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), mat(0xe04a3a));
+  private cap = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), mat(0xf6f0e0));
   private line: THREE.Line;
   private mark: THREE.Sprite;
-  private ripple = new THREE.Mesh(new THREE.RingGeometry(0.25, 0.35, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, side: THREE.DoubleSide }));
   private castT = 0;
+  private evtT = 9;
+  private landed = false;
   private lastPhase: FishingState['phase'] = 'idle';
   private tip = new THREE.Vector3();
-  private spot = new THREE.Vector3(LAYOUT.fishingSpot.x, -0.6, LAYOUT.pierEndZ - 2.6);
+  private spot = new THREE.Vector3(LAYOUT.fishingSpot.x, SEA_Y, LAYOUT.pierEndZ - 2.6);
+  private ws = { h: 0, sx: 0, sz: 0 };
+  readonly ripples: Ripple[] = [];
+  private static N = 16;
 
   constructor(scene: THREE.Scene, private player: Player) {
-    const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const geo = new THREE.BufferGeometry().setFromPoints(Array.from({ length: FishingView.N }, () => new THREE.Vector3()));
     this.line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xf4f0e0 }));
     this.line.frustumCulled = false;
     const c = document.createElement('canvas');
@@ -117,60 +144,90 @@ export class FishingView {
     }
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
-    this.mark = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false }));
+    this.mark = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, fog: false }));
     this.mark.scale.set(1.1, 1.1, 1);
     this.mark.renderOrder = 10;
-    this.ripple.rotation.x = -Math.PI / 2;
     this.float.castShadow = true;
-    scene.add(this.float, this.line, this.mark, this.ripple);
+    this.float.add(this.cap);
+    this.cap.position.y = 0.0;
+    scene.add(this.float, this.line, this.mark);
     this.hide();
   }
 
   private hide(): void {
-    this.float.visible = this.line.visible = this.mark.visible = this.ripple.visible = false;
+    this.float.visible = this.line.visible = this.mark.visible = false;
   }
 
   update(dt: number, now: number, f: FishingState): void {
+    this.ripples.length = 0;
     if (f.phase === 'idle') {
       this.lastPhase = 'idle';
       this.castT = 0;
+      this.evtT = 9;
+      this.landed = false;
+      this.player.figure.pose.fish = null;
       this.player.setRodVisible(false);
       this.hide();
       return;
     }
+    const bite = f.phase === 'bite';
     this.player.setRodVisible(true);
     this.castT += dt;
+    this.evtT += dt;
+    this.player.figure.pose.fish = { t: this.castT, bite };
+
+    // rod: wind back, flick forward, then hold; bends under a bite
+    const t = this.castT;
+    let theta: number;
+    if (t < 0.22) theta = 0.35 - 0.8 * (t / 0.22);
+    else if (t < 0.5) theta = -0.45 + 1.7 * ((t - 0.22) / 0.28);
+    else theta = 1.25 - 0.1 * Math.min(1, (t - 0.5) * 2);
+    if (bite) theta = 0.95 + Math.sin(now * 40) * 0.05;
+    this.player.placeRod(theta, bite ? 0.42 : 0.1 + Math.sin(now * 2) * 0.01);
     this.player.rodTip(this.tip);
-    const k = Math.min(1, this.castT / 0.5);
+
+    const k = Math.min(1, t / 0.5);
     const e = 1 - (1 - k) * (1 - k);
     const p = this.float.position;
-    p.lerpVectors(this.tip, this.spot, e);
-    p.y += Math.sin(k * Math.PI) * 2.2;
-    const bite = f.phase === 'bite';
-    if (k >= 1) p.y = this.spot.y + 0.1 + (bite ? Math.sin(now * 40) * 0.08 - 0.12 : Math.sin(now * 2.2) * 0.03);
+    waveAt(this.spot.x, this.spot.z, now, this.ws);
+    const rest = SEA_Y + this.ws.h + 0.08;
+    p.set(
+      this.tip.x + (this.spot.x - this.tip.x) * e,
+      this.tip.y + (rest - this.tip.y) * e + Math.sin(k * Math.PI) * 2.2,
+      this.tip.z + (this.spot.z - this.tip.z) * e,
+    );
+    if (k >= 1) p.y = rest + (bite ? Math.sin(now * 40) * 0.05 - 0.14 : Math.sin(now * 2.2) * 0.02);
     this.float.visible = true;
     this.line.visible = true;
+    this.float.rotation.set(this.ws.sz * 2, 0, -this.ws.sx * 2);
+
     const pa = this.line.geometry.attributes.position as THREE.BufferAttribute;
-    pa.setXYZ(0, this.tip.x, this.tip.y, this.tip.z);
-    pa.setXYZ(1, p.x, p.y, p.z);
+    const sag = k < 1 ? 0.15 : bite ? 0.05 : 0.5;
+    const N = FishingView.N;
+    for (let i = 0; i < N; i++) {
+      const s = i / (N - 1);
+      pa.setXYZ(i, this.tip.x + (p.x - this.tip.x) * s, this.tip.y + (p.y - this.tip.y) * s - Math.sin(Math.PI * s) * sag, this.tip.z + (p.z - this.tip.z) * s);
+    }
     pa.needsUpdate = true;
     this.mark.visible = bite;
     this.mark.position.set(p.x, p.y + 1.3 + Math.sin(now * 14) * 0.08, p.z);
-    if (bite && this.lastPhase !== 'bite') this.castT = Math.max(this.castT, 0.5);
-    this.ripple.visible = bite;
-    if (bite) {
-      const t = (0.7 - f.timer) / 0.7;
-      this.ripple.position.set(p.x, -0.58, p.z);
-      this.ripple.scale.setScalar(1 + t * 4);
-      (this.ripple.material as THREE.MeshBasicMaterial).opacity = 0.7 * (1 - t);
-    }
+    if (bite && this.lastPhase !== 'bite') { this.castT = Math.max(this.castT, 0.5); this.evtT = 0; }
+    if (k >= 1 && !this.landed) { this.landed = true; this.evtT = 0; }
     this.lastPhase = f.phase;
+
+    if (k >= 1) {
+      for (let i = 0; i < 2; i++) {
+        const ph = (now * 0.45 + i * 0.5) % 1;
+        this.ripples.push({ x: p.x, z: p.z, radius: 0.2 + ph * 1.5, amp: (1 - ph) * (bite ? 0.9 : 0.45) });
+      }
+      if (this.evtT < 0.9) this.ripples.push({ x: p.x, z: p.z, radius: 0.2 + this.evtT * 3.6, amp: 1 - this.evtT / 0.9 });
+    }
   }
 }
 
 /** Pulsing ring on the ground under whatever E will act on. */
 export class TargetMarker {
-  private ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.7, 28), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.8, depthTest: false, side: THREE.DoubleSide }));
+  private ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.7, 28), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.8, depthTest: false, side: THREE.DoubleSide, toneMapped: false }));
   constructor(scene: THREE.Scene) {
     this.ring.rotation.x = -Math.PI / 2;
     this.ring.renderOrder = 5;

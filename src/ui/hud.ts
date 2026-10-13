@@ -29,6 +29,8 @@ export class Hud {
   private prompt = this.el('card prompt');
   private hints = this.el('card hints');
   private toasts = this.el('toasts');
+  private shownMoney = -1;
+  private lastTick = performance.now();
 
   constructor(root: HTMLElement) {
     const right = document.createElement('div');
@@ -46,7 +48,21 @@ export class Hud {
   }
 
   update(state: GameState, prompt: Prompt | null): void {
-    set(this.money, `<div class="big">$${state.money}</div><div class="sub">Day ${state.day}</div>`);
+    // Counter ticks up (or down) towards the real balance.
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - this.lastTick) / 1000);
+    this.lastTick = now;
+    if (this.shownMoney < 0) this.shownMoney = state.money;
+    const diff = state.money - this.shownMoney;
+    if (Math.abs(diff) > 0.5) {
+      this.shownMoney += Math.sign(diff) * Math.max(1, Math.abs(diff) * Math.min(1, dt * 7));
+      if (Math.abs(state.money - this.shownMoney) < 1) this.shownMoney = state.money;
+      if (diff > 0) this.money.classList.add('tick');
+    } else {
+      this.shownMoney = state.money;
+      this.money.classList.remove('tick');
+    }
+    set(this.money, `<div class="big">$${Math.round(this.shownMoney)}</div><div class="sub">Day ${state.day}</div>`);
     const ph = phaseOf(state.dayTime);
     set(this.clock, `<div class="t">${formatClock(state.dayTime)}</div><div class="p">${ph}</div>`);
 
@@ -95,6 +111,18 @@ export class Hud {
     t.textContent = text;
     this.toasts.appendChild(t);
     while (this.toasts.children.length > 4) this.toasts.firstElementChild?.remove();
+    setTimeout(() => t.classList.add('out'), 3400);
     setTimeout(() => t.remove(), 3800);
+  }
+
+  /** Floating "+$12" that rises and fades at a screen position. */
+  floatText(text: string, x: number, y: number): void {
+    const f = document.createElement('div');
+    f.className = 'floaty';
+    f.textContent = text;
+    f.style.left = `${x}px`;
+    f.style.top = `${y}px`;
+    this.toasts.parentElement?.appendChild(f);
+    setTimeout(() => f.remove(), 1500);
   }
 }

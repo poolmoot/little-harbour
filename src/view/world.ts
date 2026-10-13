@@ -1,293 +1,377 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
-import { box, mat } from './figures';
+import { SPECIES_COLOUR } from '../palette';
 import type { SkyState } from './scene';
+import { Fireflies, Smoke, haloSprite, windU } from './fx';
+import { hullGeometry } from './hull';
+import { barrel, bake, bollard, bx, chimney, crateBox, cy, doorAt, fishGeo, flat, gableRoof, lampMat, mats, net, put, ropeCoil, signMesh, tBox, windowAt, windowMat } from './kit';
+import { buildNature, groundH, landPatch } from './nature';
 
 export interface Rect {
   x0: number; x1: number; z0: number; z1: number;
 }
 
-export function makeSign(text: string, w: number, h: number, bg = '#6b4a2f', fg = '#f6ecd2'): THREE.Mesh {
-  const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = Math.max(32, Math.round((256 * h) / w));
-  const g = c.getContext('2d');
-  if (g) {
-    g.fillStyle = bg;
-    g.fillRect(0, 0, c.width, c.height);
-    g.strokeStyle = fg;
-    g.lineWidth = 4;
-    g.strokeRect(5, 5, c.width - 10, c.height - 10);
-    g.fillStyle = fg;
-    g.font = `bold ${Math.round(c.height * 0.5)}px "Trebuchet MS", sans-serif`;
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(text, c.width / 2, c.height / 2 + 2);
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 1 }));
-  m.castShadow = false;
-  return m;
-}
-
-function gableRoof(len: number, depth: number, height: number, color: number): THREE.Mesh {
-  const r = depth / (2 * 0.866);
-  const geo = new THREE.CylinderGeometry(r, r, len, 3);
-  geo.rotateY(Math.PI / 2);
-  const m = new THREE.Mesh(geo, mat(color));
-  m.rotation.z = Math.PI / 2;
-  const sx = height / (1.5 * r);
-  m.scale.x = sx;
-  m.userData.halfBase = 0.5 * r * sx; // distance from centre to base plane
-  m.castShadow = true;
-  m.receiveShadow = true;
-  return m;
-}
-
-function cyl(rt: number, rb: number, h: number, color: number, x: number, y: number, z: number, parent: THREE.Object3D, seg = 10): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(color));
-  m.position.set(x, y, z);
-  m.castShadow = true;
-  m.receiveShadow = true;
-  parent.add(m);
-  return m;
-}
+interface Lamp { light: THREE.PointLight | null; halo: THREE.Sprite; phase: number }
 
 export class World {
   readonly group = new THREE.Group();
   readonly obstacles: Rect[] = [];
-  private sea: THREE.Mesh;
-  private seaBase: Float32Array;
-  private seaMat: THREE.MeshStandardMaterial;
-  private lights: THREE.PointLight[] = [];
-  private bulbs: THREE.MeshStandardMaterial[] = [];
-  private windows: THREE.MeshStandardMaterial[] = [];
+  private stat = new THREE.Group();
+  private M = mats();
+  private lamps: Lamp[] = [];
+  private signs: { m: THREE.Object3D; phase: number }[] = [];
+  private smokes: Smoke[] = [];
+  private fireflies!: Fireflies;
+  private flag!: THREE.Mesh;
 
   constructor(scene: THREE.Scene) {
     scene.add(this.group);
+    this.group.add(this.stat);
     this.buildGround();
     this.buildPier();
     this.buildMarket();
     this.buildShipyard();
     this.buildInn();
     this.buildBoardAndIce();
-    this.buildDecor();
+    this.buildQuayDetail();
     this.buildLanterns();
-
-    const geo = new THREE.PlaneGeometry(420, 420, 105, 105);
-    geo.rotateX(-Math.PI / 2);
-    this.seaBase = new Float32Array(geo.attributes.position.array);
-    this.seaMat = new THREE.MeshStandardMaterial({ color: 0x2a93b5, roughness: 0.55, flatShading: true });
-    this.sea = new THREE.Mesh(geo, this.seaMat);
-    this.sea.position.y = -0.7;
-    this.sea.receiveShadow = false;
-    this.group.add(this.sea);
+    bake(this.stat);
+    const n = buildNature(this.group, (x, z) => {
+      if (z < -8) return false;
+      if (Math.abs(x) < 22.2 && z < 14.2) return false;
+      return true;
+    });
+    this.fireflies = new Fireflies(this.group, [...n.fireflies, [-1.85, 0, -4], [1.85, 0, -10.5], [-13, 0, 8.5], [13, 0, 9]], 5);
   }
 
   private solid(r: Rect): void {
     this.obstacles.push(r);
   }
 
+  // ---------------------------------------------------------------- ground
+
   private buildGround(): void {
-    const L = LAYOUT;
-    const quay = box(L.quayMaxX - L.quayMinX, 1.4, L.quayMaxZ, 0xcdc2a6, 0, -0.7, L.quayMaxZ / 2, this.group);
-    quay.castShadow = false;
-    // Slightly darker lip along the water's edge.
-    box(L.quayMaxX - L.quayMinX, 0.12, 0.5, 0xa89f88, 0, 0.02, 0.25, this.group).castShadow = false;
-    const grass = (x0: number, x1: number, z0: number, z1: number, c = 0x8fb573) => {
-      const m = box(x1 - x0, 1.4, z1 - z0, c, (x0 + x1) / 2, -0.72, (z0 + z1) / 2, this.group);
-      m.castShadow = false;
-    };
-    grass(-90, 90, L.quayMaxZ, 90);
-    grass(L.quayMaxX, 90, -8, L.quayMaxZ, 0x9dbd7c);
-    grass(-90, L.quayMinX, -8, L.quayMaxZ, 0x9dbd7c);
-    // Rocky shore blocks at the quay ends
-    for (const sx of [-1, 1]) {
-      for (let i = 0; i < 4; i++) {
-        const r = box(2.2 + i * 0.3, 1.2, 2 + (i % 2), 0x8a8f94, sx * (23.5 + i * 2.2), -0.4, -2.5 - i * 1.2);
-        r.rotation.y = i * 0.7;
-        this.group.add(r);
-      }
-    }
+    const L = LAYOUT, M = this.M, s = this.stat;
+    tBox(L.quayMaxX - L.quayMinX, 1.4, L.quayMaxZ, M.cobble, 2.4, 0, -0.7, L.quayMaxZ / 2, s).castShadow = false;
+    tBox(L.quayMaxX - L.quayMinX + 0.2, 0.16, 0.6, M.lip, 2, 0, 0.0, 0.3, s).castShadow = false;
+    // retaining wall between quay and the green verge
+    tBox(L.quayMaxX - L.quayMinX, 0.5, 0.35, M.wall, 1.6, 0, 0.1, L.quayMaxZ + 0.15, s);
+    tBox(L.quayMaxX - L.quayMinX + 0.3, 0.1, 0.55, M.lip, 2, 0, 0.38, L.quayMaxZ + 0.15, s);
+    const gtex = M.grass.map as THREE.Texture;
+    this.group.add(landPatch(gtex, -100, -22, -8, 110), landPatch(gtex, 22, 100, -8, 110), landPatch(gtex, -22, 22, 14, 110));
+    // stone skirts where the land meets the water
+    tBox(78, 1.5, 0.4, M.wall, 1.8, 61, -0.78, -8.2, s);
+    tBox(78, 1.5, 0.4, M.wall, 1.8, -61, -0.78, -8.2, s);
+    tBox(0.4, 1.5, 8.2, M.wall, 1.8, 22.2, -0.78, -4, s);
+    tBox(0.4, 1.5, 8.2, M.wall, 1.8, -22.2, -0.78, -4, s);
+    // quay end steps down to the rocks
+    for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) tBox(1.6, 0.18, 6 - i, M.lip, 2, sx * (21.2 - i * 0.2), -0.1 - i * 0.18, 3.5, s).castShadow = false;
   }
 
   private buildPier(): void {
-    const L = LAYOUT;
-    const len = -L.pierEndZ;
-    const w = L.pierHalfWidth * 2;
-    box(w, 0.35, len, 0xa9825a, 0, -0.12, -len / 2, this.group);
-    for (let i = 0; i < len; i += 1) {
-      const m = box(w - 0.1, 0.02, 0.06, 0x7b5a3a, 0, 0.06, -i - 0.5, this.group);
-      m.castShadow = false;
+    const L = LAYOUT, M = this.M, s = this.stat;
+    const len = -L.pierEndZ, w = L.pierHalfWidth * 2;
+    tBox(w, 0.35, len, M.pier, 2, 0, -0.12, -len / 2, s);
+    for (const sx of [-1, 1]) bx(0.2, 0.34, len, M.dark, sx * (L.pierHalfWidth - 0.1), -0.4, -len / 2, s);
+    for (let z = -1; z > L.pierEndZ; z -= 3) bx(w + 0.2, 0.14, 0.22, M.dark, 0, -0.34, z, s);
+    // piles with caps and rope rails
+    const zs: number[] = [];
+    for (let z = -1; z >= L.pierEndZ + 0.5; z -= 3) zs.push(z);
+    for (const sx of [-1, 1]) {
+      for (const z of zs) {
+        const x = sx * (L.pierHalfWidth - 0.05);
+        cy(0.17, 0.2, 2.4, M.dark, x, -0.55, z, s, 8);
+        cy(0.2, 0.17, 0.08, M.trim, x, 0.62, z, s, 8);
+      }
+      for (let i = 0; i < zs.length - 1; i++) {
+        const x = sx * (L.pierHalfWidth - 0.05);
+        const c = new THREE.CatmullRomCurve3([new THREE.Vector3(x, 0.55, zs[i]), new THREE.Vector3(x, 0.4, (zs[i] + zs[i + 1]) / 2), new THREE.Vector3(x, 0.55, zs[i + 1])]);
+        put(new THREE.TubeGeometry(c, 8, 0.025, 5, false), M.rope, 0, 0, 0, s);
+      }
     }
-    for (let z = -1; z >= L.pierEndZ + 0.5; z -= 3) {
-      for (const sx of [-1, 1]) cyl(0.17, 0.2, 2.2, 0x5a4330, sx * (L.pierHalfWidth - 0.05), -0.65, z, this.group);
+    for (const b of L.berths) {
+      bollard(s, b.edgeX * 1.05, 0.055, b.edgeZ + 1.2);
+      bollard(s, b.edgeX * 1.05, 0.055, b.edgeZ - 1.2);
     }
-    // Bollards at each berth
-    for (const b of L.berths) cyl(0.14, 0.18, 0.4, 0x3c3c3c, b.edgeX * 1.05, 0.2, b.edgeZ + 1.2, this.group);
-    // Fishing spot: bucket and rod rack at the pier end
-    cyl(0.25, 0.2, 0.4, 0x4a6fa5, 1.3, 0.2, L.pierEndZ + 0.8, this.group);
-    box(0.08, 1.2, 0.08, 0x6b4a2f, -1.4, 0.6, L.pierEndZ + 0.6, this.group);
-    box(0.5, 0.04, 0.5, 0xf2c14e, 0, 0.06, L.fishingSpot.z, this.group).castShadow = false;
+    // fishing spot: painted pad, bucket, rod rack, stool, rope, nets
+    bx(0.7, 0.012, 0.7, flat(0xe2b640, 0.8), 0, 0.066, L.fishingSpot.z, s).castShadow = false;
+    const bz = L.pierEndZ + 0.9;
+    cy(0.25, 0.2, 0.4, flat(0x4a6fa5, 0.6), 1.3, 0.25, bz, s);
+    cy(0.22, 0.22, 0.02, flat(0x2f4f78), 1.3, 0.45, bz, s, 12);
+    for (const dx of [-0.2, 0.2]) cy(0.05, 0.05, 1.3, M.trim, -1.4 + dx, 0.7, bz - 0.1, s, 6);
+    for (let i = 0; i < 3; i++) {
+      const rod = cy(0.012, 0.025, 2.0, M.trim, -1.4, 1.2, bz - 0.1 + (i - 1) * 0.05, s, 5);
+      rod.rotation.z = 0.12 * (i - 1) + 0.1;
+    }
+    cy(0.22, 0.2, 0.34, M.dark, -1.2, 0.22, bz + 0.5, s, 8);
+    ropeCoil(s, 1.0, 0.055, bz + 1.4, 1.1);
+    barrel(s, -1.35, L.pierEndZ + 1.8, 0.055, 0.9);
+    crateBox(s, 1.4, 0.055, L.pierEndZ + 2.2, 0.55, 0.3);
+    net(this.group, 1.4, 0.9, 1.1, 0.35, bz + 0.45, 0.4);
+    // end-of-pier lantern post
+    cy(0.07, 0.09, 2.6, M.iron, -1.75, 1.3, L.pierEndZ + 0.3, s, 6);
+    this.lampHead(-1.75, 2.7, L.pierEndZ + 0.3, false);
   }
+
+  // ---------------------------------------------------------------- market
 
   private buildMarket(): void {
-    const { x, z } = LAYOUT.market;
-    box(4.2, 1.0, 2.0, 0x9c6b43, x, 0.5, z, this.group);
-    box(4.4, 0.1, 2.2, 0xc99a68, x, 1.02, z, this.group);
-    for (const dx of [-2, 2]) for (const dz of [-0.9, 0.9]) cyl(0.07, 0.07, 2.8, 0x6b4a2f, x + dx, 1.4, z + dz, this.group, 6);
+    const { x, z } = LAYOUT.market, M = this.M, s = this.stat;
+    tBox(4.2, 1.0, 2.0, M.wood, 1.6, x, 0.5, z, s);
+    tBox(4.5, 0.1, 2.3, M.crate, 1.4, x, 1.05, z, s);
+    for (const dx of [-2.05, 2.05]) for (const dz of [-0.95, 0.95]) cy(0.07, 0.08, 2.9, M.dark, x + dx, 1.45, z + dz, s, 6);
+    const stripe = [0xd24a3a, 0xf6efe0];
     for (let i = 0; i < 7; i++) {
-      const s = box(0.64, 0.08, 2.8, i % 2 ? 0xf3ede0 : 0xcf4a3a, x - 1.92 + i * 0.64, 2.86, z + 0.1, this.group);
-      s.rotation.x = 0.18;
+      const sl = bx(0.64, 0.07, 2.9, flat(stripe[i % 2], 0.95), x - 1.92 + i * 0.64, 2.9, z + 0.1, s);
+      sl.rotation.x = 0.18;
+      const v = bx(0.64, 0.3, 0.04, flat(stripe[i % 2], 0.95), x - 1.92 + i * 0.64, 2.64, z + 1.5, s);
+      v.rotation.x = 0.1;
+      put(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 8, 1, false, 0, Math.PI), flat(stripe[i % 2], 0.95), x - 1.92 + i * 0.64, 2.5, z + 1.52, s).rotation.set(Math.PI / 2, Math.PI / 2, 0);
     }
-    const sign = makeSign('FISH MARKET', 2.6, 0.5, '#2f6f8f');
-    sign.position.set(x, 2.35, z + 1.15);
+    bx(4.4, 0.12, 0.12, M.trim, x, 2.76, z + 1.45, s);
+    // fish on ice trays
+    const species = ['herring', 'mackerel', 'flounder', 'seabass', 'snapper', 'lobster'] as const;
+    for (let i = 0; i < 4; i++) {
+      const tx = x - 1.45 + i * 0.97;
+      bx(0.8, 0.12, 0.56, flat(0xdde9f0, 0.5), tx, 1.17, z + 0.3, s);
+      bx(0.7, 0.06, 0.46, flat(0xb9d8e8, 0.3), tx, 1.23, z + 0.3, s);
+      for (let k = 0; k < 3; k++) {
+        const f = put(fishGeo(), flat(SPECIES_COLOUR[species[(i + k) % 6]], 0.45), tx - 0.16 + k * 0.17, 1.33, z + 0.3 + (k % 2 ? 0.1 : -0.1), s);
+        f.scale.setScalar(0.42);
+        f.rotation.set(0, Math.PI / 2 + (k - 1) * 0.2, k * 0.1);
+      }
+    }
+    // hanging fish string and scale
+    bx(3.6, 0.03, 0.03, M.rope, x, 2.45, z + 1.3, s);
+    for (let i = 0; i < 6; i++) {
+      const f = put(fishGeo(), flat(SPECIES_COLOUR[species[i % 4]], 0.45), x - 1.5 + i * 0.6, 2.2, z + 1.3, s);
+      f.scale.setScalar(0.5);
+      f.rotation.set(0, 0, Math.PI / 2);
+    }
+    const sign = signMesh('FISH MARKET', 2.6, 0.5, '#2f6f8f');
+    sign.position.set(x, 1.9, z + 1.1);
     this.group.add(sign);
-    // Fish trays on the counter
-    for (let i = 0; i < 4; i++) box(0.7, 0.12, 0.5, [0xb8c7d6, 0x4f8fb0, 0xd2b48c, 0xe05a4f][i], x - 1.4 + i * 0.95, 1.13, z + 0.3, this.group);
+    this.signs.push({ m: sign, phase: 0 });
+    this.lampHead(x + 1.7, 2.5, z + 0.6, false, true);
+    // scale + baskets on the counter
+    cy(0.2, 0.2, 0.04, flat(0xb89a5a, 0.4), x + 1.2, 1.14, z - 0.5, s, 10);
+    for (const dx of [-0.6, 0, 0.6]) put(new THREE.CylinderGeometry(0.2, 0.15, 0.2, 8), flat(0xb08a4a, 0.95), x + dx, 1.2, z - 0.55, s);
     this.solid({ x0: x - 2.2, x1: x + 2.2, z0: z - 1.1, z1: z + 1.1 });
-    // barrels
-    cyl(0.4, 0.4, 0.8, 0x7a5a3a, x + 3.0, 0.4, z + 0.6, this.group);
-    cyl(0.4, 0.4, 0.8, 0x7a5a3a, x + 3.6, 0.4, z + 0.1, this.group);
-    this.solid({ x0: x + 2.5, x1: x + 4.1, z0: z - 0.4, z1: z + 1.1 });
+    barrel(s, x + 3.0, z + 0.6);
+    barrel(s, x + 3.6, z + 0.1);
+    crateBox(s, x + 3.3, 0, z - 0.4, 0.7, 0.3);
+    crateBox(s, x + 3.3, 0.7, z - 0.4, 0.55, 0.9);
+    this.solid({ x0: x + 2.5, x1: x + 4.1, z0: z - 0.7, z1: z + 1.1 });
   }
 
+  // ---------------------------------------------------------------- shipyard
+
   private buildShipyard(): void {
-    const { x, z } = LAYOUT.shipyard;
-    box(6, 3, 4, 0x8c6a4a, x, 1.5, z, this.group);
-    box(1.4, 2.2, 0.1, 0x4a3426, x - 1, 1.1, z + 2.03, this.group);
-    box(1.6, 1.2, 0.1, 0x3a2a20, x + 1.6, 1.8, z + 2.03, this.group);
-    const roof = gableRoof(6.8, 5, 1.7, 0x4f6d86);
-    roof.position.set(x, 3 + roof.userData.halfBase, z);
-    this.group.add(roof);
-    const sign = makeSign('SHIPYARD', 2.4, 0.55, '#3b5167');
-    sign.position.set(x, 3.35, z + 2.1);
+    const { x, z } = LAYOUT.shipyard, M = this.M, s = this.stat;
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    s.add(g);
+    bx(6.2, 0.4, 4.2, M.wall, 0, 0.2, 0, g);
+    tBox(6, 2.7, 4, M.wood, 1.6, 0, 1.75, 0, g);
+    for (const sx of [-1, 1]) bx(0.2, 3, 4.2, M.trim, sx * 3, 1.5, 0, g);
+    gableRoof(g, 6, 4, 3.1, 1.7, M.blueRoof, M.wood, 0.5);
+    // big workshop double door
+    bx(1.9, 2.5, 0.1, M.trim, -1.1, 1.5, 2.02, g);
+    for (const sx of [-1, 1]) {
+      tBox(0.85, 2.3, 0.08, M.dark, 1, -1.1 + sx * 0.44, 1.4, 2.07, g);
+      bx(0.6, 0.07, 0.1, M.iron, -1.1 + sx * 0.44, 1.0, 2.13, g);
+      bx(0.6, 0.07, 0.1, M.iron, -1.1 + sx * 0.44, 1.9, 2.13, g);
+    }
+    windowAt(g, 1.7, 1.9, 2.03, 1.0, 0.9, { shutter: 0x3f6a86 });
+    windowAt(g, 3.03, 1.9, 0.5, 0.8, 0.8, { ry: Math.PI / 2 });
+    const smoke = chimney(g, -2.1, 3.6, -1.0, 2.0);
+    this.smokes.push(new Smoke(this.group, smoke.add(new THREE.Vector3(x, 0, z))));
+    const sign = signMesh('SHIPYARD', 2.4, 0.55, '#3b5167');
+    sign.position.set(x + 0.9, 3.0, z + 2.2);
     this.group.add(sign);
-    // an upturned hull on trestles beside it
-    const hull = box(3, 0.7, 1.2, 0x7b4b32, x + 4.6, 0.85, z + 0.8, this.group);
-    hull.scale.set(1, 1, 1);
-    box(0.2, 0.5, 1.4, 0x5a4330, x + 3.5, 0.25, z + 0.8, this.group);
-    box(0.2, 0.5, 1.4, 0x5a4330, x + 5.7, 0.25, z + 0.8, this.group);
+    this.signs.push({ m: sign, phase: 1.2 });
+    // upturned hull on trestles
+    const hullMat = flat(0x7b4b32, 0.85);
+    const hull = put(hullGeometry(0.85, 0.72), hullMat, x + 4.6, 1.15, z + 0.8, s);
+    hull.rotation.set(0, Math.PI / 2, Math.PI);
+    hull.scale.set(0.85, 1, 0.8);
+    (hull.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+    bx(0.25, 0.75, 1.5, M.dark, x + 3.4, 0.38, z + 0.8, s);
+    bx(0.25, 0.75, 1.5, M.dark, x + 5.8, 0.38, z + 0.8, s);
+    bx(2.9, 0.12, 0.2, M.dark, x + 4.6, 0.35, z + 0.2, s);
+    // timber stack, barrels, anchor
+    for (let i = 0; i < 4; i++) bx(2.2, 0.12, 0.3, i % 2 ? M.crate : M.wood, x - 3.9, 0.07 + i * 0.13, z + 1.2 + (i % 2) * 0.05, s).rotation.y = 0.5;
+    barrel(s, x + 3.4, z + 2.4, 0, 1, false);
+    crateBox(s, x - 3.3, 0, z + 2.6, 0.7, 0.2);
+    const anchor = new THREE.Group();
+    anchor.position.set(x - 2.3, 0.55, z + 2.7);
+    cy(0.04, 0.04, 1.0, M.iron, 0, 0, 0, anchor, 6);
+    bx(0.6, 0.05, 0.05, M.iron, 0, 0.35, 0, anchor);
+    const arc = put(new THREE.TorusGeometry(0.28, 0.04, 5, 10, Math.PI), M.iron, 0, -0.35, 0, anchor);
+    arc.rotation.z = Math.PI;
+    anchor.rotation.set(0.1, 0.4, 0.15);
+    s.add(anchor);
+    net(this.group, 1.6, 1.0, x + 1.9, 0.9, z + 3.0, 0.2);
     this.solid({ x0: x - 3, x1: x + 3, z0: z - 2, z1: z + 2 });
     this.solid({ x0: x + 3.1, x1: x + 6.1, z0: z + 0.1, z1: z + 1.5 });
   }
 
+  // ---------------------------------------------------------------- inn
+
   private buildInn(): void {
-    const { x, z } = LAYOUT.inn;
-    box(7, 3, 5, 0xe8dcc2, x, 1.5, z, this.group);
-    box(6.2, 2.2, 4.4, 0x9a6a46, x, 4.1, z, this.group);
-    const roof = gableRoof(7.6, 5.4, 1.9, 0xa8473a);
-    roof.position.set(x, 5.2 + roof.userData.halfBase, z);
-    this.group.add(roof);
-    box(0.6, 1.6, 0.6, 0x8a8f94, x + 2.4, 6.2, z - 0.5, this.group);
-    box(1.3, 2.2, 0.1, 0x4a3426, x - 1.8, 1.1, z + 2.53, this.group);
-    for (const [wx, wy] of [[0.8, 1.7], [2.5, 1.7], [-1.8, 4.1], [0.2, 4.1], [2.2, 4.1]] as const) {
-      const wm = new THREE.MeshStandardMaterial({ color: 0xcfe8f0, emissive: 0xffd88a, emissiveIntensity: 0, roughness: 0.4 });
-      this.windows.push(wm);
-      const w = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.1), wm);
-      w.position.set(x + wx, wy, z + (wy > 3 ? 2.23 : 2.53));
-      this.group.add(w);
-    }
-    const sign = makeSign('THE ANCHOR INN', 3.0, 0.55, '#7a2f2a');
-    sign.position.set(x, 3.25, z + 2.56);
+    const { x, z } = LAYOUT.inn, M = this.M, s = this.stat;
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    s.add(g);
+    bx(7.2, 0.4, 5.2, M.wall, 0, 0.2, 0, g);
+    tBox(7, 2.6, 5, M.cream, 2, 0, 1.7, 0, g);
+    tBox(6.6, 2.2, 4.6, M.wood, 1.6, 0, 4.1, 0, g);
+    bx(7.3, 0.2, 5.3, M.trim, 0, 3.05, 0, g);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(0.22, 3.0, 0.22, M.trim, sx * 3.5, 1.5, sz * 2.5, g);
+    for (const sx of [-1, 1]) bx(0.18, 2.2, 0.18, M.dark, sx * 3.3, 4.1, 2.3, g);
+    bx(6.7, 0.14, 0.14, M.dark, 0, 5.15, 2.3, g);
+    gableRoof(g, 6.6, 4.6, 5.2, 1.9, M.redRoof, M.wood, 0.6);
+    doorAt(g, -1.8, 2.5, 1.3, 2.2);
+    windowAt(g, 0.8, 1.7, 2.5, 0.95, 0.95, { shutter: 0x2f6f8f, flowers: true });
+    windowAt(g, 2.5, 1.7, 2.5, 0.95, 0.95, { shutter: 0x2f6f8f, flowers: true });
+    for (const wx of [-1.8, 0.2, 2.2]) windowAt(g, wx, 4.1, 2.3, 0.9, 0.9, { shutter: 0xb5483a });
+    windowAt(g, 3.5, 1.8, 0.4, 0.9, 0.9, { ry: Math.PI / 2, shutter: 0x2f6f8f });
+    windowAt(g, 3.3, 4.1, 0, 0.9, 0.9, { ry: Math.PI / 2 });
+    const top = chimney(g, 2.5, 5.9, -0.8, 1.7);
+    this.smokes.push(new Smoke(this.group, top.add(new THREE.Vector3(x, 0, z)), 32));
+    // hanging anchor sign
+    for (const sx of [-1.3, 1.7]) bx(0.05, 0.4, 0.05, M.iron, sx, 3.35, 2.7, g);
+    const sign = signMesh('THE ANCHOR INN', 3.0, 0.55, '#7a2f2a');
+    sign.position.set(x + 0.2, 3.35, z + 2.74);
     this.group.add(sign);
+    this.signs.push({ m: sign, phase: 2.4 });
+    // pennant on the ridge
+    const pole = cy(0.03, 0.03, 1.6, M.iron, 3.1, 7.9, 0, g, 5);
+    pole.castShadow = false;
+    const fg = new THREE.PlaneGeometry(0.9, 0.5, 6, 2);
+    fg.translate(0.45, 0, 0);
+    this.flag = new THREE.Mesh(fg, new THREE.MeshStandardMaterial({ color: 0xd24a3a, side: THREE.DoubleSide, roughness: 0.9 }));
+    this.flag.position.set(x + 3.1, 8.4, z);
+    this.flag.userData.keep = true;
+    this.group.add(this.flag);
+    // outside bits
+    barrel(s, x + 4.1, z + 2.2);
+    crateBox(s, x + 4.9, 0, z + 1.6, 0.8, 0.2);
+    crateBox(s, x + 4.5, 0, z + 0.7, 0.6, 0.6);
+    bx(1.6, 0.08, 0.4, M.dark, x + 0.6, 0.5, z + 2.95, s);
+    bx(0.08, 0.5, 0.36, M.dark, x - 0.1, 0.25, z + 2.95, s);
+    bx(0.08, 0.5, 0.36, M.dark, x + 1.3, 0.25, z + 2.95, s);
+    for (const px of [-3.0, -0.7]) {
+      put(new THREE.CylinderGeometry(0.2, 0.15, 0.3, 8), flat(0xb5654a, 0.9), x + px, 0.15 + 0.4, z + 2.75, s);
+      for (let i = 0; i < 4; i++) put(new THREE.SphereGeometry(0.1, 6, 5), flat([0xff7aa8, 0xffe14a, 0xffffff, 0xb48cf0][i], 0.8), x + px - 0.12 + i * 0.08, 0.7, z + 2.75 + (i % 2) * 0.05, s);
+    }
     this.solid({ x0: x - 3.5, x1: x + 3.5, z0: z - 2.5, z1: z + 2.5 });
   }
 
+  // ---------------------------------------------------------------- notice board / ice
+
   private buildBoardAndIce(): void {
-    const nb = LAYOUT.noticeBoard;
-    box(0.14, 2.2, 0.14, 0x5a4330, nb.x - 0.9, 1.1, nb.z, this.group);
-    box(0.14, 2.2, 0.14, 0x5a4330, nb.x + 0.9, 1.1, nb.z, this.group);
-    box(2.1, 1.3, 0.1, 0x8c6a4a, nb.x, 1.55, nb.z, this.group);
-    const papers = [0xf6ecd2, 0xe9dcb0, 0xf6ecd2, 0xdfe8d0];
+    const nb = LAYOUT.noticeBoard, M = this.M, s = this.stat;
+    for (const sx of [-1, 1]) cy(0.07, 0.08, 2.4, M.dark, nb.x + sx * 0.95, 1.2, nb.z, s, 6);
+    tBox(2.1, 1.3, 0.1, M.wood, 1.2, nb.x, 1.55, nb.z, s);
+    bx(2.3, 0.1, 0.16, M.trim, nb.x, 2.25, nb.z, s);
+    for (const sx of [-1, 1]) {
+      const r = tBox(1.3, 0.08, 0.5, M.blueRoof, 1, nb.x + sx * 0.52, 2.45, nb.z, s);
+      r.rotation.z = -sx * 0.4;
+    }
+    const papers = [0xf6ecd2, 0xe9dcb0, 0xf6ecd2, 0xdfe8d0, 0xf2dcd0];
     papers.forEach((c, i) => {
-      const p = box(0.42, 0.55, 0.02, c, nb.x - 0.7 + i * 0.47, 1.6 + (i % 2) * 0.1, nb.z + 0.07, this.group);
-      p.rotation.z = (i - 1.5) * 0.06;
+      const p = bx(0.38, 0.5, 0.02, flat(c, 0.95), nb.x - 0.75 + i * 0.37, 1.55 + (i % 2) * 0.12, nb.z + 0.07, s);
+      p.rotation.z = (i - 2) * 0.07;
+      put(new THREE.SphereGeometry(0.03, 5, 4), flat(0xc03a2a, 0.5), nb.x - 0.75 + i * 0.37, 1.76 + (i % 2) * 0.12, nb.z + 0.1, s);
     });
-    const sign = makeSign('NOTICES', 1.4, 0.3, '#2f4f3a');
-    sign.position.set(nb.x, 2.4, nb.z + 0.1);
-    this.group.add(sign);
+    const sign = signMesh('NOTICES', 1.4, 0.3, '#2f4f3a');
+    sign.position.set(nb.x, 0.62, nb.z + 0.09);
+    s.add(sign);
     this.solid({ x0: nb.x - 1, x1: nb.x + 1, z0: nb.z - 0.2, z1: nb.z + 0.2 });
 
     const ib = LAYOUT.iceBox;
-    box(1.7, 0.9, 1.3, 0xcfe6ef, ib.x, 0.45, ib.z, this.group);
-    box(1.8, 0.1, 1.4, 0x8fb5c6, ib.x, 0.92, ib.z, this.group);
-    box(0.4, 0.12, 0.1, 0x555b60, ib.x, 0.7, ib.z + 0.66, this.group);
-    const s = makeSign('ICE', 0.6, 0.25, '#4a7a96');
-    s.position.set(ib.x, 0.5, ib.z + 0.66);
-    this.group.add(s);
+    tBox(1.7, 0.9, 1.3, M.white, 1.4, ib.x, 0.45, ib.z, s);
+    bx(1.8, 0.1, 1.4, flat(0x8fb5c6, 0.4), ib.x, 0.92, ib.z, s);
+    for (const dy of [0.2, 0.7]) bx(1.74, 0.05, 1.34, M.iron, ib.x, dy, ib.z, s);
+    bx(0.4, 0.12, 0.1, flat(0xb0b6ba, 0.3), ib.x, 0.7, ib.z + 0.68, s);
+    const sg = signMesh('ICE', 0.6, 0.25, '#4a7a96');
+    sg.position.set(ib.x, 0.45, ib.z + 0.69);
+    s.add(sg);
     this.solid({ x0: ib.x - 0.9, x1: ib.x + 0.9, z0: ib.z - 0.7, z1: ib.z + 0.7 });
   }
 
-  private tree(x: number, z: number, s = 1): void {
-    const g = new THREE.Group();
-    cyl(0.18 * s, 0.26 * s, 1.6 * s, 0x6b4a2f, 0, 0.8 * s, 0, g, 6);
-    const c1 = new THREE.Mesh(new THREE.ConeGeometry(1.3 * s, 2.4 * s, 7), mat(0x4f8a52));
-    c1.position.y = 2.4 * s;
-    const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.0 * s, 2.0 * s, 7), mat(0x5c9a5e));
-    c2.position.y = 3.6 * s;
-    c1.castShadow = c2.castShadow = true;
-    g.add(c1, c2);
-    g.position.set(x, 0, z);
-    this.group.add(g);
+  private buildQuayDetail(): void {
+    const s = this.stat;
+    for (let x = -20; x <= 20; x += 5) if (Math.abs(x) > 3) bollard(s, x, 0.08, 0.75);
+    barrel(s, 14.6, 5.2 + 0.6, 0, 1, true);
+    ropeCoil(s, -6.3, 0, 1.4, 1.2);
+    ropeCoil(s, 6.5, 0, 1.2, 1);
+    crateBox(s, 8.8, 0, 1.3, 0.7, 0.4);
+    crateBox(s, -17.5, 0, 9.2, 0.8, 0.1);
+    crateBox(s, -16.5, 0, 9.4, 0.6, 0.7);
+    barrel(s, 17.8, 7.5);
+    barrel(s, 18.5, 7.1);
+    net(this.group, 1.4, 0.8, -2.5, 0.5, 0.9, 0.1);
   }
 
-  private buildDecor(): void {
-    const trees: [number, number, number][] = [[-18, 17, 1.2], [-12, 20, 1], [-5, 18, 1.3], [3, 21, 1], [9, 17, 1.2], [16, 19, 1.1], [22, 16, 1.3], [-24, 12, 1], [26, 10, 1.1], [-8, 25, 1.4], [14, 24, 1.3], [-20, 24, 1.2]];
-    for (const [x, z, s] of trees) this.tree(x, z, s);
-    for (const [x, z] of [[-20, 15], [-1, 16], [12, 15.5], [19, 17], [-14, 16.5]] as const) {
-      const b = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), mat(0x6aa468));
-      b.position.set(x, 0.3, z);
-      b.scale.y = 0.7;
-      b.castShadow = true;
-      this.group.add(b);
+  // ---------------------------------------------------------------- lanterns
+
+  private lampHead(x: number, y: number, z: number, withLight: boolean, noPole = false): void {
+    const M = this.M;
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    this.stat.add(g);
+    bx(0.28, 0.05, 0.28, M.iron, 0, -0.13, 0, g);
+    put(new THREE.CylinderGeometry(0.13, 0.13, 0.3, 8), lampMat, 0, 0.03, 0, g).castShadow = false;
+    put(new THREE.ConeGeometry(0.22, 0.2, 8), M.iron, 0, 0.28, 0, g);
+    cy(0.03, 0.03, 0.06, M.iron, 0, 0.42, 0, g, 6);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(0.025, 0.3, 0.025, M.iron, sx * 0.13, 0.03, sz * 0.13, g);
+    if (noPole) bx(0.04, 0.5, 0.04, M.iron, 0, 0.55, 0, g);
+    const halo = haloSprite(0xffc060, 2.8);
+    halo.position.set(x, y + 0.03, z);
+    this.group.add(halo);
+    let light: THREE.PointLight | null = null;
+    if (withLight) {
+      light = new THREE.PointLight(0xffc070, 0, 16, 2);
+      light.position.set(x, y + 0.1, z);
+      this.group.add(light);
     }
-    // bollards along the quay edge
-    for (let x = -20; x <= 20; x += 5) if (Math.abs(x) > 3) cyl(0.14, 0.18, 0.4, 0x3c3c3c, x, 0.2, 0.7, this.group);
-    // barrels & crates by the inn
-    cyl(0.4, 0.4, 0.8, 0x7a5a3a, 14.6, 0.4, 5.2, this.group);
-    box(0.8, 0.8, 0.8, 0x9c7a50, 15.4, 0.4, 4.6, this.group);
-    // small rocks
-    for (const [x, z, s] of [[-26, 3, 1.2], [27, 5, 1], [-9, 14.8, 0.8]] as const) {
-      const r = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), mat(0x8a8f94));
-      r.position.set(x, s * 0.4, z);
-      r.castShadow = true;
-      this.group.add(r);
-    }
+    this.lamps.push({ light, halo, phase: Math.random() * 10 });
   }
 
   private buildLanterns(): void {
     const spots: [number, number, boolean][] = [[-1.85, -4, true], [1.85, -10.5, true], [-1.85, -16, true], [-13, 8.5, true], [-1, 9, true], [13, 9, true], [-1.85, -10.5, false], [1.85, -4, false], [1.85, -16, false]];
     for (const [x, z, light] of spots) {
-      cyl(0.06, 0.08, 2.4, 0x2f3438, x, 1.2, z, this.group, 6);
-      const bm = new THREE.MeshStandardMaterial({ color: 0xffe2a0, emissive: 0xffc860, emissiveIntensity: 0 });
-      this.bulbs.push(bm);
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), bm);
-      bulb.position.set(x, 2.5, z);
-      this.group.add(bulb);
-      if (light) {
-        const pl = new THREE.PointLight(0xffc870, 0, 15, 2);
-        pl.position.set(x, 2.5, z);
-        this.group.add(pl);
-        this.lights.push(pl);
-      }
+      const base = z < 0 ? 0.055 : 0;
+      cy(0.14, 0.17, 0.3, this.M.iron, x, base + 0.15, z, this.stat, 8);
+      cy(0.05, 0.07, 2.2, this.M.iron, x, base + 1.3, z, this.stat, 6);
+      bx(0.06, 0.06, 0.4, this.M.iron, x, base + 2.3, z, this.stat);
+      this.lampHead(x, base + 2.55, z, light);
     }
   }
 
-  update(t: number, sky: SkyState): void {
-    const pos = this.sea.geometry.attributes.position as THREE.BufferAttribute;
-    const base = this.seaBase;
-    for (let i = 0; i < pos.count; i++) {
-      const x = base[i * 3], z = base[i * 3 + 2];
-      pos.setY(i, Math.sin(x * 0.33 + t * 1.2) * 0.07 + Math.cos(z * 0.27 + t * 0.9) * 0.07 + Math.sin((x + z) * 0.15 + t * 0.6) * 0.05);
-    }
-    pos.needsUpdate = true;
-    this.seaMat.color.copy(sky.sea).multiplyScalar(0.92 + Math.sin(t * 0.35) * 0.08);
+  // ---------------------------------------------------------------- per frame
+
+  update(t: number, sky: SkyState, pxScale: number): void {
+    windU.value = t;
     const n = sky.lantern;
-    for (const b of this.bulbs) b.emissiveIntensity = n * 2.2;
-    for (const l of this.lights) l.intensity = n * 38;
-    for (const w of this.windows) w.emissiveIntensity = n * 1.3;
+    windowMat.emissiveIntensity = n * 1.8;
+    lampMat.emissiveIntensity = n * 3.2;
+    for (const l of this.lamps) {
+      const fl = 1 + Math.sin(t * 9 + l.phase) * 0.04 + Math.sin(t * 23 + l.phase * 3) * 0.03;
+      if (l.light) l.light.intensity = n * 42 * fl;
+      (l.halo.material as THREE.SpriteMaterial).opacity = n * 0.55 * fl;
+    }
+    for (const s of this.signs) s.m.rotation.z = Math.sin(t * 1.1 + s.phase) * 0.03;
+    for (const sm of this.smokes) sm.update(t, pxScale, sky.light);
+    this.fireflies.update(t, pxScale, Math.min(1, sky.night * 1.3 + n * 0.3));
+    const p = this.flag.geometry.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) {
+      const fx = p.getX(i);
+      p.setZ(i, Math.sin(t * 5 - fx * 6) * 0.07 * fx);
+    }
+    p.needsUpdate = true;
   }
 
   /** Is the point (with a small radius) standing on the quay or the pier? */
@@ -319,3 +403,4 @@ export class World {
     this.obstacles.push(r);
   }
 }
+export { groundH };

@@ -1,6 +1,7 @@
+import { Vector3 } from 'three';
 import { GameAudio } from './audio';
 import { Input } from './input';
-import { BOAT_RANGE, CRATE_RANGE, FISH, INTERACT_RANGE, LAYOUT, UPGRADES, ZONES } from './sim/config';
+import { BOAT_RANGE, CRATE_RANGE, FISH, HOUR_SECONDS, INTERACT_RANGE, LAYOUT, START_HOUR, UPGRADES, ZONES } from './sim/config';
 import type { ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
@@ -18,6 +19,7 @@ import { Life } from './view/life';
 import { FishingView, Player, TargetMarker } from './view/player';
 import { SceneRig } from './view/scene';
 import { World } from './view/world';
+import { Water, Wake } from './view/water';
 
 type TargetKind = 'crate' | 'boat' | 'market' | 'shipyard' | 'board' | 'icebox' | 'fishing';
 interface Target {
@@ -45,6 +47,8 @@ export class Game {
   private audio = new GameAudio();
   private rig: SceneRig;
   private world: World;
+  private water: Water;
+  private wake: Wake;
   private player: Player;
   private cameraRig: CameraRig;
   private boatsView: BoatsView;
@@ -62,6 +66,8 @@ export class Game {
   private recentMissed = -99;
   private resetting = false;
   private started = false;
+  private holdHour: number | null = null;
+  private frameMs = 16;
 
   constructor(app: HTMLElement, uiRoot: HTMLElement) {
     injectStyles();
@@ -71,9 +77,11 @@ export class Game {
 
     this.rig = new SceneRig(app);
     this.world = new World(this.rig.scene);
+    this.water = new Water(this.rig.scene);
+    this.wake = new Wake(this.rig.scene);
     this.player = new Player(this.rig.scene, this.world);
     this.cameraRig = new CameraRig(this.rig.camera, this.player.pos);
-    this.boatsView = new BoatsView(this.rig.scene);
+    this.boatsView = new BoatsView(this.rig.scene, this.wake);
     this.cratesView = new CratesView(this.rig.scene, this.player);
     this.life = new Life(this.rig.scene, this.world, this.rig.camera, uiRoot);
     this.fishView = new FishingView(this.rig.scene, this.player);
@@ -106,7 +114,34 @@ export class Game {
     if (!loaded) this.hud.toast('Welcome to the harbour! Walk with WASD, press E near things.', 'info');
     else this.hud.toast('Welcome back. Your boats are waiting in the harbour.', 'info');
     if (loaded && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast('A boat has a catch ready to unload.', 'good');
+    if (import.meta.env.DEV) this.installDebug();
   }
+
+  /** Development-only helpers: window.__debug (see report). Never shipped in production builds. */
+  private installDebug(): void {
+    const dbg = {
+      /** Freeze the clock at an hour (0-24); setHour(null) resumes time. */
+      setHour: (h: number | null) => {
+        this.holdHour = h;
+        if (h !== null) this.state.dayTime = (((h - START_HOUR) % 24) + 24) % 24 * HOUR_SECONDS;
+      },
+      teleport: (x: number, z: number) => {
+        this.player.pos.set(x, 0, z);
+        this.cameraRig.focus.set(x, 0, z);
+      },
+      money: (n: number) => { this.state.money += n; },
+      upgrade: (id: keyof GameState['upgrades']) => { this.state.upgrades[id] = true; },
+      send: (boat = 0, zone: ZoneId = 'shallows') => this.dispatch(this.state.boats[boat]?.id ?? 0, zone),
+      /** Override the camera: cam(pitchDeg, distance); cam() clears. */
+      cam: (pitch?: number, dist = 20) => { this.cameraRig.override = pitch === undefined ? null : { pitch, dist }; },
+      popup: (text = '+$12') => this.hud.floatText(text, window.innerWidth / 2, window.innerHeight / 2),
+      toast: (t: string) => this.hud.toast(t, 'good'),
+      stats: () => ({ ms: +this.frameMs.toFixed(2), calls: this.rig.renderer.info.render.calls, tris: this.rig.renderer.info.render.triangles, geometries: this.rig.renderer.info.memory.geometries }),
+      state: () => this.state,
+    };
+    (window as unknown as { __debug: typeof dbg }).__debug = dbg;
+  }
+
 
   start(): void {
     if (this.started) return;
@@ -183,6 +218,12 @@ export class Game {
     saveGame(this.state, localStorage);
   }
 
+  /** Floating text at a world position (projected to the screen). */
+  private popAt(x: number, y: number, z: number, text: string): void {
+    const v = new Vector3(x, y, z).project(this.rig.camera);
+    this.hud.floatText(text, (v.x * 0.5 + 0.5) * window.innerWidth, (-v.y * 0.5 + 0.5) * window.innerHeight);
+  }
+
   private run(evs: Ev[]): void {
     this.handle(evs);
     this.panels.refresh();
@@ -225,6 +266,7 @@ export class Game {
           break;
         case 'orderFilled':
           this.recentFilled = this.now;
+          this.popAt(LAYOUT.noticeBoard.x, 2.6, LAYOUT.noticeBoard.z, `Bonus +$${e.bonus}`);
           a.coin();
           h.toast(`${e.name}'s order is complete! Bonus +$${e.bonus}`, 'good');
           break;
@@ -264,6 +306,7 @@ export class Game {
       }
     }
     if (soldCount > 0) {
+      this.popAt(LAYOUT.market.x, 2.9, LAYOUT.market.z + 1.2, `+$${soldTotal}`);
       a.coin();
       h.toast(`Sold ${NOUN(soldCount)} for $${soldTotal}.`, 'good');
     }
@@ -336,6 +379,7 @@ export class Game {
     const s = this.state;
     const frozen = this.panels.isOpen();
 
+    this.player.figure.pose.carry = handCrates(s).length > 0 ? 1 : 0;
     const stepped = this.player.update(dt, this.input.moveVector(), frozen, s.fishing.phase !== 'idle');
     if (stepped) this.audio.step();
     if (s.fishing.phase !== 'idle' && Math.hypot(this.player.pos.x - STATIONS.fishing.x, this.player.pos.z - STATIONS.fishing.z) > 3.8) {
@@ -343,6 +387,9 @@ export class Game {
     }
 
     this.handle(step(s, dt, this.rng));
+    if (this.holdHour !== null) s.dayTime = (((this.holdHour - START_HOUR) % 24) + 24) % 24 * HOUR_SECONDS;
+    this.frameMs += (dt * 1000 - this.frameMs) * 0.05;
+    this.cameraRig.pitchGoal = 55 - 15 * Math.min(1, Math.max(0, -this.player.pos.z / 10));
 
     this.target = frozen ? null : this.findTarget();
 
@@ -354,10 +401,13 @@ export class Game {
 
     // view
     this.cameraRig.update(dt, this.player.pos);
-    this.rig.update(s.dayTime, this.cameraRig.focus);
-    this.world.update(this.now, this.rig.skyState);
+    this.rig.update(s.dayTime, this.cameraRig.focus, this.now);
+    const pxScale = this.rig.renderer.domElement.height * 0.5 / Math.tan((this.rig.camera.fov * Math.PI) / 360);
+    this.world.update(this.now, this.rig.skyState, pxScale);
+    this.water.update(this.now, this.rig.skyState, this.rig.fog.near, this.rig.fog.far, this.boatsView.foam, this.fishView.ripples);
+    this.wake.update(dt, this.now, this.rig.skyState.foam);
     this.boatsView.sync(s, this.now, dt);
-    this.cratesView.sync(s, this.now);
+    this.cratesView.sync(s, this.now, dt);
     this.fishView.update(dt, this.now, s.fishing);
     this.marker.update(this.now, this.target ? { x: this.target.x, z: this.target.z } : null);
     const hand = handCrates(s);
