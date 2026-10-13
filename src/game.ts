@@ -5,7 +5,7 @@ import { HOUR_SECONDS, START_HOUR } from './sim/config';
 import type { ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
-import { buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy } from './sim/sim';
+import { applyAway, buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy } from './sim/sim';
 import { acceptContract, buyBuilding, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate, storeInCold, takeFromCold } from './sim/sim';
 import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
@@ -14,10 +14,12 @@ import { Hud } from './ui/hud';
 import { EventRouter } from './events';
 import { STATIONS, findTarget, interact, promptFor } from './interaction';
 import type { Target } from './interaction';
+import { awayPlan } from './ui/awayFlow';
 import { escapeAction, isHalted } from './ui/menuFlow';
 import type { Mode } from './ui/menuFlow';
 import { Panels } from './ui/panels';
 import './ui/styles/index.css';
+import type { AwayInfo } from './ui/screens/types';
 import { say } from './ui/text';
 import { BoatsView } from './view/boatsView';
 import { StaffView } from './view/staffView';
@@ -34,6 +36,15 @@ import { Water, Wake } from './view/water';
 const SAVE_EVERY = 10;
 /** Set (for this tab only) when New game reloads the page, so the title screen is not shown a second time. */
 const SKIP_TITLE_KEY = 'harbour-skip-title';
+/** Set once the one-time "hire a captain" tip has been shown (kept apart from the game save). */
+const AWAY_TIP_KEY = 'harbour-away-tip-seen';
+
+function tipSeen(): boolean {
+  try { return localStorage.getItem(AWAY_TIP_KEY) !== null; } catch { return true; }
+}
+function markTipSeen(): void {
+  try { localStorage.setItem(AWAY_TIP_KEY, '1'); } catch { /* the tip may show again */ }
+}
 
 /** True when the title screen should be skipped: a fresh start after New game, or `?play` in the address (handy for scripted checks). */
 function skipTitle(): boolean {
@@ -77,6 +88,8 @@ export class Game {
   private mode: Mode = 'title';
   private hasSave = false;
   private greeted = false;
+  /** What the harbour earned while the player was away; set when they choose Continue. */
+  private away: AwayInfo | null = null;
   private started = false;
   private holdHour: number | null = null;
   private frameMs = 16;
@@ -146,6 +159,7 @@ export class Game {
         setVolume: (k, v) => this.audio.setVolume(k, v),
         setMuted: (m) => this.audio.setMuted(m),
         hasSave: () => this.hasSave,
+        getAway: () => this.away,
         continueGame: () => this.beginPlay(),
         newGame: () => this.newGame(),
         resume: () => this.resume(),
@@ -242,8 +256,27 @@ export class Game {
     this.panels.close();
     if (this.greeted) return;
     this.greeted = true;
-    this.hud.toast(this.hasSave ? say.welcomeBack : say.welcome, 'info');
+    const shown = this.hasSave && this.creditAway();
+    if (!shown) this.hud.toast(this.hasSave ? say.welcomeBack : say.welcome, 'info');
     if (this.hasSave && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast(say.catchWaiting, 'good');
+  }
+
+  /**
+   * Credit what the harbour earned while the player was away, once, at the moment they choose Continue (not at load), so the
+   * title screen still shows the saved money and the counter ticks up in front of them. The save is stamped again at once, so
+   * the same time away can never be paid twice. Returns true when a window was opened.
+   */
+  private creditAway(): boolean {
+    const secs = this.state.savedAt > 0 ? (Date.now() - this.state.savedAt) / 1000 : 0;
+    const { result, events } = applyAway(this.state, secs, this.rng);
+    this.events.handle(events);
+    this.save();
+    const plan = awayPlan(result, this.state, tipSeen());
+    this.away = result;
+    if (plan === 'none') return false;
+    if (plan === 'tip') markTipSeen();
+    this.panels.open('away', plan === 'tip' ? 1 : 0);
+    return true;
   }
 
   private resume(): void {
@@ -284,7 +317,7 @@ export class Game {
   }
 
   private save(): void {
-    saveGame(this.state, localStorage);
+    saveGame(this.state, localStorage, Date.now());
     this.hasSave = true;
   }
 

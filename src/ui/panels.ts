@@ -2,8 +2,11 @@ import type { BuildingId, Species, Track, UpgradeId, ZoneId } from '../sim/confi
 import type { DayStats, GameState, HaulPolicy } from '../sim/state';
 import type { AudioSettings, VolumeKey } from '../audio/settings';
 import type { QualityMode } from '../view/quality';
+import { money } from './components';
 import { isMenuKind } from './menuFlow';
 import { LABEL } from './text';
+import { awayScreen } from './screens/away';
+import { countedUp } from './awayFlow';
 import { boatScreen } from './screens/boat';
 import { crewScreen } from './screens/crew';
 import { iceboxScreen } from './screens/icebox';
@@ -18,9 +21,9 @@ import { pauseScreen } from './screens/pause';
 import { settingsScreen } from './screens/settings';
 import { shipyardScreen } from './screens/shipyard';
 import { titleScreen } from './screens/title';
-import type { Screen, ScreenView } from './screens/types';
+import type { AwayInfo, Screen, ScreenView } from './screens/types';
 
-export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending';
+export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away';
 
 const SCREENS: Record<PanelKind, Screen> = {
   boat: boatScreen,
@@ -37,6 +40,7 @@ const SCREENS: Record<PanelKind, Screen> = {
   howto: howtoScreen,
   plot: plotScreen,
   ending: endingScreen,
+  away: awayScreen,
 };
 
 export interface PanelActions {
@@ -73,6 +77,8 @@ export interface PanelActions {
   setMuted(muted: boolean): void;
   /** True when a saved game exists. */
   hasSave(): boolean;
+  /** What the harbour earned while the player was away, for the welcome-back window. */
+  getAway(): AwayInfo | null;
   continueGame(): void;
   newGame(): void;
   resume(): void;
@@ -111,6 +117,7 @@ export class Panels {
   private lastUpdate = 0;
   private last = '';
   private freshTimer = 0;
+  private openedAt = 0;
 
   constructor(root: HTMLElement, private actions: PanelActions, private getState: () => GameState) {
     this.overlay.className = 'overlay';
@@ -166,6 +173,7 @@ export class Panels {
     this.tab = '';
     this.confirmReset = false;
     this.confirmNew = false;
+    this.openedAt = performance.now();
     this.overlay.classList.add('open');
     this.render(true);
     this.playEntrance();
@@ -195,10 +203,21 @@ export class Panels {
 
   /** Re-render (throttled) so countdowns and prices stay live. */
   update(): void {
+    if (this.kind === 'away') { this.tickCount(); return; }
     // Menu screens hold no live numbers, and redrawing one would interrupt a slider drag.
     if (!this.kind || isMenuKind(this.kind) || performance.now() / 1000 - this.lastUpdate < REFRESH_SECONDS) return;
     this.render(false);
   }
+  /** The welcome-back money counts up in place, so the window is not redrawn every frame. */
+  private tickCount(): void {
+    const el = this.win.querySelector<HTMLElement>('[data-count]');
+    if (!el) return;
+    const total = Number(el.dataset.count);
+    const text = `+$${money(countedUp(total, (performance.now() - this.openedAt) / 1000))}`;
+    const node = el.lastChild;
+    if (node && node.nodeType === Node.TEXT_NODE && node.textContent !== text) node.textContent = text;
+  }
+
   refresh(): void {
     // Never redraw under a slider that is being dragged or held with the keyboard.
     const held = document.activeElement as HTMLElement | null;
@@ -270,6 +289,7 @@ export class Panels {
     const view = SCREENS[this.kind]({
       state: this.getState(), arg: this.arg, tab: this.tab, confirmReset: this.confirmReset, quality: this.actions.getQuality(), summary: this.summary,
       hasSave: this.actions.hasSave(), confirmNew: this.confirmNew, audio: this.actions.getAudio(),
+      away: this.kind === 'away' ? this.actions.getAway() : null, age: (performance.now() - this.openedAt) / 1000,
     });
     const html = frame(view);
     this.wrap.classList.toggle('has-host', !!view.host);
