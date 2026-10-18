@@ -114,6 +114,20 @@ export const CAPTAIN_NAMES = ['Ansel', 'Brigid', 'Corwin', 'Delphine', 'Eero', '
 export const DOCKHAND_NAMES = ['Pip', 'Odd', 'Tove', 'Rurik', 'Sunniva', 'Ebb', 'Marit', 'Lars'];
 
 // Layout shared by sim (dock slots) and view (world). x east, z south; the sea is at -z, the camera at +z.
+/** Where a point given in a building's own frame (x right, z towards its door) lands in the world, for a building turned by `rot` radians (same turn as Three.js rotation.y). */
+export function toWorld(o: { x: number; z: number; rot?: number }, lx: number, lz: number): { x: number; z: number } {
+  const a = o.rot ?? 0, c = Math.cos(a), s = Math.sin(a);
+  return { x: o.x + lx * c + lz * s, z: o.z - lx * s + lz * c };
+}
+const plot = (x: number, z: number, rot: number, doorLx: number, doorLz: number) => {
+  const d = toWorld({ x, z, rot }, doorLx, doorLz);
+  return { x, z, rot, doorX: Math.round(d.x * 100) / 100, doorZ: Math.round(d.z * 100) / 100 };
+};
+/**
+ * The town is a crescent round a small square at the head of the pier. Doors face the camera (+z); the
+ * buildings on the two arms are turned towards the square so their fronts show. Every walk from the pier
+ * head to a door is about 20 units or less.
+ */
 export const LAYOUT = {
   quayZ: 0,
   pierHalfWidth: 2,
@@ -127,27 +141,38 @@ export const LAYOUT = {
   slotRows: 4,
   slotDZ: -0.75,
   fishingSpot: { x: 0, z: -17.2 },
-  market: { x: -8, z: 4 },
-  shipyard: { x: -18, z: 3 },
-  inn: { x: 10.5, z: 3 },
+  market: { x: -8.8, z: 2.6 },
+  shipyard: { x: -18.2, z: 4.3, rot: 0.25 },
+  inn: { x: 10.2, z: 2.8 },
+  /** The clock and bell tower, the landmark. The harbour bell rings from here. */
+  bellTower: { x: 4.6, z: 1.8 },
   dockhandHome: { x: 1.2, z: 1.6 },
-  marketDrop: { x: -8, z: 5.7 },
-  iceDrop: { x: -3.6, z: 3.6 },
-  noticeBoard: { x: 5.2, z: 5.2 },
-  iceBox: { x: -3.6, z: 2.4 },
-  /** Four building plots in the waterfront row with the market and the inn; the lighthouse stands at the seaward corner. The door is where workers stop (in front, towards the camera). */
+  marketDrop: { x: -8.8, z: 5.9 },
+  iceDrop: { x: -3.0, z: 3.6 },
+  noticeBoard: { x: 2.9, z: 5.6 },
+  iceBox: { x: -3.0, z: 2.4 },
+  /** Four building plots. The door is where workers stop (in front, towards the camera); `rot` turns the building. The lighthouse stands on its own rocky point at the east end. */
   plots: {
-    coldstore: { x: -27, z: 3, doorX: -27, doorZ: 5.5 },
-    smokehouse: { x: 26, z: 3, doorX: 26.9, doorZ: 5.4 },
-    restaurant: { x: 19.5, z: 3, doorX: 18, doorZ: 5.4 },
-    lighthouse: { x: 30, z: 2.6, doorX: 30, doorZ: 4.5 },
+    coldstore: plot(-12.6, 8.8, 0.5, 0, 2.7),
+    smokehouse: plot(16.6, 3.2, -0.12, 0.9, 3.0),
+    restaurant: plot(12.6, 8.6, -0.5, -1.5, 2.8),
+    lighthouse: plot(20.2, -3.3, 0, 0, 2.0),
   },
+  /** The rocky point the lighthouse stands on (walkable): x0, x1, z0, z1. */
+  point: { x0: 18.2, x1: 23, z0: -5.2, z1: 0 },
   /** Workers walk east-west along this line when going between buildings. */
-  corridorZ: 7.4,
+  corridorZ: 12.2,
   playerStart: { x: 0, z: 6 },
-  quayMinX: -32,
-  quayMaxX: 32,
-  quayMaxZ: 14,
+  quayMinX: -24.5,
+  quayMaxX: 23,
+  quayMaxZ: 13.4,
+  /** Open space kept clear for the town-life agent: a market queue, restaurant tables, a pier-head crowd (x0, x1, z0, z1). */
+  queueZone: { x0: -12.8, x1: -4.8, z0: 4.4, z1: 5.5 },
+  crowdZone: { x0: -3.2, x1: 3.2, z0: 0.8, z1: 4.6 },
+};
+/** Half sizes (across, deep) of what each plot's building takes up on the ground. */
+export const PLOT_HALF: Record<'coldstore' | 'smokehouse' | 'restaurant' | 'lighthouse', [number, number]> = {
+  coldstore: [2.4, 2.0], smokehouse: [2.0, 1.9], restaurant: [2.5, 1.9], lighthouse: [1.6, 1.6],
 };
 export const INTERACT_RANGE = 2.8;
 export const CRATE_RANGE = 1.3;
