@@ -56,7 +56,7 @@ export class Player {
     this.group.add(this.rod);
     scene.add(this.group);
     this.sync();
-    if (import.meta.env.DEV) (window as unknown as { __player?: Player }).__player = this; // dev-only, for scripted checks
+    if (import.meta.env.DEV && typeof window !== 'undefined') (window as unknown as { __player?: Player }).__player = this; // dev-only, for scripted checks
   }
 
   /** Returns true when a footstep should sound. */
