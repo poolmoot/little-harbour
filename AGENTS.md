@@ -285,8 +285,8 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `settings.ts` — volumes and mute, saved under their own `localStorage` key.
 - `effects.ts` — sound effects. `ambience.ts` — sea, wind, gulls, weather beds.
 - `music.ts` — plays the music with look-ahead scheduling. `musicPlan.ts` — chooses the chords and melody.
-- `mix.ts` — pure maths for how sound follows position, clock and weather. `random.ts` — small seeded random numbers.
-- Tests: `mix.test.ts`, `musicPlan.test.ts`, `settings.test.ts`.
+- `mix.ts` — pure maths for how sound follows position, clock and weather. `town.ts` — pure maths for the town sounds (hour bell, seller's calls, crowd level and murmur, wet cobbles, cheers; the bell's position is `bellPos()`). `voices.ts` — formant (vowel-like) call, cheer and chatter synthesis. `random.ts` — small seeded random numbers.
+- Tests: `mix.test.ts`, `town.test.ts`, `musicPlan.test.ts`, `settings.test.ts`.
 
 **src/view/** (Three.js drawing)
 - `scene.ts` — renderer, sky, sun, post-processing, quality settings applied.

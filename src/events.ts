@@ -9,6 +9,7 @@ import { MENU } from './ui/menuText';
 import { SAY2 } from './ui/screenText';
 import { AWAY, FISH_BOOK, FISH_NAME, KING, NAME_TOAST, RANK_NAME, ZONE_NAME, denyText, say, sayTycoon } from './ui/text';
 import { crateSize, crateStars } from './sim/fishbook';
+import { catchCheer } from './audio/town';
 
 /** How loud each weather layer is for a kind of weather (0 to 1). */
 export function weatherSound(w: WeatherId): { rain: number; wind: number; fog: number } {
@@ -52,6 +53,13 @@ export class EventRouter {
     this.d.audio.setRain(v.rain);
     this.d.audio.setStormWind(v.wind);
     this.d.audio.setFog(v.fog);
+    this.syncTown();
+  }
+
+  /** Tell the audio how busy the town is (rank and market day), on load and when they change. */
+  private syncTown(): void {
+    const st = this.d.getState();
+    this.d.audio.setTownState({ rank: st.rank, marketDay: st.special?.kind === 'market' });
   }
 
   /** True at most once every `secs` seconds for a key, so busy workers do not flood the screen with toasts. */
@@ -76,6 +84,8 @@ export class EventRouter {
           h.toast(say.sailed(e.zone, e.cost));
           break;
         case 'boatReturned':
+          // A big catch gets a cheer, whether the player or a captain sent the boat.
+          if (catchCheer(e.count) > 0) a.fx.cheer(1);
           if (e.auto) break;
           a.fx.boatReturn();
           h.toast(say.returned(e.count), 'good');
@@ -89,6 +99,7 @@ export class EventRouter {
         case 'crateStored': a.fx.crateIce(); break;
         case 'crateTaken': a.fx.cratePickUp(); break;
         case 'crateSold':
+          a.noteSale(1);
           if (e.staff) { this.staffSold += e.price; break; }
           soldCount++;
           soldTotal += e.price;
@@ -126,6 +137,7 @@ export class EventRouter {
           break;
         }
         case 'goldenCaught':
+          a.fx.cheer(2);
           a.fx.goalComplete();
           a.fx.coins(400);
           if (this.due('golden', 3)) h.banner(FISH_BOOK.goldenBanner(FISH_NAME[e.species]), FISH_BOOK.goldenBannerSub);
@@ -177,6 +189,7 @@ export class EventRouter {
           if (e.unpaid > 0) h.toast(say.unpaid(e.unpaid), 'warn');
           break;
         case 'rankUp':
+          this.syncTown();
           a.fx.rankUp();
           h.banner(RANK_NAME[e.rank], say.rankUp(e.rank));
           saveNow = true;
@@ -260,12 +273,14 @@ export class EventRouter {
           saveNow = true;
           break;
         case 'kingFishFound':
+          a.fx.cheer(3);
           a.fx.kingFishCaught();
           h.banner(SAY2.kingBanner, SAY2.kingBannerSub);
           h.toast(KING.found, 'good');
           saveNow = true;
           break;
         case 'endingReached':
+          a.fx.cheer(3);
           a.fx.ending();
           this.d.openPanel('ending');
           saveNow = true;

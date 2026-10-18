@@ -18,6 +18,8 @@ function setup() {
     setRain: (v: number) => calls.push(`rain ${v}`),
     setStormWind: (v: number) => calls.push(`wind ${v}`),
     setFog: (v: number) => calls.push(`fog ${v}`),
+    setTownState: (v: unknown) => calls.push(`town ${JSON.stringify(v)}`),
+    noteSale: (n: number) => calls.push(`sale ${n}`),
     dawn: () => {}, dayReport: () => {},
   };
   const hud = {
@@ -78,7 +80,7 @@ describe('weather sound', () => {
   it('sets the layers when the weather changes and on load', () => {
     const t = setup();
     t.router.syncWeather('storm');
-    expect(t.calls).toEqual(['rain 1', 'wind 1', 'fog 0']);
+    expect(t.calls.slice(0, 3)).toEqual(['rain 1', 'wind 1', 'fog 0']);
     const t2 = setup();
     t2.router.handle([{ type: 'weatherChanged', weather: 'fog', special: null, tomorrowWeather: 'calm', tomorrowSpecial: null }]);
     expect(t2.calls).toContain('fog 1');
@@ -91,6 +93,30 @@ describe('weather sound', () => {
     expect(t.calls).toContain('fx.stormWarning');
     expect(t.calls).toContain('fx.marketDay');
     expect(t.toasts.some((x) => x.includes('storm'))).toBe(true);
+  });
+});
+
+describe('town sounds', () => {
+  it('cheers for a big catch, a golden fish and the King Fish, but not a small catch', () => {
+    const t = setup();
+    t.router.handle([{ type: 'boatReturned', boatId: 0, count: 2 }]);
+    expect(t.calls).not.toContain('fx.cheer');
+    t.router.handle([{ type: 'boatReturned', boatId: 0, count: 6, auto: true }]);
+    expect(t.calls.filter((c) => c === 'fx.cheer')).toHaveLength(1);
+    t.router.handle([{ type: 'goldenCaught', species: 'tuna' }, { type: 'kingFishFound', boatId: 0 }]);
+    expect(t.calls.filter((c) => c === 'fx.cheer')).toHaveLength(3);
+  });
+
+  it('tells the audio about sales, rank and market day', () => {
+    const t = setup();
+    t.state.rank = 2;
+    t.router.handle([{ type: 'rankUp', rank: 2 }, { type: 'crateSold', price: 5 } as unknown as Ev]);
+    expect(t.calls).toContain('sale 1');
+    expect(t.calls.some((c) => c.startsWith('town') && c.includes('"rank":2'))).toBe(true);
+    const m = setup();
+    m.state.special = { kind: 'market' } as typeof m.state.special;
+    m.router.syncWeather('calm');
+    expect(m.calls.some((c) => c.includes('"marketDay":true'))).toBe(true);
   });
 });
 

@@ -12,7 +12,12 @@ import { Ambience } from './ambience';
 import { Effects } from './effects';
 import type { Surface } from './effects';
 import { AudioEngine } from './engine';
-import { MARKET_POS } from './mix';
+import { MARKET_POS, dayness } from './mix';
+import {
+  bellLevel, bellPos, bellRings, bellStrokes, crowdLevel, decaySales, nextCallDelay, panFor,
+  marketPos, sellerCalls, sellerLevel, townMurmur, wetnessStep,
+} from './town';
+import type { TownState } from './town';
 import { Music } from './music';
 import { SettingsStore } from './settings';
 import type { AudioSettings, VolumeKey } from './settings';
@@ -40,6 +45,11 @@ export class GameAudio {
   private suppressPanelUntil = 0;
   private lastClick = -99;
   private hour = 8;
+  private town: TownState = { rank: 0, marketDay: false };
+  private recentSales = 0;
+  private wetness = 0;
+  private lastHourRung = -1;
+  private nextCall = 12;
 
   constructor() {
     this.settings.subscribe((s) => {
@@ -82,12 +92,22 @@ export class GameAudio {
   setStormWind(v: number): void { this.ambience.setStorm(v); }
   setFog(v: number): void { this.ambience.setFog(v); }
 
+  // ---- town state (set by the event router when it changes) --------------------------
+
+  /** Harbour rank and market day: they set how busy the town sounds. */
+  setTownState(s: Partial<TownState>): void { this.town = { ...this.town, ...s }; }
+  /** A crate was sold: the crowd gets a little louder for a while. */
+  noteSale(count = 1): void { this.recentSales = Math.min(30, this.recentSales + count); }
+
   // ---- per frame -------------------------------------------------------------------
 
   /** Once per frame: player position, game clock (seconds since 06:00) and whether a panel is open. */
   update(dt: number, x: number, z: number, dayTime: number, panelOpen: boolean): void {
     this.pz = z;
+    const prevHour = this.hour;
     this.hour = hourOf(dayTime);
+    this.wetness = wetnessStep(this.wetness, this.ambience.getWeather().rain, dt);
+    this.recentSales = decaySales(this.recentSales, dt);
     if (!this.engine.running) return;
     const now = this.engine.now();
 
@@ -103,7 +123,10 @@ export class GameAudio {
     this.envTimer += dt;
     if (this.envTimer < 0.1) return;
     this.envTimer = 0;
-    this.ambience.update(x, z, this.hour);
+    const crowd = crowdLevel(this.town.rank, this.recentSales, this.town.marketDay);
+    const day = dayness(this.hour);
+    this.ambience.update(x, z, this.hour, townMurmur(crowd, x, z, day));
+    this.townLife(x, z, prevHour, crowd);
 
     // The cat meows now and then when the player is near its corner.
     this.nextMeow -= 0.1;
@@ -113,12 +136,32 @@ export class GameAudio {
     }
   }
 
+  /** The hour bell and the fish seller, checked ten times a second. */
+  private townLife(x: number, z: number, prevHour: number, crowd: number): void {
+    const h = this.hour;
+    const whole = Math.floor(h);
+    // The bell rings once as the clock crosses a whole hour (not when the clock jumps back).
+    if (whole !== Math.floor(prevHour) && whole !== this.lastHourRung && h - whole < 0.5 && bellRings(whole)) {
+      this.lastHourRung = whole;
+      const b = bellPos();
+      this.fx.hourBell(bellStrokes(whole), bellLevel(Math.hypot(x - b.x, z - b.z)), panFor(x, b.x));
+    }
+    const storm = this.ambience.getWeather().storm;
+    this.nextCall -= 0.1;
+    if (this.nextCall <= 0) {
+      this.nextCall = nextCallDelay(crowd, Math.random());
+      if (sellerCalls(h, storm)) {
+        this.fx.sellerCall(sellerLevel(x, z), panFor(x, marketPos().x));
+      }
+    }
+  }
+
   // ---- calls the game already makes ---------------------------------------------------
 
   /** One footstep, on wood out on the pier and stone in town. */
   step(): void {
     const surface: Surface = this.pz < -0.5 ? 'wood' : 'stone';
-    this.fx.step(surface);
+    this.fx.step(surface, this.wetness);
   }
 
   /** Button press / panel closed by the interface. */

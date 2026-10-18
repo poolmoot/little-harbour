@@ -5,6 +5,8 @@
  */
 import type { AudioEngine } from './engine';
 import { midiToHz } from './random';
+import { Voices } from './voices';
+import { splashChance } from './town';
 
 export interface ToneOpts {
   f: number;
@@ -45,8 +47,11 @@ export type Surface = 'stone' | 'wood';
 
 export class Effects {
   private last: Record<string, number> = {};
+  private voices: Voices;
 
-  constructor(private e: AudioEngine) {}
+  constructor(private e: AudioEngine) {
+    this.voices = new Voices(e, this);
+  }
 
   // ---- building blocks ------------------------------------------------------
 
@@ -153,14 +158,118 @@ export class Effects {
 
   // ---- movement and carrying ------------------------------------------------
 
-  step(surface: Surface): void {
+  /** One footstep. `wet` (0..1) is how wet the cobbles are: duller, with the odd splash. */
+  step(surface: Surface, wet = 0): void {
     if (!this.ok('step', 0.08)) return;
     if (surface === 'stone') {
-      this.noise({ dur: 0.05, g: 0.07, f0: rnd(1500, 2200), f1: 800, q: 1.3, low: true });
+      const w = wet * 0.6;
+      this.noise({ dur: 0.05 + 0.03 * w, g: 0.07, f0: rnd(1500, 2200) * (1 - 0.35 * w), f1: 800 * (1 - 0.3 * w), q: 1.3, low: true });
       this.tone({ f: rnd(150, 190), f2: 100, dur: 0.06, g: 0.04, low: true });
+      if (wet > 0.2) {
+        // A wet slap, and now and then a little splash.
+        this.noise({ dur: 0.07, g: 0.025 * wet, f0: 2800, q: 0.8, filter: 'highpass', at: 0.02, low: true });
+        if (Math.random() < splashChance(wet)) this.splash();
+      }
     } else {
       this.noise({ dur: 0.08, g: 0.11, f0: rnd(480, 620), f1: 280, q: 3, low: true });
       this.tone({ f: rnd(120, 150), f2: 80, dur: 0.1, g: 0.08, low: true });
+    }
+  }
+
+  /** A small splash: a burst of bright noise and a quick bubbly drop. */
+  splash(): void {
+    this.noise({ dur: 0.22, g: 0.05, f0: 3200, f1: 1400, q: 0.7, attack: 0.01, low: true });
+    this.tone({ f: rnd(500, 700), f2: rnd(1000, 1300), dur: 0.08, g: 0.02, at: 0.02, low: true });
+  }
+
+  // ---- town sounds -----------------------------------------------------------
+
+  /** Harbour bell: `strokes` soft strokes, `gain` 0..1 for distance, `pan` -1..1. Plays on the ambience bus. */
+  hourBell(strokes: number, gain: number, pan = 0): void {
+    if (!this.ok('hourBell', 3)) return;
+    const f = N(67); // G4, mellow
+    for (let i = 0; i < strokes; i++) {
+      const at = i * 1.6;
+      const g = 0.08 * gain;
+      const o = { at, pan, bus: this.e.amb, jit: 0.002 };
+      this.tone({ f, dur: 2.4, g, attack: 0.005, ...o });
+      this.tone({ f: f * 2.01, dur: 1.5, g: g * 0.35, attack: 0.005, ...o });
+      this.tone({ f: f * 2.76, dur: 0.9, g: g * 0.2, attack: 0.005, ...o });
+      this.tone({ f: f * 5.4, dur: 0.35, g: g * 0.07, attack: 0.005, ...o });
+    }
+  }
+
+  /** The fish seller's friendly call. `level` 0..1 (distance), `pan` -1..1. */
+  sellerCall(level: number, pan = 0): void {
+    if (level < 0.03 || !this.ok('sellerCall', 8)) return;
+    this.voices.sellerCall(level, pan);
+  }
+
+  /** A townsperson calling out a greeting ("hello!"), as a tone-based impression. */
+  wave(level = 1, pan = 0): void {
+    if (!this.ok('wave', 2)) return;
+    this.voices.wave(level, pan);
+  }
+
+  /** A crowd cheer: 1 small (a big catch), 2 bigger (a golden fish), 3 biggest (the King Fish). */
+  cheer(size: 1 | 2 | 3): void {
+    if (!this.ok('cheer', 4)) return;
+    this.voices.cheer(size);
+  }
+
+  /** Diners at the tables: one short burst of quiet chatter. Call every second or two; `level` 0..1. */
+  tableChatter(level: number): void {
+    if (!this.ok('tableChatter', 0.8)) return;
+    this.voices.tableChatter(level);
+  }
+
+  /** Gulls on the ground bursting into the air: wing flaps and a few startled calls. */
+  gullsTakeOff(level = 1): void {
+    if (!this.ok('gullsTakeOff', 1.5)) return;
+    for (let i = 0; i < 6; i++) {
+      this.noise({ dur: 0.07, g: 0.04 * level, f0: rnd(900, 1500), q: 0.9, at: i * 0.07 + Math.random() * 0.03, pan: rnd(-0.5, 0.5), low: true });
+    }
+    for (let i = 0; i < 2; i++) {
+      const top = rnd(1500, 2000);
+      this.tone({ f: top, f2: top * 0.6, dur: 0.22, g: 0.04 * level, type: 'triangle', attack: 0.03, at: 0.08 + i * 0.2, pan: rnd(-0.5, 0.5), low: true, jit: 0.03 });
+    }
+  }
+
+  /** A cat purring: low noise throbbing about 25 times a second, about `dur` seconds. */
+  catPurr(dur = 2.2): void {
+    if (!this.ok('catPurr', 3) || !this.e.takeVoice(true)) return;
+    try {
+      const c = this.e.ctx!;
+      const t = c.currentTime + 0.02;
+      const src = c.createBufferSource();
+      src.buffer = this.e.noise;
+      const lp = c.createBiquadFilter();
+      lp.type = 'bandpass';
+      lp.frequency.value = 150;
+      lp.Q.value = 1.2;
+      const throb = c.createGain();
+      throb.gain.value = 0.5;
+      const lfo = c.createOscillator();
+      lfo.frequency.value = rnd(22, 28);
+      const depth = c.createGain();
+      depth.gain.value = 0.5;
+      lfo.connect(depth).connect(throb.gain);
+      const env = c.createGain();
+      env.gain.setValueAtTime(0.0001, t);
+      env.gain.linearRampToValueAtTime(0.1, t + 0.5);
+      env.gain.setValueAtTime(0.1, t + dur - 0.6);
+      env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(lp).connect(throb).connect(env).connect(this.e.fx);
+      src.onended = () => {
+        src.disconnect(); lp.disconnect(); throb.disconnect(); lfo.disconnect(); depth.disconnect(); env.disconnect();
+        this.e.releaseVoice();
+      };
+      lfo.start(t);
+      lfo.stop(t + dur + 0.05);
+      src.start(t, Math.random() * 1.5);
+      src.stop(t + dur + 0.05);
+    } catch {
+      this.e.releaseVoice();
     }
   }
 

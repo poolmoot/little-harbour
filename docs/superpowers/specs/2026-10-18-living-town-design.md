@@ -104,3 +104,17 @@ crates naturally. Idle has gentle breathing and the occasional look around.
 - The sounds in section 2 are audio work in `src/audio/` and `src/events.ts`.
 - Build order: layout and the walk first (in parallel), sound in parallel,
   then the town life and reactions on top of the new layout.
+
+## Town sounds: done
+
+Built in `src/audio/` (`town.ts` pure maths with tests, `voices.ts` vowel-like
+synthesis) and `src/events.ts`; nothing changed in `src/game.ts`. The event
+router tells the audio the rank, market day and each crate sold
+(`setTownState`, `noteSale`). Hour bell (day only, 1 to 4 strokes, quieter
+far from `bellPos()` in `town.ts`, currently the inn until the layout has a
+`bellTower`), seller's calls every 20 to 60 s near the market, crowd murmur
+that follows rank, recent sales and market day, cheers for 5+ crate catches,
+golden fish and the King Fish, wet cobbles after rain with splashes. Ready
+but not wired for the town-life work: `fx.gullsTakeOff()`, `fx.catPurr()`,
+`fx.wave()`, `fx.tableChatter(level)`. All unheard so far: levels are
+conservative guesses to be tuned by ear.

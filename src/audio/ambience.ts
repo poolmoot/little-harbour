@@ -101,14 +101,15 @@ export class Ambience {
   }
 
   /** Called about ten times a second. */
-  update(x: number, z: number, hour: number): void {
+  update(x: number, z: number, hour: number, murmur?: number): void {
     if (!this.built || !this.e.running) return;
     const w = this.weather;
     const t = ambienceTargets(x, z, hour, w);
     this.setLevel('seaWash', t.sea);
     this.setLevel('seaHiss', t.sea);
     this.setLevel('wind', t.wind);
-    this.setLevel('murmur', t.murmur);
+    // The town passes its own crowd-based level; weather still quietens it.
+    this.setLevel('murmur', murmur === undefined ? t.murmur : murmur * (1 - w.storm) * (1 - 0.5 * w.rain));
     this.setLevel('rain', w.rain);
     this.setLevel('stormWind', w.storm);
     this.setLevel('stormHowl', w.storm * w.storm);
