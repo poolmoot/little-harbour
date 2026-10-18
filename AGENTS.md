@@ -124,6 +124,13 @@ See "Code map" at the bottom for a file-by-file list.
 
 ## Several agents work in this folder at once
 
+(Update 2026-10-18: the separate graphics session has ended. The gameplay
+chat now coordinates all work, including `src/view/`, through sub-agents
+that often run in parallel. The ownership split below still describes which
+files belong together; parallel sub-agents must still commit only their own
+paths.)
+
+
 The owner runs more than one agent session on this project. To avoid
 stepping on each other:
 
