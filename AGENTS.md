@@ -255,6 +255,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `away.ts` — earnings while the player is away (measures a rate on a copy, credits half of it).
 - `fishbook.ts` — fish sizes, stars, golden fish, the fish book figures and zone rewards.
 - `names.ts` — harbour and boat names and their checks.
+- `layoutBoxes.ts` — ground footprints of the buildings, used only by the layout tests (`layout.test.ts`, `../layoutStations.test.ts`).
 
 **src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
 - `text.ts` — all names and wording the player reads in the game.
@@ -292,7 +293,10 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `scene.ts` — renderer, sky, sun, post-processing, quality settings applied.
 - `quality.ts` — quality levels and the slow-frame governor.
 - `cameraRig.ts` — the angled follow camera.
-- `world.ts` — the harbour: builds it from the area files, animates lamps and flags, walkable test.
+- `world.ts` — the harbour: builds it from the area files, animates lamps and flags, walkable test and sliding movement (`resolve`).
+- `collide.ts` — walking collision maths: a circle against turned boxes and discs, kept on the ground; slides along walls and corners (tested).
+- `occlusion.ts` — the see-through fade for anything between the camera and the player (shader patch, two shared uniforms, `updateOcclusion` called once a frame from `game.ts`).
+- `worldTown.ts` — the clock tower (landmark), the square with fountain and well, the hillside houses and stairs, the breakwater boulders and the lighthouse point.
 - `worldParts.ts` — shared types for the area builders.
 - `worldGround.ts` — quay, pier, quay details.
 - `worldMarket.ts` — market stall, stall wings, weathervane.

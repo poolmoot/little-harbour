@@ -140,3 +140,17 @@ Sections 4 (movement and camera) and 5 (the walk).
   sounds on each landed boot (at most 5 per second).
 - Camera: critically damped follow (0.2 s), a small look-ahead in the direction of movement (up to 0.9 m), a softer pitch
   change on the pier, and a straight cut instead of a swoop when the player is moved more than 3.5 m in a frame.
+
+## Layout: done
+
+The town is a crescent round a small square at the head of the pier (all positions in `LAYOUT`, `src/sim/config.ts`; rotations in radians; `toWorld` turns a point in a building's own frame into world coordinates).
+
+- Quay is 48 wide (x -24 to 24) and 13.4 deep. Far row, doors facing the camera: shipyard (-18.2, 4.3, turned 0.25), market (-8.8, 2.6), ice box (-3, 2.4), clock tower (4.6, 1.8, the landmark and the harbour bell), inn (10.2, 2.8), smokehouse (16.6, 3.2). Arms turned towards the square: cold store (-12.6, 8.8, turned 0.5) and restaurant (13.4, 8.7, turned -0.5).
+- The lighthouse stands on its own rocky point at the east end (door at about 20.2, -1.3; point rectangle `LAYOUT.point`). A breakwater of boulders runs out from the west end.
+- Square: a flagstone disc at (0, 8.7) with a fountain (5, 8.7) and a well (-5, 8.7); the middle stays open for the workers' lanes. Notice board (2.9, 5.6). Lawns with trees at the corners.
+- Behind the town: stairs up to two terraces of pastel houses (decorative, doors towards the town).
+- Workers: lane up from the pier, corridor at z 12.2, then straight down to each door; all of it is checked clear of buildings by `layout.test.ts`. The market and ice drops keep their short routes at z 6.4.
+- Longest straight walk from the pier head (0, 1) to a door: shipyard about 18.6, lighthouse about 20.7. The pacing test passes unchanged.
+- Space kept clear for the town-life work: market queue `LAYOUT.queueZone` (x -12.8 to -4.8, z 4.4 to 5.5, in front of the stall); restaurant terrace `LAYOUT.terrace` in the restaurant's own frame (x -3 to 3, z 2.2 to 3.6, room for three tables; use `toWorld(LAYOUT.plots.restaurant, ...)`); pier-head crowd `LAYOUT.crowdZone` (x -3.2 to 3.2, z 0.8 to 4.6) plus the pier itself.
+- Collision (`src/view/collide.ts`) pushes the walker out of turned boxes and discs and back onto the ground, so walls and corners slide and never snag. Anything solid is a box or disc in `World.solids`.
+- Fade: `src/view/occlusion.ts` thins out (never fully) anything between the camera and the player, in the shader, for all town materials, the ink outlines and the trees.

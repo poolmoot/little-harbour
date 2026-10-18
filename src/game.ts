@@ -32,6 +32,7 @@ import { FishingView, Player, TargetMarker } from './view/player';
 import { Quality } from './view/quality';
 import { SceneRig } from './view/scene';
 import { World } from './view/world';
+import { updateOcclusion } from './view/occlusion';
 import { Water, Wake } from './view/water';
 
 const SAVE_EVERY = 10;
@@ -391,6 +392,7 @@ export class Game {
     this.tycoonView.sync(s, this.now, sdt);
     this.unstickPlayer();
     this.rig.update(s.dayTime, this.cameraRig.focus, this.now);
+    updateOcclusion(this.rig.camera, this.player.pos);
     const pxScale = this.rig.renderer.domElement.height * 0.5 / Math.tan((this.rig.camera.fov * Math.PI) / 360);
     this.world.update(this.now, this.rig.skyState, pxScale);
     this.water.update(this.now, this.rig.skyState, this.rig.fog.near, this.rig.fog.far, this.boatsView.foam, this.fishView.ripples);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as TX from './textures';
+import { seeThrough } from './occlusion';
 import { addInk, inkGeometry, inkMesh, thinnestSide } from './ink';
 
 /** Shared materials, geometry helpers and prop factories for the harbour. Everything is built from code. */
@@ -22,8 +23,9 @@ float toonBand( float facing ) {
   float lit = mix( ${TOON_PART_LIT.toFixed(2)}, 1.0, smoothstep( ${TOON_LIT_FROM.toFixed(2)}, ${TOON_LIT_TO.toFixed(2)}, facing ) );
   return lit * smoothstep( 0.0, ${TOON_DARK_TO.toFixed(2)}, facing );
 }`;
-function toonCompile(shader: { fragmentShader: string }): void {
+function toonCompile(shader: { vertexShader: string; fragmentShader: string; uniforms: Record<string, { value: unknown }> }): void {
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_pars_fragment>', TOON_BAND + TOON_LIGHTS);
+  seeThrough(shader);
 }
 /** Give a lit material the world's cel shading. Its other settings (colour, map, glow, roughness) keep working. */
 export function toon<T extends THREE.MeshStandardMaterial>(m: T): T {

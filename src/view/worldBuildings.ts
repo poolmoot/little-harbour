@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LAYOUT } from '../sim/config';
+import { LAYOUT, toWorld } from '../sim/config';
 import { Smoke } from './fx';
 import { hullGeometry } from './hull';
 import { BOAT_TIERS } from './boatModels';
@@ -7,10 +7,8 @@ import { barrel, bx, chimney, crateBox, cy, doorAt, flat, gableRoof, net, put, s
 import type { Build } from './worldParts';
 
 export function buildShipyard(w: Build): void {
-  const { x, z } = LAYOUT.shipyard, M = w.M, s = w.stat;
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  s.add(g);
+  const Y = LAYOUT.shipyard, M = w.M;
+  const { s: g, live } = w.place(Y.x, Y.z, Y.rot);
   bx(6.2, 0.4, 4.2, M.wall, 0, 0.2, 0, g);
   tBox(6, 2.7, 4, M.wood, 1.6, 0, 1.75, 0, g);
   for (const sx of [-1, 1]) bx(0.2, 3, 4.2, M.trim, sx * 3, 1.5, 0, g);
@@ -22,38 +20,40 @@ export function buildShipyard(w: Build): void {
     bx(0.6, 0.07, 0.1, M.iron, -1.1 + sx * 0.44, 1.0, 2.13, g);
     bx(0.6, 0.07, 0.1, M.iron, -1.1 + sx * 0.44, 1.9, 2.13, g);
   }
-  windowAt(g, 1.7, 1.9, 2.03, 1.0, 0.9, { shutter: 0x3f6a86 });
+  windowAt(g, 1.7, 1.9, 2.03, 1.0, 0.9, { shutter: 0x3f6a86, flowers: true });
   windowAt(g, 3.03, 1.9, 0.5, 0.8, 0.8, { ry: Math.PI / 2 });
+  windowAt(g, -3.03, 1.9, 0.5, 0.8, 0.8, { ry: -Math.PI / 2 });
   const smoke = chimney(g, -2.1, 3.6, -1.0, 2.0);
-  w.smokes.push(new Smoke(w.group, smoke.add(new THREE.Vector3(x, 0, z))));
+  g.updateMatrixWorld(true);
+  w.smokes.push(new Smoke(w.group, g.localToWorld(smoke)));
   const sign = signMesh('SHIPYARD', 2.4, 0.55, '#3b5167');
-  sign.position.set(x + 0.9, 3.0, z + 2.2);
-  w.group.add(sign);
+  sign.position.set(0.9, 3.0, 2.2);
+  live.add(sign);
   w.signs.push({ m: sign, phase: 1.2 });
-  // upturned hull on trestles
+  // upturned hull on trestles, round the back where the yard is quiet
   const hullMat = flat(0x7b4b32, 0.85);
-  const hull = put(hullGeometry(BOAT_TIERS[0].shape, { bottom: 0, stripe: 0, side: 0, sheer: 0 }), hullMat, x + 4.6, 1.15, z + 0.8, s);
+  const hull = put(hullGeometry(BOAT_TIERS[0].shape, { bottom: 0, stripe: 0, side: 0, sheer: 0 }), hullMat, -0.6, 1.15, -3.1, g);
   hull.rotation.set(0, Math.PI / 2, Math.PI);
   hull.scale.set(0.85, 1, 0.8);
   (hull.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
-  bx(0.25, 0.75, 1.5, M.dark, x + 3.4, 0.38, z + 0.8, s);
-  bx(0.25, 0.75, 1.5, M.dark, x + 5.8, 0.38, z + 0.8, s);
-  bx(2.9, 0.12, 0.2, M.dark, x + 4.6, 0.35, z + 0.2, s);
+  bx(0.25, 0.75, 1.5, M.dark, -1.8, 0.38, -3.1, g);
+  bx(0.25, 0.75, 1.5, M.dark, 0.6, 0.38, -3.1, g);
   // timber stack, barrels, anchor
-  for (let i = 0; i < 4; i++) bx(2.2, 0.12, 0.3, i % 2 ? M.crate : M.wood, x - 3.9, 0.07 + i * 0.13, z + 1.2 + (i % 2) * 0.05, s).rotation.y = 0.5;
-  barrel(s, x + 3.4, z + 2.4, 0, 1, false);
-  crateBox(s, x - 3.3, 0, z + 2.6, 0.7, 0.2);
+  for (let i = 0; i < 4; i++) bx(2.2, 0.12, 0.3, i % 2 ? M.crate : M.wood, -3.9, 0.07 + i * 0.13, 1.2 + (i % 2) * 0.05, g).rotation.y = 0.5;
+  barrel(g, 3.4, 2.4, 0, 1, false);
+  crateBox(g, -3.3, 0, 2.6, 0.7, 0.2);
   const anchor = new THREE.Group();
-  anchor.position.set(x - 2.3, 0.55, z + 2.7);
+  anchor.position.set(-2.3, 0.55, 2.7);
   cy(0.04, 0.04, 1.0, M.iron, 0, 0, 0, anchor, 6);
   bx(0.6, 0.05, 0.05, M.iron, 0, 0.35, 0, anchor);
   const arc = put(new THREE.TorusGeometry(0.28, 0.04, 5, 10, Math.PI), M.iron, 0, -0.35, 0, anchor);
   arc.rotation.z = Math.PI;
   anchor.rotation.set(0.1, 0.4, 0.15);
-  s.add(anchor);
-  net(w.group, 1.6, 1.0, x + 1.9, 0.9, z + 3.0, 0.2);
-  w.solid({ x0: x - 3, x1: x + 3, z0: z - 2, z1: z + 2 });
-  w.solid({ x0: x + 3.1, x1: x + 6.1, z0: z + 0.1, z1: z + 1.5 });
+  g.add(anchor);
+  net(live, 1.6, 1.0, 1.9, 0.9, 3.0, 0.2);
+  w.box({ cx: Y.x, cz: Y.z, hx: 3, hz: 2, a: Y.rot });
+  const h = toWorld(Y, -0.6, -3.1);
+  w.box({ cx: h.x, cz: h.z, hx: 1.7, hz: 0.8, a: Y.rot });
 }
 
 export function buildInn(w: Build): void {

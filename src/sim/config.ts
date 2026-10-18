@@ -155,19 +155,21 @@ export const LAYOUT = {
   plots: {
     coldstore: plot(-12.6, 8.8, 0.5, 0, 2.7),
     smokehouse: plot(16.6, 3.2, -0.12, 0.9, 3.0),
-    restaurant: plot(12.6, 8.6, -0.5, -1.5, 2.8),
+    restaurant: plot(13.4, 8.7, -0.5, -1.5, 2.8),
     lighthouse: plot(20.2, -3.3, 0, 0, 2.0),
   },
   /** The rocky point the lighthouse stands on (walkable): x0, x1, z0, z1. */
-  point: { x0: 18.2, x1: 23, z0: -5.2, z1: 0 },
+  point: { x0: 18.4, x1: 24, z0: -5.2, z1: 0 },
   /** Workers walk east-west along this line when going between buildings. */
   corridorZ: 12.2,
   playerStart: { x: 0, z: 6 },
-  quayMinX: -24.5,
-  quayMaxX: 23,
+  quayMinX: -24,
+  quayMaxX: 24,
   quayMaxZ: 13.4,
   /** Open space kept clear for the town-life agent: a market queue, restaurant tables, a pier-head crowd (x0, x1, z0, z1). */
   queueZone: { x0: -12.8, x1: -4.8, z0: 4.4, z1: 5.5 },
+  /** The restaurant terrace, in the restaurant's own frame (x across, z towards its door): room for up to three tables. Use toWorld(plots.restaurant, ...) to place things. */
+  terrace: { x0: -3, x1: 3, z0: 2.2, z1: 3.6 },
   crowdZone: { x0: -3.2, x1: 3.2, z0: 0.8, z1: 4.6 },
 };
 /** Half sizes (across, deep) of what each plot's building takes up on the ground. */

@@ -1,4 +1,4 @@
-import { BOAT_RANGE, BUILDING_IDS, CRATE_RANGE, INTERACT_RANGE, LAYOUT } from './sim/config';
+import { BOAT_RANGE, BUILDING_IDS, CRATE_RANGE, INTERACT_RANGE, LAYOUT, toWorld } from './sim/config';
 import { carryCapacity, castLine, deliverKingFish, dockCrates, handCrates, hook, pickUp, unloadBoat } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import type { Rng } from './sim/rng';
@@ -19,10 +19,10 @@ export interface Target {
 
 export const STATIONS: Record<Exclude<TargetKind, 'crate' | 'boat' | 'plot'>, { x: number; z: number; range: number }> = {
   market: { x: LAYOUT.market.x, z: LAYOUT.market.z + 1.7, range: INTERACT_RANGE },
-  shipyard: { x: LAYOUT.shipyard.x, z: LAYOUT.shipyard.z + 2.8, range: INTERACT_RANGE },
+  shipyard: { ...toWorld(LAYOUT.shipyard, -0.5, 3.0), range: INTERACT_RANGE },
   board: { x: LAYOUT.noticeBoard.x, z: LAYOUT.noticeBoard.z + 0.5, range: INTERACT_RANGE },
   icebox: { x: LAYOUT.iceBox.x, z: LAYOUT.iceBox.z + 1.1, range: INTERACT_RANGE },
-  inn: { x: LAYOUT.inn.x + 0.8, z: LAYOUT.inn.z + 3.6, range: INTERACT_RANGE },
+  inn: { x: LAYOUT.inn.x - 1.8, z: LAYOUT.inn.z + 3.4, range: INTERACT_RANGE },
   fishing: { x: LAYOUT.fishingSpot.x, z: LAYOUT.fishingSpot.z, range: 3.2 },
 };
 

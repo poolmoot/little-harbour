@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BUILDING_IDS, LAYOUT } from '../sim/config';
+import { BUILDING_IDS, LAYOUT, PLOT_HALF, toWorld } from '../sim/config';
 import type { BuildingId, GoalArrow, WeatherId } from '../sim/config';
 import { currentGoal } from '../sim/sim';
 import type { GameState } from '../sim/state';
@@ -19,16 +19,18 @@ const SMOKE = LAYOUT.plots.smokehouse, COLD = LAYOUT.plots.coldstore;
 const RACK_X = -1.75, RACK_Z = 2.2, RACK_STEP = 0.55, RACK_SHELF = [0.72, 1.2];
 /** Spot on the smokehouse racks for the i-th smoking crate. */
 export function smokeRackPos(i: number, out: THREE.Vector3): THREE.Vector3 {
-  return out.set(SMOKE.x + RACK_X + (i % 3) * RACK_STEP, RACK_SHELF[Math.floor(i / 3) % 2], SMOKE.z + RACK_Z);
+  const p = toWorld(SMOKE, RACK_X + (i % 3) * RACK_STEP, RACK_Z);
+  return out.set(p.x, RACK_SHELF[Math.floor(i / 3) % 2], p.z);
 }
 /** Crates in the cold store are inside the building: they shrink away through its door. */
 export function coldStorePos(out: THREE.Vector3): THREE.Vector3 {
-  return out.set(COLD.x, 0.8, COLD.z + 1.6);
+  const p = toWorld(COLD, 0, 1.6);
+  return out.set(p.x, 0.8, p.z);
 }
 
 // ---- buildings ------------------------------------------------------------------------------------
 
-interface Plan { w: number; d: number; build(g: THREE.Group, level: number, v: TycoonView, x: number, z: number): void }
+interface Plan { w: number; d: number; build(g: THREE.Group, level: number, v: TycoonView): void }
 
 /** A marked-out empty lot with a "for sale" board. */
 function emptyLot(g: THREE.Group, p: Plan): void {
@@ -81,15 +83,15 @@ const PLANS: Record<BuildingId, Plan> = {
   },
   smokehouse: {
     w: 3.8, d: 3.6,
-    build(g, level, v, x, z) {
+    build(g, level, v) {
       const M = v.world.M;
       bx(4.0, 0.3, 3.8, M.wall, 0, 0.15, 0, g);
       tBox(3.8, 2.3, 3.6, M.dark, 1.6, 0, 1.45, 0, g);
       gableRoof(g, 3.8, 3.6, 2.6, 1.7, M.redRoof, M.dark, 0.4);
       doorAt(g, 0.9, 1.8, 1.0, 1.9);
       const top = chimney(g, -1.0, 3.2, -0.6, 1.9 + level * 0.3);
-      v.addSmoke(top.add(new THREE.Vector3(x, 0, z)), 30 + level * 8);
-      if (level >= 3) v.addSmoke(chimney(g, 1.1, 3.2, -0.6, 1.6).add(new THREE.Vector3(x, 0, z)), 30);
+      v.addSmoke(v.worldOf(g, top), 30 + level * 8);
+      if (level >= 3) v.addSmoke(v.worldOf(g, chimney(g, 1.1, 3.2, -0.6, 1.6)), 30);
       // drying racks by the front wall: smoking crates sit on these shelves
       const wood = flat(0x6a4a30, 0.9);
       for (const px of [RACK_X - 0.3, RACK_X + 2 * RACK_STEP + 0.3]) bx(0.08, 1.7, 0.5, wood, px, 0.85, RACK_Z, g);
@@ -164,13 +166,14 @@ const PLANS: Record<BuildingId, Plan> = {
 
 // ---- goal arrow ------------------------------------------------------------------------------------
 
+const SHIPYARD_FRONT = toWorld(LAYOUT.shipyard, 0, 2);
 const ARROW_SPOT: Record<GoalArrow, [x: number, y: number, z: number]> = {
   boat: [LAYOUT.berths[0].boatX, 3.6, LAYOUT.berths[0].boatZ],
   market: [LAYOUT.market.x, 4.4, LAYOUT.market.z],
   pierEnd: [LAYOUT.fishingSpot.x, 2.6, LAYOUT.fishingSpot.z],
-  shipyard: [LAYOUT.shipyard.x, 5.6, LAYOUT.shipyard.z + 2],
+  shipyard: [SHIPYARD_FRONT.x, 5.6, SHIPYARD_FRONT.z],
   board: [LAYOUT.noticeBoard.x, 3.2, LAYOUT.noticeBoard.z],
-  inn: [LAYOUT.inn.x - 1.8, 4.2, LAYOUT.inn.z + 3],
+  inn: [LAYOUT.inn.x - 1.8, 6.4, LAYOUT.inn.z + 3],
 };
 
 function buildArrow(): THREE.Group {
@@ -251,11 +254,13 @@ export class TycoonView {
     for (const id of BUILDING_IDS) {
       const group = new THREE.Group();
       group.position.set(LAYOUT.plots[id].x, 0, LAYOUT.plots[id].z);
+      group.rotation.y = LAYOUT.plots[id].rot;
       rig.scene.add(group);
       this.plots.set(id, { group, level: -1 });
       // The lot is solid even while empty (it is fenced), so nobody is standing inside when the building goes up.
-      const { x, z } = LAYOUT.plots[id], plan = PLANS[id];
-      world.addObstacle({ x0: x - plan.w / 2, x1: x + plan.w / 2, z0: z - plan.d / 2, z1: z + plan.d / 2 });
+      const p = LAYOUT.plots[id], [hx, hz] = PLOT_HALF[id];
+      if (id === 'lighthouse') world.disc({ cx: p.x, cz: p.z, r: 1.7 });
+      else world.box({ cx: p.x, cz: p.z, hx: hx - 0.1, hz: hz - 0.1, a: p.rot });
     }
     const cone = new THREE.Mesh(
       new THREE.ConeGeometry(1.3, 22, 16, 1, true),
@@ -270,6 +275,12 @@ export class TycoonView {
     rig.scene.add(this.arrow, this.rain);
   }
 
+  /** World position of a point given in a plot group's own frame (the plots are turned). */
+  worldOf(g: THREE.Group, local: THREE.Vector3): THREE.Vector3 {
+    g.updateMatrixWorld(true);
+    return g.localToWorld(local);
+  }
+
   addSmoke(at: THREE.Vector3, count: number): void {
     this.world.smokes.push(new Smoke(this.world.group, at, count));
   }
@@ -280,7 +291,7 @@ export class TycoonView {
     plot.group.clear();
     if (level === 0) emptyLot(plot.group, plan);
     else {
-      plan.build(plot.group, level, this, plot.group.position.x, plot.group.position.z);
+      plan.build(plot.group, level, this);
     }
     bake(plot.group);
   }

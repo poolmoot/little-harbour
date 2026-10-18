@@ -29,7 +29,7 @@ export function lampHead(w: Build, x: number, y: number, z: number, withLight: b
 }
 
 export function buildLanterns(w: Build): void {
-  const spots: [number, number, boolean][] = [[-1.85, -4, true], [1.85, -10.5, true], [-1.85, -16, true], [-13, 8.5, true], [-1, 9, true], [13, 9, true], [-1.85, -10.5, false], [1.85, -4, false], [1.85, -16, false]];
+  const spots: [number, number, boolean][] = [[-1.85, -4, true], [1.85, -10.5, true], [-1.85, -16, true], [-9.8, 7.6, true], [9.6, 7.8, true], [0, 13, true], [-19, 8.8, false], [19.6, 6.4, false], [-1.85, -10.5, false], [1.85, -4, false], [1.85, -16, false]];
   for (const [x, z, light] of spots) {
     const base = z < 0 ? 0.055 : 0;
     cy(0.14, 0.17, 0.3, w.M.iron, x, base + 0.15, z, w.stat, 8);

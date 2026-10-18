@@ -10,6 +10,9 @@ import { buildGround, buildPier, buildQuayDetail } from './worldGround';
 import { buildMarket, buildVane } from './worldMarket';
 import { buildBoardAndIce, buildInn, buildShipyard } from './worldBuildings';
 import { buildLanterns } from './worldLamps';
+import { buildBreakwaters, buildHillside, buildSquare, buildTower } from './worldTown';
+import { inAreas, overlaps, resolveMove } from './collide';
+import type { Area, Disc, Obb, Solid } from './collide';
 
 export type { Rect };
 
@@ -17,6 +20,15 @@ export type { Rect };
 export class World implements Build {
   readonly group = new THREE.Group();
   readonly obstacles: Rect[] = [];
+  /** Everything the walkers collide with: turned boxes and discs (plain rectangles are turned into boxes). */
+  readonly solids: Solid[] = [];
+  /** The ground you can walk on: the quay, the pier and the lighthouse point. */
+  readonly areas: Area[] = [
+    [LAYOUT.quayMinX, LAYOUT.quayMaxX, 0, LAYOUT.quayMaxZ],
+    [-LAYOUT.pierHalfWidth, LAYOUT.pierHalfWidth, LAYOUT.pierEndZ, 1.2],
+    [LAYOUT.point.x0, LAYOUT.point.x1, LAYOUT.point.z0, 1.2],
+  ];
+  private stallObb: Obb | null = null;
   readonly stat = new THREE.Group();
   readonly M = mats();
   readonly lamps: Lamp[] = [];
@@ -38,6 +50,10 @@ export class World implements Build {
     buildShipyard(this);
     buildInn(this);
     buildBoardAndIce(this);
+    buildTower(this);
+    buildSquare(this);
+    buildHillside(this);
+    buildBreakwaters(this);
     buildQuayDetail(this);
     buildLanterns(this);
     buildVane(this);
@@ -45,13 +61,26 @@ export class World implements Build {
     const n = buildNature(this.group, (x, z) => {
       if (z < -8) return false;
       if (Math.abs(x) < LAYOUT.quayMaxX + 0.2 && z < LAYOUT.quayMaxZ + 0.2) return false;
+      if (Math.abs(x) < LAYOUT.quayMaxX + 5 && z > 14.4 && z < 32) return false;   // the hillside terraces and houses
       return true;
     }, BEDS);
-    this.fireflies = new Fireflies(this.group, [...n.fireflies, [-1.85, 0, -4], [1.85, 0, -10.5], [-13, 0, 8.5], [13, 0, 9]], 5);
+    this.fireflies = new Fireflies(this.group, [...n.fireflies, [-1.85, 0, -4], [1.85, 0, -10.5], [-10, 0, 8.6], [10, 0, 8.6]], 5);
   }
 
   solid(r: Rect): void {
     this.obstacles.push(r);
+    const o: Obb = { cx: (r.x0 + r.x1) / 2, cz: (r.z0 + r.z1) / 2, hx: (r.x1 - r.x0) / 2, hz: (r.z1 - r.z0) / 2, a: 0 };
+    this.solids.push(o);
+    if (r === this.stallSolid) this.stallObb = o;
+  }
+  box(o: Obb): void { this.solids.push(o); }
+  disc(d: Disc): void { this.solids.push(d); }
+  place(x: number, z: number, rot: number): { s: THREE.Group; live: THREE.Group } {
+    const s = new THREE.Group(), live = new THREE.Group();
+    for (const g of [s, live]) { g.position.set(x, 0, z); g.rotation.y = rot; }
+    this.stat.add(s);
+    this.group.add(live);
+    return { s, live };
   }
 
   /** Market stall upgrades: a wing on each side per level (wings are built in worldMarket.ts). */
@@ -60,6 +89,7 @@ export class World implements Build {
     const reach = [2.2, 3.4, 4.4][level] ?? 2.2;
     this.stallSolid.x0 = LAYOUT.market.x - reach;
     this.stallSolid.x1 = LAYOUT.market.x + reach;
+    if (this.stallObb) { this.stallObb.cx = LAYOUT.market.x; this.stallObb.hx = reach; }
   }
 
   /** Golden weathervane on the inn (top rank). */
@@ -89,33 +119,20 @@ export class World implements Build {
     if (this.vane.visible) this.vaneArrow.rotation.y = Math.sin(t * 0.35) * 1.2 + Math.sin(t * 0.9) * 0.2;
   }
 
-  /** Is the point (with a small radius) standing on the quay or the pier? */
+  /** Is the point (with a small radius) standing on the quay, the pier or the point, clear of every solid? */
   walkable(x: number, z: number, r: number): boolean {
-    const L = LAYOUT;
-    const inside = (px: number, pz: number) => {
-      const quay = px >= L.quayMinX && px <= L.quayMaxX && pz >= 0 && pz <= L.quayMaxZ;
-      const pier = Math.abs(px) <= L.pierHalfWidth && pz <= 0.05 && pz >= L.pierEndZ;
-      return quay || pier;
-    };
-    if (!inside(x, z)) return false;
-    if (!(inside(x + r, z) && inside(x - r, z) && inside(x, z + r) && inside(x, z - r))) return false;
-    for (const o of this.obstacles) {
-      const cx = Math.max(o.x0, Math.min(x, o.x1)), cz = Math.max(o.z0, Math.min(z, o.z1));
-      if ((cx - x) ** 2 + (cz - z) ** 2 < r * r) return false;
-    }
+    if (!inAreas(this.areas, x, z, r)) return false;
+    for (const o of this.solids) if (overlaps(o, x, z, r)) return false;
     return true;
   }
 
-  /** Move from (px,pz) toward (nx,nz), sliding along obstacles and water edges. */
+  /** Move from (px,pz) toward (nx,nz): pushed out of walls, corners and posts and kept on the ground, so it slides and never snags. */
   resolve(px: number, pz: number, nx: number, nz: number, r: number): { x: number; z: number } {
-    if (this.walkable(nx, nz, r)) return { x: nx, z: nz };
-    if (this.walkable(nx, pz, r)) return { x: nx, z: pz };
-    if (this.walkable(px, nz, r)) return { x: px, z: nz };
-    return { x: px, z: pz };
+    return resolveMove(this.areas, this.solids, { x: px, z: pz }, nx, nz, r);
   }
 
   addObstacle(r: Rect): void {
-    this.obstacles.push(r);
+    this.solid(r);
   }
 }
 export { groundH };

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { seeThrough } from './occlusion';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /**
@@ -28,6 +29,7 @@ const SAME_FACE = 0.999;
 
 const inkMat = new THREE.MeshBasicMaterial({ color: INK_COLOUR, side: THREE.BackSide });
 inkMat.onBeforeCompile = (shader) => {
+  seeThrough(shader);
   shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `
     float inkDist = -(modelViewMatrix * vec4(position, 1.0)).z;
     float inkGrow = clamp(inkDist / ${INK_REF_DIST.toFixed(1)}, 1.0, ${INK_GROW_MAX.toFixed(1)});

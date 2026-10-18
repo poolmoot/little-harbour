@@ -5,7 +5,7 @@ import { BUILDING_IDS, LAYOUT } from './sim/config';
 import { addCrate } from './sim/crates';
 import { initialState } from './sim/sim';
 import type { Ev } from './sim/sim';
-import { findTarget, interact, promptFor } from './interaction';
+import { STATIONS, findTarget, interact, promptFor } from './interaction';
 import { Rng } from './sim/rng';
 
 function setup() {
@@ -196,7 +196,7 @@ describe('plots and the King Fish at the inn', () => {
 
   it('delivers the King Fish at the inn instead of opening the hire window', () => {
     const s = initialState();
-    const inn = { x: LAYOUT.inn.x + 0.8, z: LAYOUT.inn.z + 3.6 };
+    const inn = { x: STATIONS.inn.x, z: STATIONS.inn.z };
     const t = findTarget(s, inn);
     expect(interact(t, s, new Rng())).toEqual({ open: 'hire' });
     const king = addCrate(s, 'sturgeon', 'hand');

@@ -1,6 +1,7 @@
 import { LAYOUT } from '../sim/config';
 import * as THREE from 'three';
 import { addWind } from './fx';
+import { withSeeThrough } from './occlusion';
 
 /** Rolling ground height. The quay is flat; the land behind it rises into green hills. */
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -139,7 +140,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   }
 
   // --- flowers
-  const centres: [number, number, number][] = [[-16, 16.5, 2.4], [-6, 17.5, 2], [4, 16.2, 2.6], [13, 17.5, 2.2], [20, 16, 2], [-24, 20, 2.5], [9, 22, 2.5], [-31, 6, 2.2], [31, 5, 2.4], [28, 11, 2], [-28, 11, 2]].map(([x, z, s]) => [beside(x), z, s]);
+  const centres: [number, number, number][] = [[-14, 35, 3], [4, 36, 3], [16, 35, 3], [-31, 6, 2.2], [31, 5, 2.4], [28, 11, 2], [-28, 11, 2], [-27, 36, 3], [24, 36, 3]].map(([x, z, s]) => [beside(x), z, s]);
   const fl: [number, number, number][] = [];
   for (const [cx, cz, rad] of centres) for (let i = 0; i < 70; i++) {
     const a = r() * 6.28, d = Math.sqrt(r()) * rad;
@@ -168,7 +169,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   scene.add(stems, heads);
 
   // --- trees (instanced trunks + foliage blobs)
-  const trees: [number, number, number][] = [[-18, 17, 1.2], [-12, 20, 1], [-5, 18.5, 1.3], [3, 21, 1], [9, 17.5, 1.2], [16, 19, 1.1], [22.6, 16, 1.3], [-25, 12, 1.2], [27, 10, 1.2], [-8, 26, 1.5], [14, 25, 1.4], [-21, 25, 1.3], [-33, 4, 1.4], [34, 2, 1.3], [0, 31, 1.6], [-30, 20, 1.5], [30, 22, 1.5], [24, 30, 1.7], [-12, 33, 1.7]].map(([x, z, s]) => [beside(x), z, s]);
+  const trees: [number, number, number][] = ([[-25, 12, 1.2], [27, 10, 1.2], [-33, 4, 1.4], [34, 2, 1.3], [0, 36, 1.6], [-30, 20, 1.5], [30, 22, 1.5], [24, 34, 1.7], [-12, 38, 1.7], [-20, 35, 1.4], [12, 37, 1.5], [-28, 28, 1.6], [29, 6, 1.3], [-29, 2, 1.2]] as [number, number, number][]).map(([x, z, s]) => [beside(x), z, s] as [number, number, number]).filter(([x, z]) => onGround(x, z));
   for (const b of beds) trees.push([(b[0] + b[1]) / 2, (b[2] + b[3]) / 2, 0.8]);
   const blobG = new THREE.IcosahedronGeometry(1, 2);
   {
@@ -188,6 +189,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   const trunkM = new THREE.MeshStandardMaterial({ color: 0x7a5636, roughness: 1 });
   const foliM = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
   addWind(foliM, 'foli', 0.035, 1.0);
+  withSeeThrough(foliM); withSeeThrough(trunkM);
   const nBlob = trees.length * 4;
   const trunks = new THREE.InstancedMesh(trunkG, trunkM, trees.length);
   const foli = new THREE.InstancedMesh(blobG, foliM, nBlob);
@@ -225,7 +227,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
     }
     rockG.computeVertexNormals();
   }
-  const rocks: [number, number, number][] = [[-26, 3, 1.3], [27, 4, 1.1], [-9, 14.8, 0.8], [24, -3, 1.4], [-24.5, -3.5, 1.2], [26, -6.5, 1.0], [-27, -6, 1.5], [-23, -1, 0.9], [25.5, 0.5, 0.8], [-15, 19, 0.7], [18, 21, 0.9], [6, 27, 1.2], [-34, 14, 1.8], [33, 16, 1.6]].map(([x, z, r]) => [beside(x), z, r]);
+  const rocks: [number, number, number][] = [[-28, 3, 1.3], [28, 4, 1.1], [29, -3, 1.4], [-29, -3.5, 1.2], [30, -6.5, 1.0], [-31, -6, 1.5], [6, 38, 1.2], [-34, 14, 1.8], [33, 16, 1.6]].map(([x, z, r]) => [beside(x), z, r]);
   const rockM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true });
   const rk = new THREE.InstancedMesh(rockG, rockM, rocks.length);
   const rpal = [0x8a9096, 0x7d8387, 0x9a9890, 0x6f767c];

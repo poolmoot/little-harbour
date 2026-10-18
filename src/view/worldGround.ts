@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LAYOUT } from '../sim/config';
+import { BUILDING_IDS, LAYOUT, toWorld } from '../sim/config';
 
 import { barrel, bollard, bx, crateBox, cy, flat, net, put, ropeCoil, tBox } from './kit';
 import { landPatch } from './nature';
@@ -11,9 +11,22 @@ export function buildGround(w: Build): void {
   const L = LAYOUT, M = w.M, s = w.stat;
   tBox(L.quayMaxX - L.quayMinX, 1.4, L.quayMaxZ, M.cobble, 2.4, 0, -0.7, L.quayMaxZ / 2, s).castShadow = false;
   tBox(L.quayMaxX - L.quayMinX + 0.2, 0.16, 0.6, M.lip, 2, 0, 0.0, 0.3, s).castShadow = false;
-  // flagstone avenue from the pier to the green, and a worn forecourt in front of each building
-  tBox(5.2, 0.03, 14, M.lip, 2, 0, 0.012, 7, s).castShadow = false;
-  for (const [bx0, bz0, bw, bd] of [[-8, 4.6, 6, 3.2], [-15, 3.6, 8, 5], [10.5, 3.6, 8.4, 5.4]] as const) tBox(bw, 0.02, bd, M.lip, 2, bx0, 0.01, bz0 + 1.5, s).castShadow = false;
+  // flagstone avenue from the pier to the square, and a worn forecourt in front of each building
+  tBox(5.2, 0.03, L.quayMaxZ, M.lip, 2, 0, 0.012, L.quayMaxZ / 2, s).castShadow = false;
+  const yard = (cx: number, cz: number, rot: number, bw: number, bd: number) => {
+    const m = tBox(bw, 0.02, bd, M.lip, 2, cx, 0.01, cz, s);
+    m.rotation.y = rot;
+    m.castShadow = false;
+  };
+  yard(L.market.x, L.market.z + 3.3, 0, 10, 3.6);
+  yard(L.inn.x, L.inn.z + 3.9, 0, 7.6, 3.0);
+  const sy = toWorld(L.shipyard, 0, 3.6);
+  yard(sy.x, sy.z, L.shipyard.rot, 7, 3.4);
+  for (const id of BUILDING_IDS) {
+    if (id === 'lighthouse') continue;
+    const p = L.plots[id], c = toWorld(p, 0, 3.2);
+    yard(c.x, c.z, p.rot, 6, 3.4);
+  }
   // planted beds on the quay: a stone surround, a lawn, and a tree trunk to walk around
   for (const [x0, x1, z0, z1] of BEDS) {
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
@@ -82,14 +95,13 @@ export function buildPier(w: Build): void {
 
 export function buildQuayDetail(w: Build): void {
   const s = w.stat;
-  for (let x = -20; x <= 20; x += 5) if (Math.abs(x) > 3) bollard(s, x, 0.08, 0.75);
-  barrel(s, 14.6, 5.2 + 0.6, 0, 1, true);
-  ropeCoil(s, -6.3, 0, 1.4, 1.2);
-  ropeCoil(s, 6.5, 0, 1.2, 1);
-  crateBox(s, 8.8, 0, 1.3, 0.7, 0.4);
-  crateBox(s, -17.5, 0, 9.2, 0.8, 0.1);
-  crateBox(s, -16.5, 0, 9.4, 0.6, 0.7);
-  barrel(s, 17.8, 7.5);
-  barrel(s, 18.5, 7.1);
+  for (let x = -20; x <= 15; x += 5) if (Math.abs(x) > 3) bollard(s, x, 0.08, 0.75);
+  barrel(s, 14.7, 6.4, 0, 1, true);
+  ropeCoil(s, -2.9, 0, 0.8, 1.1);
+  ropeCoil(s, 2.8, 0, 0.8, 1);
+  crateBox(s, 8.6, 0, 6.6, 0.7, 0.4);
+  barrel(s, 19.6, 5.6);
+  barrel(s, 20.4, 5.2);
+  crateBox(s, -15.4, 0, 12.2 + 0.4, 0.7, 0.2);
   net(w.group, 1.4, 0.8, -2.5, 0.5, 0.9, 0.1);
 }

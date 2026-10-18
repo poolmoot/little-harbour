@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LAYOUT } from '../sim/config';
+import { LAYOUT, toWorld } from '../sim/config';
 import type { Crate } from '../sim/state';
 import { Figure, mat } from './figures';
 import { NPC_TITLE, pickLine } from '../ui/text';
@@ -48,7 +48,7 @@ const WALKERS: { look: FigureLook; pace: number }[] = [
 /** Places people like to walk to: stalls, doors, the board, the pier head. */
 const HAUNTS: [number, number][] = [
   [LAYOUT.market.x, LAYOUT.market.z + 2.8], [LAYOUT.noticeBoard.x, LAYOUT.noticeBoard.z + 1.4], [LAYOUT.inn.x - 1, LAYOUT.inn.z + 5],
-  [LAYOUT.shipyard.x + 3, LAYOUT.shipyard.z + 5.5], [0, 2], [0, -3], [-1, -10], [1, -6], [-14, 10], [14, 10], [6, 11], [-6, 11.5],
+  [toWorld(LAYOUT.shipyard, 3, 5.5).x, toWorld(LAYOUT.shipyard, 3, 5.5).z], [0, 2], [0, -3], [-1, -10], [1, -6], [-16, 11], [16, 12.8], [8, 12.4], [-8, 12.6], [0, 8.7],
 ];
 const WALKER_RADIUS = 0.32;
 
@@ -408,8 +408,8 @@ export class Life {
   constructor(scene: THREE.Scene, world: World, private camera: THREE.Camera, uiRoot: HTMLElement) {
     const defs: { role: Role; title: string; name: string; x: number; z: number; fig: ConstructorParameters<typeof Figure>[0] }[] = [
       { role: 'fishmonger', title: NPC_TITLE.fishmonger, name: 'Greta', x: LAYOUT.market.x, z: LAYOUT.market.z - 1.9, fig: NPC_LOOK.fishmonger },
-      { role: 'shipwright', title: NPC_TITLE.shipwright, name: 'Osric', x: LAYOUT.shipyard.x + 2.6, z: LAYOUT.shipyard.z + 3.4, fig: NPC_LOOK.shipwright },
-      { role: 'innkeeper', title: NPC_TITLE.innkeeper, name: 'Bram', x: LAYOUT.inn.x - 1.0, z: LAYOUT.inn.z + 3.6, fig: NPC_LOOK.innkeeper },
+      { role: 'shipwright', title: NPC_TITLE.shipwright, name: 'Osric', ...toWorld(LAYOUT.shipyard, 2.6, 3.6), fig: NPC_LOOK.shipwright },
+      { role: 'innkeeper', title: NPC_TITLE.innkeeper, name: 'Bram', x: LAYOUT.inn.x - 3.0, z: LAYOUT.inn.z + 3.4, fig: NPC_LOOK.innkeeper },
     ];
     for (const d of defs) {
       const figure = new Figure(d.fig);
