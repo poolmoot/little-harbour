@@ -5,6 +5,9 @@ import type { GameState } from '../sim/state';
 import { bx, cy, flat } from './kit';
 import { Figure } from './figures';
 import { dockhandLook } from './people';
+import { REST_HIPS } from './gait';
+/** Carried crates ride at hand height: the rig stands this much taller than it used to, with its boots on the ground. */
+const HAND_LIFT = REST_HIPS - 0.6;
 
 
 function buildCart(): THREE.Group {
@@ -63,6 +66,7 @@ export class StaffView {
       const hauling = !!d.job && d.job.phase === 'haul';
       e.cart.visible = cart;
       e.fig.pose.carry = hauling && !cart ? 1 : 0;
+      e.fig.pose.load = hauling && !cart ? d.job!.crateIds.length : 0;
       e.cart.position.set(0, 0, 0.95);
       e.fig.group.position.set(e.x, 0, e.z);
       e.fig.group.rotation.y = e.yaw;
@@ -75,7 +79,7 @@ export class StaffView {
             const lx = (i % 2 ? 0.2 : -0.2), lz = 0.95 + (Math.floor(i / 2) % 2 ? 0.15 : -0.15), ly = 0.5 + Math.floor(i / 4) * 0.3;
             v.set(e!.x + lx * c + lz * s, ly, e!.z - lx * s + lz * c);
           } else {
-            const lx = i % 2 ? 0.2 : -0.2, lz = 0.5, ly = 0.95 + Math.floor(i / 2) * 0.36;
+            const lx = i % 2 ? 0.2 : -0.2, lz = 0.5, ly = 0.95 + HAND_LIFT + Math.floor(i / 2) * 0.36;
             v.set(e!.x + lx * c + lz * s, ly, e!.z - lx * s + lz * c);
           }
           this.haul.set(id, v);

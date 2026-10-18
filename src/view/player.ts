@@ -2,12 +2,17 @@ import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
 import type { FishingState } from '../sim/state';
 import { Figure, mat } from './figures';
+import { REST_HIPS } from './gait';
+import { accelerate, turnToward } from './motion';
 import { SEA_Y, waveAt } from './waves';
 import type { Ripple } from './water';
 import type { World } from './world';
 
 const SPEED = 5.2;
 const RADIUS = 0.4;
+/** Speeding up takes about 0.17 s and letting go about 0.11 s (m/s per second). */
+const ACCEL = 30, DECEL = 47;
+const NONE = { x: 0, z: 0 };
 
 export class Player {
   readonly group = new THREE.Group();
@@ -15,8 +20,13 @@ export class Player {
   readonly figure: Figure;
   readonly pos = new THREE.Vector3(LAYOUT.playerStart.x, 0, LAYOUT.playerStart.z);
   facing = 0;
+  /** How fast the player is really moving (m/s), after walls. */
   speed = 0;
-  private stepDist = 0;
+  private vel = { x: 0, z: 0 };
+  private want = { x: 0, z: 0 };
+  private lastX = LAYOUT.playerStart.x;
+  private lastZ = LAYOUT.playerStart.z;
+  private sinceStep = 0;
   private rod = new THREE.Group();
   private rodSegs: THREE.Group[] = [];
   private tipObj = new THREE.Object3D();
@@ -46,47 +56,51 @@ export class Player {
     this.group.add(this.rod);
     scene.add(this.group);
     this.sync();
+    if (import.meta.env.DEV) (window as unknown as { __player?: Player }).__player = this; // dev-only, for scripted checks
   }
 
   /** Returns true when a footstep should sound. */
   update(dt: number, move: { x: number; z: number }, frozen: boolean, faceSea: boolean): boolean {
-    let stepped = false;
-    const m = frozen ? { x: 0, z: 0 } : move;
+    const m = frozen ? NONE : move;
     const moving = m.x !== 0 || m.z !== 0;
-    if (moving) {
-      const nx = this.pos.x + m.x * SPEED * dt;
-      const nz = this.pos.z + m.z * SPEED * dt;
-      const r = this.world.resolve(this.pos.x, this.pos.z, nx, nz, RADIUS);
-      const moved = Math.hypot(r.x - this.pos.x, r.z - this.pos.z);
+    // Somebody moved the player (a teleport, being stepped off a new building): start again from rest.
+    if (Math.abs(this.pos.x - this.lastX) + Math.abs(this.pos.z - this.lastZ) > 0.05) { this.vel.x = this.vel.z = 0; this.speed = 0; }
+    this.want.x = m.x * SPEED;
+    this.want.z = m.z * SPEED;
+    accelerate(this.vel, this.want, dt, ACCEL, DECEL);
+    if (this.vel.x !== 0 || this.vel.z !== 0) {
+      const r = this.world.resolve(this.pos.x, this.pos.z, this.pos.x + this.vel.x * dt, this.pos.z + this.vel.z * dt, RADIUS);
+      const mx = r.x - this.pos.x, mz = r.z - this.pos.z;
       this.pos.x = r.x;
       this.pos.z = r.z;
-      this.speed += (moved / Math.max(dt, 1e-4) - this.speed) * Math.min(1, dt * 14);
-      this.facing = this.turn(this.facing, Math.atan2(m.x, m.z), dt * 9);
-      this.stepDist += moved;
-      if (this.stepDist > 1.5) {
-        this.stepDist = 0;
-        stepped = true;
-      }
-    } else {
-      this.speed += (0 - this.speed) * Math.min(1, dt * 14);
-      if (this.speed < 0.05) this.speed = 0;
-      if (faceSea) this.facing = this.turn(this.facing, Math.PI, dt * 8);
+      // Keep only the speed that was really achieved: pushing into a wall stops cleanly instead of jittering.
+      const inv = 1 / Math.max(dt, 1e-4);
+      this.vel.x = mx * inv;
+      this.vel.z = mz * inv;
     }
+    const actual = Math.hypot(this.vel.x, this.vel.z);
+    this.speed += (actual - this.speed) * Math.min(1, dt * 22);
+    if (this.speed < 0.02 && actual === 0) this.speed = 0;
+    if (moving) this.facing = turnToward(this.facing, Math.atan2(m.x, m.z), dt);
+    else if (faceSea) this.facing = turnToward(this.facing, Math.PI, dt, 8);
+    this.lastX = this.pos.x;
+    this.lastZ = this.pos.z;
+    // Crates in the hands make the walk heavier.
+    this.figure.pose.load = this.carryGroup.children.length;
     this.figure.update(dt, this.speed);
     this.sync();
-    return stepped;
-  }
-
-  private turn(cur: number, target: number, k: number): number {
-    let d = ((target - cur + Math.PI) % (Math.PI * 2)) - Math.PI;
-    if (d < -Math.PI) d += Math.PI * 2;
-    return cur + d * Math.min(1, k);
+    // A footstep sounds each time a boot lands, no more often than five times a second.
+    this.sinceStep += dt;
+    if (this.figure.landed && this.speed > 0.4 && this.sinceStep > 0.2) { this.sinceStep = 0; return true; }
+    return false;
   }
 
   private sync(): void {
     this.group.position.copy(this.pos);
     this.figure.group.rotation.y = this.facing;
     this.carryGroup.rotation.y = this.facing;
+    // Carried crates sit at hand height and ride the body's bob.
+    this.carryGroup.position.y = this.figure.hipsY - 0.6 + (REST_HIPS - this.figure.hipsY) * 0.2;
   }
 
   setRodVisible(v: boolean): void {

@@ -37,8 +37,8 @@ export function portrait(look: FigureOpts): string {
     figure.group.rotation.y = 0.32;
     scene.add(figure.group);
     // Frame the shoulders to the top of the hat.
-    camera.position.set(0, 1.72, 3.8);
-    camera.lookAt(0, 1.66, 0);
+    camera.position.set(0, 1.93, 3.8);
+    camera.lookAt(0, 1.87, 0);
     renderer.render(scene, camera);
     url = renderer.domElement.toDataURL('image/png');
     scene.remove(figure.group);

@@ -456,7 +456,7 @@ export class Life {
           n.lineAt = now;
           n.el.innerHTML = `<b>${n.title}</b><span>${pickLine(n.role, ctx, n.lineN)}</span>`;
         }
-        this.tmp.set(n.x, 2.3, n.z).project(this.camera);
+        this.tmp.set(n.x, 2.5, n.z).project(this.camera);
         n.el.style.display = 'block';
         n.el.style.left = `${(this.tmp.x * 0.5 + 0.5) * w}px`;
         n.el.style.top = `${(-this.tmp.y * 0.5 + 0.5) * h}px`;
