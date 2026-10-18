@@ -127,16 +127,7 @@ const PLANS: Record<BuildingId, Plan> = {
         strip.rotation.x = 0.3;
       }
       for (const sx of [-2.4, 2.4]) cy(0.04, 0.04, 2.3, M.iron, sx, 1.15, 2.95, g, 5);
-      // terrace tables: one more with each level
-      const spots: [number, number][] = [[1.6, 3.3], [-0.2, 3.5], [2.9, 3.4]];
-      for (let i = 0; i < level; i++) {
-        const [tx, tz] = spots[i];
-        cy(0.45, 0.45, 0.06, flat(0xf4f1e8, 0.7), tx, 0.78, tz, g, 12);
-        cy(0.05, 0.08, 0.75, M.iron, tx, 0.4, tz, g, 6);
-        for (const a of [0.6, 2.7, 4.6]) cy(0.17, 0.15, 0.45, flat(0x2f6fb8, 0.8), tx + Math.cos(a) * 0.72, 0.25, tz + Math.sin(a) * 0.72, g, 8);
-        cy(0.03, 0.03, 1.5, M.iron, tx, 1.5, tz, g, 5);                                    // parasol
-        put(new THREE.ConeGeometry(0.85, 0.35, 8), flat(i % 2 ? 0xf2c14e : 0xd6453a, 0.8), tx, 2.3, tz, g);
-      }
+      // the terrace tables, chairs and diners are live: see townTerrace.ts
       if (level >= 2) for (let i = 0; i < 6; i++) put(new THREE.SphereGeometry(0.07, 6, 5), lampMat, -2.2 + i * 0.88, 2.2 - Math.sin((i / 5) * Math.PI) * 0.18, 3.0, g).userData.keep = true;
       const sign = signMesh('RESTAURANT', 2.6, 0.5, '#2f5f9a');
       sign.position.set(0.6, 3.2, 1.9);

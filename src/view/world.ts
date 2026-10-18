@@ -32,7 +32,9 @@ export class World implements Build {
   readonly stat = new THREE.Group();
   readonly M = mats();
   readonly lamps: Lamp[] = [];
-  readonly signs: { m: THREE.Object3D; phase: number }[] = [];
+  readonly signs: Build['signs'] = [];
+  /** Extra flag flutter (0 and up) when the player walks by; set by the town-life code. */
+  gust = 0;
   readonly smokes: Build['smokes'] = [];
   private fireflies!: Fireflies;
   flag!: THREE.Mesh;
@@ -107,13 +109,13 @@ export class World implements Build {
       if (l.light) l.light.intensity = n * 15 * fl;
       (l.halo.material as THREE.SpriteMaterial).opacity = n * 0.4 * fl;
     }
-    for (const s of this.signs) s.m.rotation.z = Math.sin(t * 1.1 + s.phase) * 0.03;
+    for (const s of this.signs) s.m.rotation.z = Math.sin(t * 1.1 + s.phase) * 0.03 + (s.kick ?? 0);
     for (const sm of this.smokes) sm.update(t, pxScale, sky.light);
     this.fireflies.update(t, pxScale, Math.min(1, sky.night * 1.3 + n * 0.3));
     const p = this.flag.geometry.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < p.count; i++) {
       const fx = p.getX(i);
-      p.setZ(i, Math.sin(t * 5 - fx * 6) * 0.07 * fx);
+      p.setZ(i, Math.sin(t * 5 - fx * 6) * 0.07 * fx * (1 + this.gust));
     }
     p.needsUpdate = true;
     if (this.vane.visible) this.vaneArrow.rotation.y = Math.sin(t * 0.35) * 1.2 + Math.sin(t * 0.9) * 0.2;

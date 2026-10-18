@@ -34,3 +34,19 @@ export const NPC_LOOK: Record<Role, FigureOpts> = {
   shipwright: { shirt: 0x4a6a8a, pants: 0x5a4a3a, hat: 'cap', hatColor: 0x2f3b47, beard: 0x8a7a6a },
   innkeeper: { shirt: 0xb5483a, pants: 0x5a4a3a, apron: 0xf0e8d8, skin: 0xe8b890, scale: 1.05, hair: 0x3a2a1a, beard: 0x3a2a1a },
 };
+
+const TOWN_SHIRTS = [0xe8c14a, 0xd9705a, 0x6fae7e, 0xb58ad6, 0x4a7aa8, 0xe29a5c, 0x8fb8d8, 0xc86a8a, 0x7ab07a, 0xf0e8d8];
+const TOWN_PANTS = [0x5a4a6a, 0x3f4f5f, 0x6a5238, 0x4a4038, 0x2f3b47, 0x5f6a4a];
+const TOWN_HATS: (FigureOpts['hat'])[] = ['none', 'cap', 'straw', 'none', 'cap'];
+
+/** A look for the n-th townsperson (queue customers, diners, crowds, extra strollers): varied clothes, skin and hair, the same every run. */
+export function townLook(n: number): FigureOpts {
+  const hat = TOWN_HATS[(n * 3 + 1) % TOWN_HATS.length];
+  const hair = pick(HAIRS, n, 5);
+  return {
+    shirt: TOWN_SHIRTS[(n * 7 + 2) % TOWN_SHIRTS.length], pants: TOWN_PANTS[(n * 5 + 1) % TOWN_PANTS.length],
+    hat, hatColor: TOWN_SHIRTS[(n * 3 + 5) % TOWN_SHIRTS.length], skin: pick(SKINS, n, 6), hair,
+    beard: n % 5 === 2 ? hair : undefined, scarf: n % 4 === 1 ? 0x3f8fbf : undefined,
+    scale: 0.9 + ((n * 37) % 11) / 100,
+  };
+}

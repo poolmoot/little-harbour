@@ -28,6 +28,7 @@ import { CameraRig } from './view/cameraRig';
 import { CratesView } from './view/cratesView';
 import { TycoonView } from './view/tycoonView';
 import { Life } from './view/life';
+import { TownLife } from './view/townLife';
 import { FishingView, Player, TargetMarker } from './view/player';
 import { Quality } from './view/quality';
 import { SceneRig } from './view/scene';
@@ -76,6 +77,7 @@ export class Game {
   private stallShown = -1;
   private vaneShown = false;
   private life: Life;
+  private townLife: TownLife;
   private fishView: FishingView;
   private marker: TargetMarker;
   private hud: Hud;
@@ -114,7 +116,10 @@ export class Game {
     this.cratesView = new CratesView(this.rig.scene, this.player);
     this.tycoonView = new TycoonView(this.rig, this.world);
     this.staffView = new StaffView(this.rig.scene, this.cratesView.haul);
-    this.life = new Life(this.rig.scene, this.world, this.rig.camera, uiRoot);
+    const fx = this.audio.fx;
+    const hooks = { gullsTakeOff: (l: number) => fx.gullsTakeOff(l), catPurr: (d: number) => fx.catPurr(d), wave: (l: number, p: number) => fx.wave(l, p), splash: () => fx.splash(), tableChatter: (l: number) => fx.tableChatter(l) };
+    this.life = new Life(this.rig.scene, this.world, this.rig.camera, uiRoot, hooks);
+    this.townLife = new TownLife(this.rig.scene, this.world, this.life, this.player, hooks, () => this.quality.level);
     this.fishView = new FishingView(this.rig.scene, this.player);
     this.marker = new TargetMarker(this.rig.scene);
     this.hud = new Hud(uiRoot, (kind) => { this.audio.click(); this.panels.toggle(kind); });
@@ -126,6 +131,7 @@ export class Game {
       getState: () => this.state,
       popAt: (x, y, z, text) => this.popAt(x, y, z, text),
       saveNow: () => { this.save(); this.saveTimer = 0; },
+      watch: (evs) => this.townLife.notice(evs, this.state),
     });
     this.panels = new Panels(
       uiRoot,
@@ -423,6 +429,7 @@ export class Game {
       dockCrates(s),
       frozen,
     );
+    this.townLife.update(sdt, this.now, s, this.rig.skyState);
     this.rig.render();
 
     // ui

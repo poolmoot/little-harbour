@@ -154,3 +154,13 @@ The town is a crescent round a small square at the head of the pier (all positio
 - Space kept clear for the town-life work: market queue `LAYOUT.queueZone` (x -12.8 to -4.8, z 4.4 to 5.5, in front of the stall); restaurant terrace `LAYOUT.terrace` in the restaurant's own frame (x -3 to 3, z 2.2 to 3.6, room for three tables; use `toWorld(LAYOUT.plots.restaurant, ...)`); pier-head crowd `LAYOUT.crowdZone` (x -3.2 to 3.2, z 0.8 to 4.6) plus the pier itself.
 - Collision (`src/view/collide.ts`) pushes the walker out of turned boxes and discs and back onto the ground, so walls and corners slide and never snag. Anything solid is a box or disc in `World.solids`.
 - Fade: `src/view/occlusion.ts` thins out (never fully) anything between the camera and the player, in the shader, for all town materials, the ink outlines and the trees.
+
+## Town life: done
+
+Sections 1 and 2 (drawing side) and the sound wiring. Item 6 was dropped (the layout is being redone); every position is read from `LAYOUT` (`queueZone`, `terrace`, `crowdZone`, plot doors, `market`), so crowds follow the buildings.
+
+- `src/view/townLife.ts` ties it together; pure rules and caps are in `townRules.ts` (tested). Caps by quality (high/medium/low): queue 4/3/2, diners 6/4/2, pier crowd 8/5/3, extra strollers 4/2/0.
+- Queue by day (none at night or in storms), length from stall level, recent sales, prices and market day; the front customer buys a parcel when a crate sells. Terrace: one table (two seats) per restaurant level, lanterns lit at night, diners in proportion to `restaurant.served`, new sitting pose and eat/talk gestures on the shared rig (`pose.sit`, `pose.clap`). Pier crowd for 5+ crates, bigger and clapping or waving for golden fish and the King Fish. Extra strollers grow with rank, some carry a basket or parcel.
+- Reactions: ground gulls take off when walked into and settle later; wet cobbles (shared stone materials darken) and puddles after rain, drying over time, splashing; the cat comes to the player near the market and rubs their legs; passers-by look and sometimes wave; signs, nets and the flag sway when brushed; dust on dry stone.
+- Sounds wired: `gullsTakeOff`, `catPurr`, `wave`, `splash`, `tableChatter`. Wetness uses the audio's `wetnessStep` with the shared `weatherRain` table.
+- Background people do not cast shadows (saves draw calls). Dev hook: `window.__town`.

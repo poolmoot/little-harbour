@@ -10,11 +10,12 @@ import { SAY2 } from './ui/screenText';
 import { AWAY, FISH_BOOK, FISH_NAME, KING, NAME_TOAST, RANK_NAME, ZONE_NAME, denyText, say, sayTycoon } from './ui/text';
 import { crateSize, crateStars } from './sim/fishbook';
 import { catchCheer } from './audio/town';
+import { weatherRain } from './view/townRules';
 
 /** How loud each weather layer is for a kind of weather (0 to 1). */
 export function weatherSound(w: WeatherId): { rain: number; wind: number; fog: number } {
   switch (w) {
-    case 'storm': return { rain: 1, wind: 1, fog: 0 };
+    case 'storm': return { rain: weatherRain(w), wind: 1, fog: 0 };
     case 'wind': return { rain: 0, wind: 0.35, fog: 0 };
     case 'fog': return { rain: 0, wind: 0, fog: 1 };
     default: return { rain: 0, wind: 0, fog: 0 };
@@ -32,6 +33,8 @@ export interface EventDeps {
   popAt(x: number, y: number, z: number, text: string): void;
   /** Save now and restart the autosave timer. */
   saveNow(): void;
+  /** Told about every batch of events, for the town's life in the drawing code. */
+  watch?(evs: Ev[]): void;
 }
 
 /** Turns sim events into sounds, toasts, pop-ups and saves. */
@@ -76,6 +79,7 @@ export class EventRouter {
   handle(evs: Ev[]): void {
     let soldCount = 0, soldTotal = 0, saveNow = false;
     const a = this.d.audio, h = this.d.hud;
+    this.d.watch?.(evs);
     for (const e of evs) {
       switch (e.type) {
         case 'boatDispatched':

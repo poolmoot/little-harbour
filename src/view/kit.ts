@@ -196,7 +196,7 @@ export function fishGeo(): THREE.BufferGeometry {
   return fishG as THREE.BufferGeometry;
 }
 
-export function net(parent: THREE.Object3D, w: number, h: number, x: number, y: number, z: number, ry = 0): void {
+export function net(parent: THREE.Object3D, w: number, h: number, x: number, y: number, z: number, ry = 0): THREE.Mesh {
   const g = new THREE.PlaneGeometry(w, h, 8, 6);
   const p = g.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 2.3) * 0.12 + (p.getY(i) < 0 ? 0.05 : 0));
@@ -210,6 +210,7 @@ export function net(parent: THREE.Object3D, w: number, h: number, x: number, y: 
   m.castShadow = true;
   m.userData.keep = true;
   parent.add(m);
+  return m;
 }
 
 export function signMesh(text: string, w: number, h: number, bg?: string, fg?: string): THREE.Mesh {

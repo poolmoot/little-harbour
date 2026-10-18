@@ -40,6 +40,10 @@ export interface Pose {
   wave: boolean;
   /** How many crates are in the hands (heavier steps for a bigger load). */
   load: number;
+  /** Sitting on a chair: thighs forward, knees bent, now and then a hand to the mouth or a small gesture. */
+  sit: boolean;
+  /** Clapping: both hands together in front of the chest. */
+  clap: boolean;
 }
 
 const ease = smooth;
@@ -47,6 +51,9 @@ const TAU = Math.PI * 2;
 const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
 // Scratch values for the gait maths, so nothing is allocated while the figures move.
 const GAIT: Gait = { run: 0, stepLen: 0.6, duty: 0.6, lift: 0.07, crouch: 0.03, walkBob: 0.05, runBob: 0.05 };
+/** Hips height (rig units) when sitting: the boots rest on the ground and the thighs slope a little down to the knees. */
+export const SIT_HIPS = 0.545;
+const SIT_THIGH = 1.2, SIT_KNEE = 0.72;
 const F0: Foot = { z: 0, y: 0 }, F1: Foot = { z: 0, y: 0 }, LEG: LegAngles = { hip: 0, knee: 0 };
 
 /** Three-step light ramp that gives characters their cel-shaded look. */
@@ -167,7 +174,9 @@ export class Figure {
   private headNod = 0;
   /** True for the frame in which a boot lands. */
   landed = false;
-  pose: Pose = { carry: 0, fish: null, wave: false, load: 0 };
+  pose: Pose = { carry: 0, fish: null, wave: false, load: 0, sit: false, clap: false };
+  private sitBlend = 0;
+  private clapBlend = 0;
 
   constructor(o: FigureOpts) {
     const skin = o.skin ?? 0xf6c9a0;
@@ -408,6 +417,17 @@ export class Figure {
       e.x = lerp(e.x, -0.5 + Math.sin(this.idle * 9) * 0.35, w);
     }
 
+    // clapping: both hands meet in front of the chest, again and again
+    this.clapBlend += ((g.clap ? 1 : 0) - this.clapBlend) * k(10);
+    if (this.clapBlend > 0.01) {
+      const c = this.clapBlend, hit = 0.5 + 0.5 * Math.sin(this.idle * 15 * this.cadence);
+      for (let i = 0; i < 2; i++) {
+        const side = i === 0 ? -1 : 1, r = this.arm[i].rotation;
+        r.set(lerp(r.x, -1.05, c), 0, lerp(r.z, -side * (0.08 + 0.24 * hit), c));
+        this.elbow[i].rotation.x = lerp(this.elbow[i].rotation.x, -1.5, c);
+      }
+    }
+
     // fishing: cast swing, then hold the rod forward; jerk on a bite
     const f = g.fish;
     if (f) {
@@ -424,6 +444,9 @@ export class Figure {
       this.elbow[0].rotation.x = lerp(this.elbow[0].rotation.x, -0.9, w);
       this.torso.rotation.x = lerp(this.torso.rotation.x, torso, w);
     }
+
+    this.sitBlend += ((g.sit ? 1 : 0) - this.sitBlend) * k(7);
+    if (this.sitBlend > 0.01) this.applySit(this.sitBlend);
 
     // head: follows the look target; while standing it also glances about now and then; a slow idle bob and blinks
     this.glanceIn -= dt;
@@ -442,6 +465,32 @@ export class Figure {
     this.blink -= dt;
     this.eyes.scale.y = this.blink > 0 && this.blink < 0.09 ? 0.12 : 1;
     if (this.blink < -3.5) this.blink = 0.1;
+  }
+
+  /** Blend into a seated pose, with a slow cycle of eating, a small talking gesture and resting hands (each person on their own beat). */
+  private applySit(s: number): void {
+    const hp = this.hips.position, hr = this.hips.rotation;
+    hp.set(lerp(hp.x, 0, s), lerp(hp.y, SIT_HIPS, s), 0);
+    hr.set(0, lerp(hr.y, 0, s), lerp(hr.z, 0, s));
+    for (let i = 0; i < 2; i++) {
+      const lr = this.leg[i].rotation;
+      lr.set(lerp(lr.x, -SIT_THIGH, s), lerp(lr.y, 0, s), lerp(lr.z, (i === 0 ? -1 : 1) * 0.05, s));
+      this.knee[i].rotation.x = lerp(this.knee[i].rotation.x, SIT_KNEE, s);
+    }
+    const ph = (this.idle * 0.16 + this.swayVar * 7) % 1;
+    const eat = ph < 0.5 ? 0.5 + 0.5 * Math.sin(this.idle * 2.6) : 0;
+    const talk = ph >= 0.5 && ph < 0.8 ? 1 : 0;
+    const tr = this.torso.rotation;
+    tr.set(lerp(tr.x, 0.05 + 0.12 * eat, s), lerp(tr.y, 0, s), lerp(tr.z, 0, s));
+    for (let i = 0; i < 2; i++) {
+      const side = i === 0 ? -1 : 1, right = i === 1;
+      let ax = -0.75, ex = -1.05, az = side * 0.1;
+      if (right && eat > 0) { ax = lerp(-0.75, -1.5, eat); ex = lerp(-1.05, -2.2, eat); }
+      if (right && talk) { ax = -1.05 + Math.sin(this.idle * 3.1) * 0.18; ex = -0.9 + Math.sin(this.idle * 4.7) * 0.35; az = 0.28; }
+      const r = this.arm[i].rotation;
+      r.set(lerp(r.x, ax, s), 0, lerp(r.z, az, s));
+      this.elbow[i].rotation.x = lerp(this.elbow[i].rotation.x, ex, s);
+    }
   }
 
   /** Leg sideways tilt that cancels the hips' sway and roll, so a planted boot stays where it landed. */

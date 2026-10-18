@@ -317,6 +317,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `kit.ts` — shared materials, geometry helpers and props.
 - `textures.ts` — canvas-drawn textures.
 - `fx.ts` — smoke, fireflies, wind, light halos.
+- `townLife.ts` — `TownLife`: reads state and events (`EventDeps.watch`), runs the queue, terrace, pier crowd, wet cobbles, dust and sway; sounds go out through `townHooks.ts` (wired in `game.ts`). `townRules.ts` — pure rules and quality caps (tested). `townPlaces.ts` — gates, queue slots, tables, crowd spots, all derived from `LAYOUT`. `townFolk.ts` — pooled fading citizens. `townQueue.ts`, `townTerrace.ts`, `townCrowd.ts` — the three crowds. `townReact.ts` — particles, wetness and puddles, sway springs.
 
 Tests sit next to the file they test (`*.test.ts`); `pacing.test.ts` checks
 times to each rank and that a Trawler is bought.

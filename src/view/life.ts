@@ -6,6 +6,11 @@ import { NPC_TITLE, pickLine } from '../ui/text';
 import type { LineContext, Role } from '../ui/text';
 import { NPC_LOOK } from './people';
 import type { World } from './world';
+import { NO_HOOKS } from './townHooks';
+import type { TownHooks } from './townHooks';
+import { CARRY_SHARE, GULL_FLUSH_DIST, catRub, catWantsPlayer, friendlyShare, gullSettleDelay, gullTakeOffLevel } from './townRules';
+import { townLook } from './people';
+import { panFor } from '../audio/town';
 
 interface Npc {
   role: Role;
@@ -55,6 +60,13 @@ const WALKER_RADIUS = 0.32;
 /** A passer-by: picks somewhere to go, walks there round obstacles, stands a while looking about, then moves on. */
 class Walker {
   private figure: Figure;
+  private root = new THREE.Group();
+  /** Fade in and out as the town gets busier or quieter: 0 hidden to 1 shown. */
+  private shown = 0;
+  private wanted = false;
+  private friendly = friendlyShare(Math.random());
+  private basket: THREE.Mesh | null = null;
+  private parcel: THREE.Mesh | null = null;
   private x = 0;
   private z = 0;
   private tx = 0;
@@ -66,14 +78,38 @@ class Walker {
   private greeted = false;
   private waveUntil = -1;
 
-  constructor(scene: THREE.Scene, private world: World, look: FigureLook, private pace: number) {
+  constructor(scene: THREE.Scene, private world: World, look: FigureLook, private pace: number, private hooks: TownHooks, carries = false) {
     this.figure = new Figure(look);
+    this.root.add(this.figure.group);
     this.pickTarget();
     this.x = this.tx;
     this.z = this.tz;
     this.pickTarget();
-    scene.add(this.figure.group);
+    if (carries) {
+      this.parcel = mesh(new THREE.BoxGeometry(0.34, 0.2, 0.26), 0xc9a06a, 0, 1.12, 0.46, this.figure.group);
+      this.basket = mesh(new THREE.CylinderGeometry(0.19, 0.14, 0.17, 10), 0xb88a4a, 0, 1.04, 0.44, this.figure.group);
+      const wearBasket = Math.random() < 0.5;
+      this.parcel.visible = !wearBasket;
+      this.basket.visible = wearBasket;
+      this.figure.pose.carry = 1;
+      this.figure.pose.load = 1;
+    }
+    this.root.visible = false;
+    this.root.scale.setScalar(0.001);
+    scene.add(this.root);
   }
+
+  /** Ask for this stroller to be out (or not). It fades in or out and only costs anything while visible. */
+  setWanted(on: boolean): void {
+    if (on && !this.wanted) {
+      // come out somewhere not right next to the player
+      this.pickTarget();
+      this.x = this.tx; this.z = this.tz;
+      this.pickTarget();
+    }
+    this.wanted = on;
+  }
+  get visible(): boolean { return this.root.visible; }
 
   private pickTarget(): void {
     for (let i = 0; i < 16; i++) {
@@ -90,6 +126,10 @@ class Walker {
   }
 
   update(dt: number, now: number, px: number, pz: number): void {
+    this.shown += ((this.wanted ? 1 : 0) - this.shown) * Math.min(1, dt * 2.5);
+    if (this.shown < 0.02 && !this.wanted) { this.root.visible = false; return; }
+    this.root.visible = true;
+    this.root.scale.setScalar(Math.max(0.001, this.shown < 0.98 ? this.shown : 1));
     const dx = this.tx - this.x, dz = this.tz - this.z;
     const d = Math.hypot(dx, dz);
     const toPlayer = Math.hypot(px - this.x, pz - this.z);
@@ -118,13 +158,16 @@ class Walker {
     }
     // Notice the player: glance over, and wave once each time they come close.
     const near = toPlayer < 3.2;
-    if (near && !this.greeted) this.waveUntil = now + 1.6;
+    if (near && !this.greeted && this.friendly && !this.parcel) {
+      this.waveUntil = now + 1.6;
+      this.hooks.wave(Math.max(0.3, 1 - toPlayer / 5), panFor(px, this.x));
+    }
     this.greeted = near;
     this.figure.pose.wave = now < this.waveUntil && this.speed < 0.6;
     if (toPlayer < 5) this.figure.look(angDiff(playerAngle, this.heading) * 0.9, -0.05);
     else this.figure.look(this.pause > 0 ? Math.sin(now * 0.6 + this.tx) * 0.7 : 0, 0);
-    this.figure.group.position.set(this.x, 0, this.z);
-    this.figure.group.rotation.y = this.heading;
+    this.root.position.set(this.x, 0, this.z);
+    this.root.rotation.y = this.heading;
     this.figure.update(dt, this.speed);
   }
 }
@@ -137,7 +180,12 @@ class Cat {
   private legs: THREE.Group[] = [];
   x = LAYOUT.market.x + 2.6;
   z = LAYOUT.market.z + 3;
-  private mode: 'sit' | 'wander' | 'home' = 'sit';
+  private mode: 'sit' | 'wander' | 'home' | 'greet' | 'rub' = 'sit';
+  private sinceGreet = 20;
+  private rubT = 0;
+  private rubFor = 0;
+  private sideVel = 0;
+  private lastSide = 0;
   private timer = 6;
   private tx = this.x;
   private tz = this.z;
@@ -147,7 +195,7 @@ class Cat {
   private flick = 0;
   private t = 0;
 
-  constructor(scene: THREE.Scene, private world: World) {
+  constructor(scene: THREE.Scene, private world: World, private hooks: TownHooks) {
     const orange = 0xd9923f, dark = 0xb5732a, cream = 0xf3dcb4;
     this.group.add(this.body);
     ell(0.15, 0.14, 0.3, orange, 0, 0.3, 0, this.body);
@@ -195,12 +243,40 @@ class Cat {
     }
   }
 
-  update(dt: number, px: number, pz: number, carrying: boolean): void {
+  update(dt: number, px: number, pz: number, carrying: boolean, facing = 0): void {
     this.t += dt;
     const home = { x: LAYOUT.market.x + 2.6, z: LAYOUT.market.z + 3 };
     const toPlayer = Math.hypot(px - this.x, pz - this.z);
     let speed = 0;
-    if (carrying) {
+    this.sinceGreet += dt;
+    if (carrying && (this.mode === 'greet' || this.mode === 'rub')) this.mode = 'wander';
+    if (!carrying && this.mode !== 'greet' && this.mode !== 'rub'
+      && catWantsPlayer(toPlayer, Math.hypot(px - home.x, pz - home.z) < 7, false, this.sinceGreet)) {
+      this.mode = 'greet';
+    }
+    let rubbing = false;
+    if (this.mode === 'greet') {
+      // trot over to the player
+      this.tx = px; this.tz = pz;
+      speed = toPlayer > 5 ? 3.4 : 2.4;
+      if (toPlayer < 0.9) { this.mode = 'rub'; this.rubT = 0; this.rubFor = 5 + Math.random() * 3; this.hooks.catPurr(2.4); }
+      else if (toPlayer > 10) { this.mode = 'home'; this.sinceGreet = 0; }
+    } else if (this.mode === 'rub') {
+      // wind round the player's legs in a slow figure of eight, purring
+      this.rubT += dt;
+      rubbing = true;
+      if (Math.floor((this.rubT - dt) / 2.6) !== Math.floor(this.rubT / 2.6)) this.hooks.catPurr(2.4);
+      const { side, ahead } = catRub(this.rubT), sf = Math.sin(facing), cf = Math.cos(facing);
+      const gx = px + sf * ahead + cf * side, gz = pz + cf * ahead - sf * side;
+      const nx = this.x + (gx - this.x) * Math.min(1, dt * 7), nz = this.z + (gz - this.z) * Math.min(1, dt * 7);
+      this.sideVel = (side - this.lastSide) / Math.max(dt, 1e-3);
+      this.lastSide = side;
+      const r = this.world.resolve(this.x, this.z, nx, nz, 0.2);
+      this.x = r.x; this.z = r.z;
+      this.heading += angDiff(Math.atan2(Math.sign(this.sideVel || 1) * cf, -Math.sign(this.sideVel || 1) * sf), this.heading) * Math.min(1, dt * 5);
+      this.walk += dt * 3;
+      if (toPlayer > 3 || this.rubT > this.rubFor) { this.mode = 'home'; this.sinceGreet = 0; }
+    } else if (carrying) {
       this.mode = 'wander';
       if (toPlayer > 1.6) {
         this.tx = px;
@@ -237,10 +313,11 @@ class Cat {
       this.heading += angDiff(Math.atan2(dx, dz), this.heading) * Math.min(1, dt * 10);
       this.walk += dt * speed * 5;
     }
-    const sitting = speed === 0 && !carrying;
+    const sitting = speed === 0 && !carrying && !rubbing;
     this.sitAmt += ((sitting ? 1 : 0) - this.sitAmt) * Math.min(1, dt * 5);
     const sa = this.sitAmt, run = Math.min(1, speed / 3);
     this.body.rotation.x = -0.75 * sa;
+    this.body.rotation.z += ((rubbing ? Math.max(-0.35, Math.min(0.35, -this.sideVel * 0.3)) : 0) - this.body.rotation.z) * Math.min(1, dt * 8);
     this.body.position.set(0, -0.02 * sa + Math.abs(Math.sin(this.walk)) * 0.035 * (1 - sa), -0.05 * sa);
     // legs: diagonal gait; front legs straight when sitting, hind legs tucked
     this.legs.forEach((l, i) => {
@@ -256,7 +333,7 @@ class Cat {
     this.tail.forEach((seg, i) => {
       const base = sa * 0.28;
       seg.rotation.y = Math.sin(this.t * 1.6 + i * 0.7) * (0.12 + 0.1 * run) + base + fl * 0.3;
-      seg.rotation.x = -0.25 * (1 - sa) * (i > 0 ? 1 : 0.4) + (sitting ? 0.1 : 0);
+      seg.rotation.x = -0.25 * (1 - sa) * (i > 0 ? 1 : 0.4) + (sitting ? 0.1 : 0) - (rubbing ? 0.55 : 0);
     });
     // head: looks at the player when close
     const toP = angDiff(Math.atan2(px - this.x, pz - this.z), this.heading);
@@ -276,6 +353,10 @@ class Gull {
   private legs: THREE.Object3D[] = [];
   pos = new THREE.Vector3();
   mode: 'circle' | 'landing' | 'perched' | 'rising' = 'circle';
+  /** A spot on the ground this gull likes to stand on (the first gull lands on dock crates instead). */
+  home: THREE.Vector3 | null = null;
+  /** Set for one frame when the player walked into this gull and it took off. */
+  flushed = false;
   private heading = 0;
   private bank = 0;
   private pitch = 0;
@@ -309,6 +390,15 @@ class Gull {
     this.prev.copy(this.pos);
   }
 
+  /** Start standing at a spot, as if it had been there all along. */
+  perchAt(v: THREE.Vector3): void {
+    this.home = v.clone();
+    this.pos.copy(v);
+    this.prev.copy(v);
+    this.mode = 'perched';
+    this.group.position.copy(v);
+  }
+
   private circle = new THREE.Vector3();
   private step = new THREE.Vector3();
   /** Where this gull should be on its lazy circle over the pier. The circle bends around the camera
@@ -335,11 +425,14 @@ class Gull {
 
   update(dt: number, t: number, landing: THREE.Vector3 | null, playerNear: boolean, cam: THREE.Vector3): void {
     const circle = this.circlePoint(t, cam);
-    if (this.mode === 'circle' && landing && this.idx === 0) {
+    if (this.mode === 'circle' && landing && (this.idx === 0 || this.home)) {
       this.landWait += dt;
       if (this.landWait > 3) this.mode = 'landing';
     } else if (this.mode !== 'perched' && this.mode !== 'landing') this.landWait = 0;
-    if ((this.mode === 'landing' || this.mode === 'perched') && (!landing || playerNear)) this.mode = 'rising';
+    if ((this.mode === 'landing' || this.mode === 'perched') && (!landing || playerNear)) {
+      if (playerNear) this.flushed = true;
+      this.mode = 'rising';
+    }
     let target = circle;
     let speed = 6;
     if (this.mode === 'landing' && landing) {
@@ -397,15 +490,24 @@ class Gull {
   }
 }
 
+/** Where the three ground gulls stand until someone walks into them. */
+const GULL_HOMES: [number, number][] = [[0.38, 0.58], [0.62, 0.6], [0.2, 0.48]].map(([fx, fz]) => [LAYOUT.quayMinX + fx * (LAYOUT.quayMaxX - LAYOUT.quayMinX), fz * LAYOUT.quayMaxZ]);
+/** The most extra strollers there ever are (on top of the four who always walk). */
+export const MAX_EXTRA_STROLLERS = 4;
+
 export class Life {
   private npcs: Npc[] = [];
   private cat: Cat;
   private walkers: Walker[] = [];
+  private extras: Walker[] = [];
   private gulls: Gull[] = [];
+  private settleAt = [0, 0, 0, 0];
+  /** Which way the player faces (the cat winds round their legs in front of them). Set by the town-life code each frame. */
+  playerFacing = 0;
   private tmp = new THREE.Vector3();
   private landing = new THREE.Vector3();
 
-  constructor(scene: THREE.Scene, world: World, private camera: THREE.Camera, uiRoot: HTMLElement) {
+  constructor(scene: THREE.Scene, world: World, private camera: THREE.Camera, uiRoot: HTMLElement, private hooks: TownHooks = NO_HOOKS) {
     const defs: { role: Role; title: string; name: string; x: number; z: number; fig: ConstructorParameters<typeof Figure>[0] }[] = [
       { role: 'fishmonger', title: NPC_TITLE.fishmonger, name: 'Greta', x: LAYOUT.market.x, z: LAYOUT.market.z - 1.9, fig: NPC_LOOK.fishmonger },
       { role: 'shipwright', title: NPC_TITLE.shipwright, name: 'Osric', ...toWorld(LAYOUT.shipyard, 2.6, 3.6), fig: NPC_LOOK.shipwright },
@@ -421,9 +523,28 @@ export class Life {
       uiRoot.appendChild(el);
       this.npcs.push({ role: d.role, title: d.title, figure, x: d.x, z: d.z, el, lineN: Math.floor(Math.random() * 5), lineAt: -99, lastKey: '', yaw: 0, wasNear: false, waveUntil: 0 });
     }
-    this.cat = new Cat(scene, world);
-    for (const w of WALKERS) this.walkers.push(new Walker(scene, world, w.look, w.pace));
+    this.cat = new Cat(scene, world, hooks);
+    for (const w of WALKERS) {
+      const wk = new Walker(scene, world, w.look, w.pace, hooks);
+      wk.setWanted(true);
+      this.walkers.push(wk);
+    }
+    // more people stroll as the harbour grows; some carry a basket or a parcel of fish
+    for (let i = 0; i < MAX_EXTRA_STROLLERS; i++) {
+      this.extras.push(new Walker(scene, world, townLook(40 + i), 1.1 + ((i * 37) % 10) / 14, hooks, Math.random() < CARRY_SHARE));
+    }
     for (let i = 0; i < 4; i++) this.gulls.push(new Gull(scene, i));
+    GULL_HOMES.forEach(([x0, z0], i) => {
+      // nearest free cobbles to the wanted spot, so a moved building never leaves a gull inside a wall
+      let x = x0, z = z0;
+      for (let k = 0; k < 24 && !world.walkable(x, z, 0.5); k++) { x = x0 + Math.cos(k * 2.4) * k * 0.3; z = z0 + Math.sin(k * 2.4) * k * 0.3; }
+      this.gulls[i + 1].perchAt(new THREE.Vector3(x, 0.1, z));
+    });
+  }
+
+  /** How many of the extra strollers are out (0 to MAX_EXTRA_STROLLERS). */
+  setStrollers(n: number): void {
+    this.extras.forEach((w, i) => w.setWanted(i < n));
   }
 
   update(dt: number, now: number, player: { x: number; z: number }, ctx: LineContext, dockCrates: Crate[], hidden: boolean): void {
@@ -464,12 +585,20 @@ export class Life {
         n.el.style.display = 'none';
       }
     }
-    this.cat.update(dt, player.x, player.z, ctx.handSpecies.length > 0);
+    this.cat.update(dt, player.x, player.z, ctx.handSpecies.length > 0, this.playerFacing);
     for (const wk of this.walkers) wk.update(dt, now, player.x, player.z);
+    for (const wk of this.extras) wk.update(dt, now, player.x, player.z);
     const fresh = dockCrates.find((c) => c.freshness > 0);
     const land = fresh ? this.landing.set(fresh.x ?? 0, 0.46 + (fresh.layer ?? 0) * 0.42, fresh.z ?? 0) : null;
     for (const g of this.gulls) {
-      g.update(dt, now, g.idx === 0 ? land : null, Math.hypot(player.x - g.pos.x, player.z - g.pos.z) < 1.8 && g.mode === 'perched', this.camera.position);
+      const dist = Math.hypot(player.x - g.pos.x, player.z - g.pos.z);
+      const spot = g.idx === 0 ? land : now >= this.settleAt[g.idx] ? g.home : null;
+      g.update(dt, now, spot, dist < GULL_FLUSH_DIST && g.mode === 'perched', this.camera.position);
+      if (g.flushed) {
+        g.flushed = false;
+        if (g.idx > 0) this.settleAt[g.idx] = now + gullSettleDelay(Math.random());
+        this.hooks.gullsTakeOff(gullTakeOffLevel(dist));
+      }
     }
   }
 }

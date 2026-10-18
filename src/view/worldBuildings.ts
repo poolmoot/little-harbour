@@ -50,7 +50,7 @@ export function buildShipyard(w: Build): void {
   arc.rotation.z = Math.PI;
   anchor.rotation.set(0.1, 0.4, 0.15);
   g.add(anchor);
-  net(live, 1.6, 1.0, 1.9, 0.9, 3.0, 0.2);
+  w.signs.push({ m: net(live, 1.6, 1.0, 1.9, 0.9, 3.0, 0.2), phase: 3.3 });
   w.box({ cx: Y.x, cz: Y.z, hx: 3, hz: 2, a: Y.rot });
   const h = toWorld(Y, -0.6, -3.1);
   w.box({ cx: h.x, cz: h.z, hx: 1.7, hz: 0.8, a: Y.rot });

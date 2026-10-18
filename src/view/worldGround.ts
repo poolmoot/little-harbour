@@ -87,7 +87,7 @@ export function buildPier(w: Build): void {
   ropeCoil(s, 1.0, 0.055, bz + 1.4, 1.1);
   barrel(s, -1.35, L.pierEndZ + 1.8, 0.055, 0.9);
   crateBox(s, 1.4, 0.055, L.pierEndZ + 2.2, 0.55, 0.3);
-  net(w.group, 1.4, 0.9, 1.1, 0.35, bz + 0.45, 0.4);
+  w.signs.push({ m: net(w.group, 1.4, 0.9, 1.1, 0.35, bz + 0.45, 0.4), phase: 0.7 });
   // end-of-pier lantern post
   cy(0.07, 0.09, 2.6, M.iron, -1.75, 1.3, L.pierEndZ + 0.3, s, 6);
   lampHead(w, -1.75, 2.7, L.pierEndZ + 0.3, false);
@@ -103,5 +103,5 @@ export function buildQuayDetail(w: Build): void {
   barrel(s, 19.6, 5.6);
   barrel(s, 20.4, 5.2);
   crateBox(s, -15.4, 0, 12.2 + 0.4, 0.7, 0.2);
-  net(w.group, 1.4, 0.8, -2.5, 0.5, 0.9, 0.1);
+  w.signs.push({ m: net(w.group, 1.4, 0.8, -2.5, 0.5, 0.9, 0.1), phase: 2.1 });
 }

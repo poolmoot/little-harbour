@@ -18,7 +18,7 @@ export interface Build {
   readonly stat: THREE.Group;
   readonly M: ReturnType<typeof mats>;
   readonly lamps: Lamp[];
-  readonly signs: { m: THREE.Object3D; phase: number }[];
+  readonly signs: { m: THREE.Object3D; phase: number; /** extra swing (radians) from the player brushing past */ kick?: number }[];
   readonly smokes: Smoke[];
   readonly stallWings: THREE.Group[];
   stallSolid: Rect;
