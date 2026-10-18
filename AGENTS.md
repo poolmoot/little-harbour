@@ -305,7 +305,9 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `hull.ts` — hull shape geometry.
 - `cratesView.ts` — crates on the dock, in hands, on ice.
 - `staffView.ts` — workers and captains.
-- `figures.ts` — people models.
+- `figures.ts` — people models and their walk, idle, carry, fishing and wave animation (one shared rig).
+- `gait.ts` — pure walk maths: foot paths (planted, then swung), two-bone leg solver, hip bob, run blend. `gait.test.ts` also checks that a real figure's boots do not slide.
+- `motion.ts` — pure easing helpers: speed ramps, smooth turning, damped follower (used by the player and the camera). Tested in `motion.test.ts`.
 - `player.ts` — the player, fishing line and target marker.
 - `life.ts` — townspeople, speech bubbles, cat, gulls.
 - `kit.ts` — shared materials, geometry helpers and props.

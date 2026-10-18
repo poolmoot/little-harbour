@@ -118,3 +118,25 @@ golden fish and the King Fish, wet cobbles after rain with splashes. Ready
 but not wired for the town-life work: `fx.gullsTakeOff()`, `fx.catPurr()`,
 `fx.wave()`, `fx.tableChatter(level)`. All unheard so far: levels are
 conservative guesses to be tuned by ear.
+
+## Walk and feel: done
+
+Sections 4 (movement and camera) and 5 (the walk).
+
+- The rig already had elbow and knee joints; what changed is how they are driven. `src/view/gait.ts` builds the walk from the
+  feet backwards: each boot follows a path that stays planted while the body moves over it, then swings forward and lands moving
+  at ground speed. A two-bone solver finds the hip and knee angles, so knees bend on the swing and give on landing, and the
+  hips ride a bob (two per stride; rising over the planted leg when walking, sinking onto it when running). Step length and
+  cadence come from the real speed, so boots do not slide (`gait.test.ts` measures this on the real figure at several speeds
+  and scales).
+- Arms swing opposite the legs a beat late; the forearm trails and folds more on the back swing. Hips twist one way and
+  shoulders the other, the head stays level, and the body leans in more with speed. Idle breathes, shifts weight now and then
+  and glances about. Idle, walk, run, carry, fishing and wave blend with weights, not snaps. Each person gets small random
+  differences in cadence, arm swing and sway. `pose.load` (crates held) makes a carrying gait shorter, lower and heavier.
+- The rig used to stand with its boots about 0.21 below the ground. It is now lifted so boots rest on the ground; carried
+  crates, the portrait framing and the speech-bubble height were adjusted to match. Boat captains now stand on the deck.
+- Player: speeds up in about 0.17 s and stops in about 0.11 s (`ACCEL`/`DECEL` in `player.ts`), turns at most 15 rad/s with a
+  soft arrival, diagonals are no faster, walls stop the player cleanly (speed is what was really achieved) and a footstep
+  sounds on each landed boot (at most 5 per second).
+- Camera: critically damped follow (0.2 s), a small look-ahead in the direction of movement (up to 0.9 m), a softer pitch
+  change on the pier, and a straight cut instead of a swoop when the player is moved more than 3.5 m in a frame.
