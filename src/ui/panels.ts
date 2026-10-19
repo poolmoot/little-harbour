@@ -62,7 +62,7 @@ export interface PanelActions {
   setPolicy(p: HaulPolicy): void;
   store(id: number): void;
   take(id: number): void;
-  /** Build a building, or make it bigger. */
+  /** Build a building, or upgrade it. */
   build(id: BuildingId): void;
   coldIn(crateId: number): void;
   coldOut(crateId: number): void;

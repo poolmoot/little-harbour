@@ -54,7 +54,7 @@ export const HOWTO = {
   aboutTitle: 'The game',
   about: [
     'You run a small fishing harbour. Boats catch fish, and you carry the fish to the market to sell.',
-    'Spend what you earn on better boats and helpers, and make your harbour bigger.',
+    'Spend what you earn to upgrade your boats, hire helpers and grow your harbour.',
   ],
   keysTitle: 'Keys',
   keys: [

@@ -12,7 +12,7 @@ import { BUILDING_LABEL, BUILDING_LEVELS, LABEL, denyText } from './text';
 
 export const buildingIcon = (id: BuildingId, size = 28): string => icon(BUILDING_ICON[id], size);
 
-/** The "Make it bigger" row at the bottom of a built building's window. */
+/** The "Upgrade" row at the bottom of a built building's window. */
 export function upgradeRow(s: GameState, id: BuildingId): string {
   const lvl = s.buildings[id];
   const max = buildingMaxLevel(id);

@@ -133,7 +133,7 @@ export const say = {
   lostLate: 'Too slow! The fish got away.',
   lostFull: 'Your hands were full.',
   bought: (id: UpgradeId) => `You bought: ${UPGRADE[id].name}.`,
-  boatBetter: (name: string) => `${name} is now better.`,
+  boatBetter: (name: string) => `${name} is upgraded.`,
   boatBought: 'You bought a new rowboat!',
   hired: (name: string, role: 'captain' | 'dockhand') => `${name} is now your ${role === 'captain' ? 'captain' : 'worker'}.`,
   fired: (name: string) => `${name} left.`,
@@ -224,7 +224,7 @@ export const GOAL_TEXT: Record<string, string> = {
   sell100: 'Sell 100 crates of fish.',
   rank3: 'Become a Fleet Boss.',
   storm: 'Sail to the Open Sea or the Deep Sea on a stormy day, and get home safely.',
-  level2: 'Make any building bigger.',
+  level2: 'Upgrade any building.',
   seafish: 'Catch every kind of fish in the Open Sea.',
   rank4: 'Become the Harbour Boss.',
   lighthouse: 'Build the lighthouse. Then your boats can sail at night.',
@@ -257,7 +257,7 @@ export const BUILDING_LEVELS: Record<BuildingId, string[]> = {
 export const buildingNeeds = (id: BuildingId): string => needsRank(BUILDINGS[id].rank);
 export const BUILDING_LABEL = {
   build: 'Build',
-  upgrade: 'Make bigger',
+  upgrade: 'Upgrade',
   level: (l: number, max: number): string => (max === 1 ? 'Built' : `Level ${l} of ${max}`),
   empty: 'An empty plot. Walk up and press E.',
   prompt: (id: BuildingId, level: number): string => (level === 0 ? `${BUILDING_NAME[id]}: build here` : `${BUILDING_NAME[id]}: open`),
@@ -429,7 +429,7 @@ export const AWAY = {
 
 export const sayTycoon = {
   goalDone: (reward: number): string => `Goal done! Reward +$${reward}`,
-  built: (id: BuildingId, level: number): string => (level === 1 ? `The ${BUILDING_NAME[id].toLowerCase()} is built!` : `The ${BUILDING_NAME[id].toLowerCase()} is now bigger.`),
+  built: (id: BuildingId, level: number): string => (level === 1 ? `The ${BUILDING_NAME[id].toLowerCase()} is built!` : `The ${BUILDING_NAME[id].toLowerCase()} is upgraded.`),
   smoking: 'A crate is in the smokehouse.',
   smoked: 'A crate of smoked fish is ready.',
   served: (s: Species, price: number): string => `The restaurant bought ${FISH_NAME[s]} for $${price}.`,

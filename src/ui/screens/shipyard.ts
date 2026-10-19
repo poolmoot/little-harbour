@@ -48,7 +48,7 @@ function fleet(s: GameState): string {
   let h = repairs(s) + (s.boats.some((b) => b.damaged) ? section(SHIPYARD_TEXT.yourBoats) : '') + item({
     art: icon('rowboat', 40),
     title: bb.cost === null ? 'You have all four boats' : 'New rowboat',
-    sub: bb.cost === null ? 'Every boat spot is used.' : `It gets boat spot ${s.boats.length + 1}. Make it better after you buy it.`,
+    sub: bb.cost === null ? 'Every boat spot is used.' : `It gets boat spot ${s.boats.length + 1}. Upgrade it after you buy it.`,
     state: bb.cost === null ? 'locked' : undefined,
     right: bb.cost === null
       ? button({ label: LABEL.full, tone: 'ghost', size: 'sm', off: true })

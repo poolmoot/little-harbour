@@ -18,7 +18,7 @@ import { FISH_NAME, LABEL, NAME_LABEL, WEATHER_LABEL, RANK_NAME, TRACK_NAME, TRA
 import { pickTab } from './types';
 import type { Screen, TabDef } from './types';
 
-const TABS: TabDef[] = [{ id: 'upgrades', label: 'Make it better' }, { id: 'grounds', label: 'Where to fish' }, { id: 'captain', label: LABEL.captain }];
+const TABS: TabDef[] = [{ id: 'upgrades', label: 'Upgrade' }, { id: 'grounds', label: 'Where to fish' }, { id: 'captain', label: LABEL.captain }];
 const TRACK_LOOK: Record<Track, { tone: CardTone; icon: IconName }> = {
   hull: { tone: 'orange', icon: 'sloop' },
   hold: { tone: 'gold', icon: 'crate' },
