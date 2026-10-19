@@ -8,6 +8,7 @@ import { buildNature, groundH } from './nature';
 import { BEDS } from './worldParts';
 import type { Build, Lamp, Rect } from './worldParts';
 import { buildGround, buildPier, buildQuayDetail } from './worldGround';
+import { buildPaving } from './worldPaving';
 import { buildMarket, buildVane } from './worldMarket';
 import { buildBoardAndIce, buildInn, buildShipyard } from './worldBuildings';
 import { buildLanterns } from './worldLamps';
@@ -48,6 +49,7 @@ export class World implements Build {
     scene.add(this.group);
     this.group.add(this.stat);
     buildGround(this);
+    buildPaving(this);
     buildPier(this);
     buildMarket(this);
     buildShipyard(this);

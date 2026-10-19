@@ -18,9 +18,7 @@ export function buildGround(w: Build): void {
   const SQ = { x0: -7, x1: 7, z0: 0.3, z1: bandZ1 };
   const sq = tBox(SQ.x1 - SQ.x0, 0.03, SQ.z1 - SQ.z0, flat(0xd8ccb2, 0.95), 2.4, 0, 0.022, (SQ.z0 + SQ.z1) / 2, s);
   sq.castShadow = false;
-  const medal = put(new THREE.CircleGeometry(3.2, 48).rotateX(-Math.PI / 2), flat(0xcdbf9e, 0.95), 0, 0.035, 6.6, s);
-  medal.castShadow = false;
-  put(new THREE.RingGeometry(3.2, 3.5, 48).rotateX(-Math.PI / 2), M.wall, 0, 0.037, 6.6, s).castShadow = false;
+  // the compass rose in the middle of the square is in worldPaving.ts
   // a worn forecourt in front of each building, running into the street
   const yard = (cx: number, bw: number) => {
     const m = tBox(bw, 0.02, 3.4, flat(0xcfc3a8, 0.95), 2.4, cx, 0.03, L.doorLineZ + 1.7, s);
