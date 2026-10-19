@@ -41,10 +41,14 @@ interface Def {
 
 const L = LAYOUT;
 const P = L.plots;
+/** How much further from the wall a camera-facing board hangs on a side row. */
+const SIDE_OUT = 0.85;
 type Pose = { x: number; z: number; rot: number };
 /** One building's marks, worked out from its pose: the sign hangs `signLz` in front of its middle (plus `signLx` across), the door is at `doorLx`. */
 function mk(id: MarkId, icon: MarkIcon, pose: Pose, hz: number, o: { signLx?: number; signLz: number; sy: number; scale: number; mount: Def['mount']; doorLx: number; station: { x: number; z: number }; bubbleY: number; lx?: number; postFrom?: number; plot?: BuildingId; lotDepth?: number }): Def {
-  const sg = toWorld(pose, o.signLx ?? 0, o.signLz), bb = toWorld(pose, o.signLx ?? 0, o.plot ? 1.5 : o.signLz);
+  // Boards always face the camera, so on the two side rows (turned 90 degrees) one hangs further out from the wall to stay clear of it.
+  const lz = o.signLz + (pose.rot !== 0 && o.mount === 'wall' ? SIDE_OUT : 0);
+  const sg = toWorld(pose, o.signLx ?? 0, lz), bb = toWorld(pose, o.signLx ?? 0, o.plot ? 1.5 : lz);
   return { id, icon, sx: sg.x, sy: o.sy, sz: sg.z, scale: o.scale, mount: o.mount, stationX: o.station.x, stationZ: o.station.z, bubbleY: o.bubbleY, pose, doorLx: o.doorLx, frontLz: hz, bx: bb.x, bz: bb.z, lx: o.lx, postFrom: o.postFrom, plot: o.plot, lotDepth: o.lotDepth };
 }
 const DEFS: Def[] = [
@@ -200,23 +204,29 @@ export class BuildingMarks {
         const k = v.forSale ? 0.85 : def.scale;
         const g = new THREE.Group();
         g.position.set(sx, sy, sz);
-        g.rotation.y = def.pose.rot;
+        g.rotation.y = 0;   // boards always face the camera, even on the side rows
         const mesh = signMesh('', BOARD_W * k, BOARD_H * k);
         const mat = toon(new THREE.MeshStandardMaterial({ map: boardTexture(v.icon, v.label), emissiveMap: null, emissive: 0xffb860, roughness: 0.9 }));
         mat.emissiveMap = mat.map;
         mat.emissiveIntensity = 0;
-        (mesh.material as THREE.Material[])[4] = mat;
+        mesh.material = mat;
         // hang the board from its rail by two short chains; the rail's top end sits at the board's top edge + 0.25
         const top = (BOARD_H * k) / 2;
         g.add(mesh);
-        for (const dx of [-1, 1]) bx(0.025, 0.28, 0.025, iron, dx * BOARD_W * k * 0.36, top + 0.14, 0, g);
+        for (const dx of [-1, 1]) bx(0.025, 0.28, 0.025, iron, dx * BOARD_W * k * 0.36, top + 0.14, 0, g).castShadow = false;   // thin chains: no shadow, to save draw calls
         live.add(g);
         const own = new THREE.Group();   // static bracket parts, baked with the rest of the signs' fittings
         own.position.set(sx, sy, sz);
-        own.rotation.y = def.pose.rot;
         stat.add(own);
         bx(BOARD_W * k + 0.2, 0.06, 0.06, iron, 0, top + 0.28, 0, own);
-        if (!v.forSale && def.mount === 'wall') for (const dx of [-1, 1]) bx(0.05, 0.05, 0.5, iron, dx * BOARD_W * k * 0.46, top + 0.28, -0.25, own);
+        if (!v.forSale && def.mount === 'wall') {
+          if (def.pose.rot === 0) for (const dx of [-1, 1]) bx(0.05, 0.05, 0.5, iron, dx * BOARD_W * k * 0.46, top + 0.28, -0.25, own);
+          else {
+            // a side row: one arm from the wall straight out to the board's middle (the wall is `frontLz` from the building's middle)
+            const wall = toWorld(def.pose, 0, def.frontLz), len = Math.abs(sx - wall.x);
+            bx(len, 0.06, 0.06, iron, (wall.x - sx) / 2, top + 0.28, 0, own);
+          }
+        }
         if (!v.forSale && def.mount === 'posts') {
           const from = def.postFrom ?? 0, hi = sy + top + 0.28;
           for (const dx of [-1, 1]) cy(0.04, 0.05, hi - from, wood, dx * (BOARD_W * k * 0.5 + 0.12), (from + hi) / 2 - sy, 0, own, 6);

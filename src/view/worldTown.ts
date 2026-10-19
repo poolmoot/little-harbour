@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
 import { bx, cy, doorAt, flat, gableRoof, put, tBox, windowAt } from './kit';
-import { BENCHES, PLANTERS, rimPoint } from '../sim/layoutBoxes';
+import { BENCHES, PLANTERS } from '../sim/layoutBoxes';
 import type { Build } from './worldParts';
 
 /** The landmark clock tower, the small square with its fountain and well, the hillside behind the town, and the rocky ends of the quay. */
@@ -101,9 +101,9 @@ function house(g: THREE.Object3D, x: number, y: number, z: number, wd: number, d
 }
 
 export function buildHillside(w: Build): void {
-  const M = w.M, s = w.stat, r = seeded(7);
-  const half = LAYOUT.quayMaxX + 3.5, S = LAYOUT.quayMaxZ + 2;
-  const T1 = { z0: S, z1: S + 6.6, y: 0.9 }, T2 = { z0: S + 8.8, z1: S + 15.6, y: 2.3 };
+  const M = w.M, s = w.stat, r = seeded(7), Q = LAYOUT.square;
+  const half = LAYOUT.quayMaxX + 3.5, wallEnd = Q.z1 + 0.7;
+  const T1 = { z0: wallEnd + 3.6, z1: wallEnd + 10.2, y: 0.9 }, T2 = { z0: wallEnd + 12.4, z1: wallEnd + 19.2, y: 2.3 };
   for (const t of [T1, T2]) {
     const d = t.z1 - t.z0;
     tBox(half * 2, t.y + 0.8, 0.5, M.wall, 1.8, 0, (t.y - 0.8) / 2, t.z0, s);
@@ -111,13 +111,13 @@ export function buildHillside(w: Build): void {
     tBox(half * 2 + 0.3, 0.1, 0.7, M.lip, 2, 0, t.y + 0.01, t.z0 - 0.05, s);
     tBox(half * 2, t.y + 0.8, 0.5, M.wall, 1.8, 0, (t.y - 0.8) / 2, t.z1, s);
   }
-  // stairs from the quay up to the first terrace
-  const n = 6, stepD = (T1.z0 - LAYOUT.quayMaxZ - 0.5) / n;
+  // steps from the square, through the gap in the low wall, up to the first terrace
+  const n = 6, stepD = (T1.z0 - wallEnd) / n;
   for (let i = 0; i < n; i++) {
     const top = ((i + 1) * T1.y) / n;
-    tBox(4.6, top + 0.5, stepD, M.lip, 1.6, 0, (top - 0.5) / 2, LAYOUT.quayMaxZ + 0.5 + stepD * (i + 0.5), s);
+    tBox(4.6, top + 0.5, stepD, M.lip, 1.6, 0, (top - 0.5) / 2, wallEnd + stepD * (i + 0.5), s);
   }
-  for (const sx of [-1, 1]) bx(0.3, 1.4, 2.2, M.wall, sx * 2.45, 0.5, LAYOUT.quayMaxZ + 1.3, s);
+  for (const sx of [-1, 1]) bx(0.3, 1.4, T1.z0 - wallEnd, M.wall, sx * 2.45, 0.5, (wallEnd + T1.z0) / 2, s);
   // second stair, off to one side
   for (let i = 0; i < 5; i++) {
     const top = T1.y + ((i + 1) * (T2.y - T1.y)) / 5;
@@ -133,16 +133,12 @@ export function buildHillside(w: Build): void {
     }
   }
   // garden hedges beside the stairs
-  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) put(new THREE.SphereGeometry(0.55 + (i % 2) * 0.15, 8, 6), flat([0x4aa84a, 0x5fb44e][i % 2], 1), sx * (4 + i * 0.9), T1.y + 0.35, S + 0.8, s);
+  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) put(new THREE.SphereGeometry(0.55 + (i % 2) * 0.15, 8, 6), flat([0x4aa84a, 0x5fb44e][i % 2], 1), sx * (4 + i * 0.9), T1.y + 0.35, T1.z0 + 0.8, s);
 }
 
-/** Boulders in a line out into the sea at the ends of the quay, and the rocky point the lighthouse stands on. */
+/** Boulders along the water's edge round the town, and the stone-walled end of the breakwater the lighthouse stands on. */
 export function buildBreakwaters(w: Build): void {
-  const L = LAYOUT, M = w.M, s = w.stat, r = seeded(21);
-  const P = L.point, pw = P.x1 - P.x0, pd = P.z1 - P.z0;
-  tBox(pw, 1.4, pd, M.cobble, 2.4, (P.x0 + P.x1) / 2, -0.7, (P.z0 + P.z1) / 2, s).castShadow = false;
-  tBox(pw + 0.2, 0.16, 0.6, M.lip, 2, (P.x0 + P.x1) / 2, 0, P.z0 + 0.1, s).castShadow = false;
-  // the point's rim rocks only on the sea side
+  const L = LAYOUT, M = w.M, s = w.stat, r = seeded(21), Q = L.square, B = L.breakwater;
   const rockG = new THREE.IcosahedronGeometry(1, 1);
   {
     const p = rockG.attributes.position as THREE.BufferAttribute;
@@ -160,14 +156,24 @@ export function buildBreakwaters(w: Build): void {
     m.rotation.set(r() * 0.5, r() * 6, r() * 0.4);
     m.userData.noInk = true;
   };
-  // a scatter of boulders along the water's edge behind the buildings
-  for (let i = 0; i < 26; i++) {
-    const side = i % 2 ? 1 : -1, deg = side * (16 + ((i >> 1) / 12.5) * 74 + (r() - 0.5) * 4), rr = L.quayMaxX + 0.2 + r() * 1.0;
-    const [rx, rz] = rimPoint(deg, rr);
-    rock(rx, rz, 0.8 + r() * 0.8);
-  }
-  // and round the lighthouse point
-  for (let i = 0; i < 9; i++) rock(P.x0 - 0.4 - r() * 0.6, P.z0 + 0.4 + i * 0.55, 0.9 + r() * 0.5);
-  for (let i = 0; i < 12; i++) rock(P.x0 - 0.2 + (i / 11) * (pw + 1.2), P.z0 - 0.5 - r() * 0.7, 0.9 + r() * 0.6);
-  for (let i = 0; i < 6; i++) rock(P.x1 + 0.5 + r() * 0.6, P.z0 + i * 1.0 + 0.4, 1.0 + r() * 0.5);
+  const run = (x0: number, z0: number, x1: number, z1: number, step: number) => {
+    const len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(len / step));
+    for (let i = 0; i <= n; i++) rock(x0 + ((x1 - x0) * i) / n + (r() - 0.5) * 0.4, z0 + ((z1 - z0) * i) / n + (r() - 0.5) * 0.4, 0.7 + r() * 0.7);
+  };
+  const sea = L.shoreZ - 0.5, yardSea = L.shipyardShoreZ - 0.5, side = L.quayMaxX + 0.5;
+  // behind the sea row, either side of the pier gap
+  run(Q.x0, sea, -3.7, sea, 1.9);
+  run(3.7, sea, B.x0 - 0.3, sea, 1.9);
+  // along the two outer shores, and behind the shipyard and the east grass
+  run(-side, yardSea, -side, Q.z1 + 0.2, 2.2);
+  run(side, sea, side, Q.z1 + 0.2, 2.2);
+  run(-side + 0.5, yardSea, -17.2, yardSea, 1.9);
+  run(-12.8, yardSea, Q.x0, yardSea, 1.9);
+  run(B.x1 + 0.6, sea, side, sea, 1.9);
+  // round the breakwater: both sides and the sea end
+  run(B.x0 - 0.5, B.z0, B.x0 - 0.5, sea, 1.8);
+  run(B.x1 + 0.5, B.z0, B.x1 + 0.5, sea, 1.8);
+  run(B.x0 - 0.2, B.z0 - 0.5, B.x1 + 0.2, B.z0 - 0.5, 1.6);
+  // the sea end of the breakwater has a stone lip too
+  tBox(B.x1 - B.x0, 0.16, 0.6, M.lip, 2, (B.x0 + B.x1) / 2, 0, B.z0 + 0.1, s).castShadow = false;
 }

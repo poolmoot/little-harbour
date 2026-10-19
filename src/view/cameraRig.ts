@@ -19,7 +19,7 @@ export class CameraRig {
   readonly focus = new THREE.Vector3();
   pitchDeg = 55;
   pitchGoal = 55;
-  distance = 20;
+  distance = 23;
   override: { pitch: number; dist: number } | null = null;
   /** True while the title screen is up: the camera circles the harbour instead of following the player. */
   showcase = false;

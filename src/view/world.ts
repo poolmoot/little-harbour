@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
-import { BOXES, ROUNDS, STALL_REACH, WALK_DISC, WALK_RECTS } from '../sim/layoutBoxes';
+import { BOXES, ROUNDS, STALL_REACH, WALK_RECTS } from '../sim/layoutBoxes';
 import type { SkyState } from './scene';
 import { Fireflies, windU } from './fx';
 import { bake, lampMat, mats, windowMat } from './kit';
@@ -23,8 +23,8 @@ export class World implements Build {
   readonly group = new THREE.Group();
   /** Everything the walkers collide with: turned boxes and discs (plain rectangles are turned into boxes). */
   readonly solids: Solid[] = [];
-  /** The ground you can walk on: the quay, the pier and the lighthouse point. */
-  readonly areas: Area[] = [WALK_DISC, ...WALK_RECTS];
+  /** The ground you can walk on: the square, the pier and the breakwater. */
+  readonly areas: Area[] = [...WALK_RECTS];
   private stallObb: Obb | null = null;
   readonly stat = new THREE.Group();
   readonly M = mats();
@@ -65,15 +65,13 @@ export class World implements Build {
       if (b.name === 'market') { o.hx = STALL_REACH[0]; this.stallObb = o; }
     }
     for (const r of ROUNDS) this.solids.push({ cx: r.cx, cz: r.cz, r: r.r });
-    const hill = LAYOUT.quayMaxZ, R = LAYOUT.ring;
+    const south = LAYOUT.square.z1;
     const n = buildNature(this.group, (x, z) => {
-      if (z < R.cz - 1) return false;                                              // north of the middle of the square is the sea
-      if (Math.hypot(x - R.cx, z - R.cz) < R.front + 7) return false;               // the town's ground
-      if (x > LAYOUT.causeway.x0 && x < LAYOUT.point.x1 + 4 && z < LAYOUT.causeway.z1 + 3) return false;   // the causeway and the lighthouse point
-      if (Math.abs(x) < LAYOUT.quayMaxX + 5 && z > hill + 1 && z < hill + 19) return false;   // the hillside terraces and houses
+      if (z < south + 1.2) return false;                                           // the town and the sea
+      if (Math.abs(x) < LAYOUT.quayMaxX + 5 && z < south + 22) return false;      // the hillside terraces and houses
       return true;
     }, BEDS);
-    this.fireflies = new Fireflies(this.group, [...n.fireflies, [-1.85, 0, -4], [1.85, 0, -10.5], [-10, 0, 8.6], [10, 0, 8.6]], 5);
+    this.fireflies = new Fireflies(this.group, [...n.fireflies, [-1.85, 0, -4], [1.85, 0, -10.5], [-14, 0, 17.6], [14, 0, 17.6]], 5);
   }
 
   box(o: Obb): void { this.solids.push(o); }

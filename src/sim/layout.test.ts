@@ -1,22 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { BOAT_RANGE, FOOT, INTERACT_RANGE, ringOf } from './config';
-import { APPROACHES, BOXES, DOORS, L, QUEUE_BOX, RING_BAND, ROUNDS, SQUARE_R, TABLES, WALK_DISC, WALK_RECTS, inside, insideRound, overlap } from './layoutBoxes';
+import { BOAT_RANGE, INTERACT_RANGE } from './config';
+import { APPROACHES, BOXES, DOORS, FRONTAGE, L, LANES, MIDDLE, QUEUE_BOX, ROUNDS, TABLES, WALK_RECTS, inside, insideRound, overlap } from './layoutBoxes';
 import type { Box } from './layoutBoxes';
 import { walkPath } from './staff';
 
 const R = 0.4; // the player's radius
 const STEP = 0.1;
+const S = L.square;
 const SOLID_BOXES: Box[] = [...BOXES, QUEUE_BOX];
-const X0 = L.quayMinX - 12, Z0 = L.pierEndZ - 2, W = Math.round((L.quayMaxX + 14 - X0) / STEP), H = Math.round((L.ring.cz + L.ring.south + 4 - Z0) / STEP);
+const X0 = L.quayMinX - 3, Z0 = L.pierEndZ - 2, W = Math.round((L.quayMaxX + 3 - X0) / STEP), H = Math.round((S.z1 + 4 - Z0) / STEP);
 const cx = (i: number) => X0 + (i + 0.5) * STEP, cz = (j: number) => Z0 + (j + 0.5) * STEP;
 const ix = (x: number) => Math.floor((x - X0) / STEP), iz = (z: number) => Math.floor((z - Z0) / STEP);
 
-/** The quay, pier and point as a fine grid: true where the player's centre can stand. */
+/** The square, pier and breakwater as a fine grid: true where the player's centre can stand. */
 function walkGrid(): Uint8Array {
   const ok = new Uint8Array(W * H);
-  for (let i = ix(WALK_DISC.cx - WALK_DISC.r + R); i <= ix(WALK_DISC.cx + WALK_DISC.r - R); i++) for (let j = iz(WALK_DISC.cz - WALK_DISC.r + R); j <= iz(WALK_DISC.cz + WALK_DISC.r - R); j++) {
-    if (Math.hypot(cx(i) - WALK_DISC.cx, cz(j) - WALK_DISC.cz) <= WALK_DISC.r - R && cz(j) <= WALK_DISC.zMax - R) ok[j * W + i] = 1;
-  }
   for (const [x0, x1, z0, z1] of WALK_RECTS) {
     for (let i = ix(x0 + R); i <= ix(x1 - R); i++) for (let j = iz(z0 + R); j <= iz(z1 - R); j++) ok[j * W + i] = 1;
   }
@@ -35,10 +33,10 @@ function walkGrid(): Uint8Array {
   }
   return ok;
 }
-/** Breadth-first search from a spot; returns the walking distance (in steps) of every cell, -1 where unreachable. */
+/** Breadth-first search from a spot (moves up, down, left, right); returns the walking distance in steps of every cell, -1 where unreachable. */
 function flood(ok: Uint8Array, x: number, z: number): Int32Array {
   const dist = new Int32Array(W * H).fill(-1);
-  let s = iz(z) * W + ix(x);
+  const s = iz(z) * W + ix(x);
   expect(ok[s], `start ${x},${z} is free`).toBe(1);
   const queue = new Int32Array(W * H);
   let head = 0, tail = 0;
@@ -54,80 +52,127 @@ function flood(ok: Uint8Array, x: number, z: number): Int32Array {
   }
   return dist;
 }
-/** Is any solid (grown by `pad`) inside the lane (a turned box)? */
+/** The same search, but a walker may also step diagonally (a diagonal step costs 1.414): the walking distance in units, Infinity where unreachable. */
+function walkDist(ok: Uint8Array, x: number, z: number): Float64Array {
+  const dist = new Float64Array(W * H).fill(Infinity);
+  const heap: number[] = [], key: number[] = [];
+  const push = (c: number, d: number) => {
+    let i = heap.length; heap.push(c); key.push(d);
+    while (i > 0) { const p = (i - 1) >> 1; if (key[p] <= key[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; [key[p], key[i]] = [key[i], key[p]]; i = p; }
+  };
+  const pop = (): [number, number] => {
+    const top: [number, number] = [heap[0], key[0]], c = heap.pop()!, d = key.pop()!;
+    if (heap.length) {
+      heap[0] = c; key[0] = d;
+      for (let i = 0; ;) {
+        let m = i; const l = 2 * i + 1, r = l + 1;
+        if (l < heap.length && key[l] < key[m]) m = l;
+        if (r < heap.length && key[r] < key[m]) m = r;
+        if (m === i) break;
+        [heap[m], heap[i]] = [heap[i], heap[m]]; [key[m], key[i]] = [key[i], key[m]]; i = m;
+      }
+    }
+    return top;
+  };
+  const s = iz(z) * W + ix(x);
+  expect(ok[s], `start ${x},${z} is free`).toBe(1);
+  dist[s] = 0; push(s, 0);
+  while (heap.length) {
+    const [c, d] = pop();
+    if (d > dist[c]) continue;
+    const i = c % W, j = (c - i) / W;
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+      if (!di && !dj) continue;
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+      const n = nj * W + ni;
+      // a diagonal step may not cut a corner of something solid
+      if (!ok[n] || (di && dj && (!ok[j * W + ni] || !ok[nj * W + i]))) continue;
+      const nd = d + (di && dj ? Math.SQRT2 : 1) * STEP;
+      if (nd < dist[n]) { dist[n] = nd; push(n, nd); }
+    }
+  }
+  return dist;
+}
+/** Is any solid (grown by `pad`) inside the lane (a box)? */
 function blockers(l: Box, pad = 0): string[] {
   const out: string[] = [];
   for (const b of SOLID_BOXES) if (overlap(l, b, -pad)) out.push(b.name);
   for (const r of ROUNDS) if (inside(l, r.cx, r.cz, r.r + pad)) out.push(r.name);
   return out;
 }
-const reachNear = (dist: Int32Array, x: number, z: number, range: number) => {
+const near = (dist: ArrayLike<number>, x: number, z: number, range: number, none: number) => {
   let best = Infinity;
   for (let i = ix(x - range); i <= ix(x + range); i++) for (let j = iz(z - range); j <= iz(z + range); j++) {
     if (i < 0 || j < 0 || i >= W || j >= H) continue;
-    if (dist[j * W + i] >= 0 && Math.hypot(cx(i) - x, cz(j) - z) <= range) best = Math.min(best, dist[j * W + i]);
+    const d = dist[j * W + i];
+    if (d !== none && d >= 0 && Math.hypot(cx(i) - x, cz(j) - z) <= range) best = Math.min(best, d);
   }
   return best;
 };
 
-const deg = (x: number, z: number) => ringOf(x, z).deg;
-const ARMS: Record<string, string[]> = { west: ['market', 'coldstore', 'smokehouse', 'shipyard'], east: ['board', 'tower', 'inn', 'restaurant'] };
+const SEA_ROW = ['market', 'icebox', 'board', 'tower'];
+const WEST_ROW = ['shipyard', 'coldstore', 'smokehouse'];
+const EAST_ROW = ['inn', 'restaurant'];
 const named = (n: string) => BOXES.find((b) => b.name === n)!;
-const rotOf = (n: string) => ({ market: L.market, shipyard: L.shipyard, inn: L.inn, tower: L.bellTower, board: L.noticeBoard, coldstore: L.plots.coldstore, smokehouse: L.plots.smokehouse, restaurant: L.plots.restaurant } as Record<string, { x: number; z: number; rot: number }>)[n];
+const poseOf = (n: string) => ({ market: L.market, shipyard: L.shipyard, inn: L.inn, tower: L.bellTower, board: L.noticeBoard, icebox: L.iceBox, coldstore: L.plots.coldstore, smokehouse: L.plots.smokehouse, restaurant: L.plots.restaurant } as Record<string, { x: number; z: number; rot: number }>)[n];
+const corners = (b: Box) => {
+  const c = Math.cos(b.a), s = Math.sin(b.a);
+  return [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz]) => ({ x: b.cx + sx * b.hx * c + sz * b.hz * s, z: b.cz - sx * b.hx * s + sz * b.hz * c }));
+};
 
 describe('town layout', () => {
-  it('stands every building on the one circle, facing its centre, with equal angular steps on each side', () => {
-    for (const arm of Object.values(ARMS)) {
-      const angles = arm.map((n) => ringOf(rotOf(n).x, rotOf(n).z).deg);
-      for (const n of arm) {
-        const p = rotOf(n), { deg: d, r } = ringOf(p.x, p.z);
-        expect(p.rot, `${n} faces the centre`).toBeCloseTo(-(d * Math.PI) / 180, 9);
-        const hz = n === 'tower' ? FOOT.bellTower[1] : n === 'board' ? FOOT.noticeBoard[1] : FOOT[n as keyof typeof FOOT][1];
-        expect(r - hz, `${n} front on the ring`).toBeCloseTo(L.ring.front, 6);
-        expect(Math.abs(d), `${n} keeps its door towards the camera`).toBeLessThanOrEqual(80);
-        expect(named(n).a, `${n} box turned with it`).toBeCloseTo(p.rot, 9);
-      }
-      const steps = angles.slice(1).map((a, i) => Math.abs(a - angles[i]));
-      for (const st of steps) expect(st).toBeCloseTo(steps[0], 6);
-    }
+  it('turns no building except by exactly 90 degrees on the two side rows, and faces every door into the square', () => {
+    for (const n of SEA_ROW) { expect(poseOf(n).rot, n).toBe(0); expect(named(n).a).toBe(0); }
+    for (const n of WEST_ROW) { expect(poseOf(n).rot, n).toBe(Math.PI / 2); expect(named(n).a, n).toBe(Math.PI / 2); }
+    for (const n of EAST_ROW) { expect(poseOf(n).rot, n).toBe(-Math.PI / 2); expect(named(n).a, n).toBe(-Math.PI / 2); }
   });
-  it('orders the work quarter west of the pier and the town quarter east of it', () => {
-    for (const n of ARMS.west) expect(rotOf(n).x).toBeLessThan(0);
-    for (const n of ARMS.east) expect(rotOf(n).x).toBeGreaterThan(0);
-    const w = ARMS.west.map((n) => Math.abs(deg(rotOf(n).x, rotOf(n).z))), e = ARMS.east.map((n) => deg(rotOf(n).x, rotOf(n).z));
-    for (const a of [w, e]) for (let i = 1; i < 4; i++) expect(a[i]).toBeGreaterThan(a[i - 1]);
-    expect(L.bellTower.x).toBe(rotOf('tower').x);
-    expect(L.bellTower.z).toBe(rotOf('tower').z);
+  it('puts the sea row on the water side with its front wall on the square, the pier running out of the gap in the middle', () => {
+    for (const n of SEA_ROW) for (const c of corners(named(n))) expect(c.z, `${n} stays behind the square's top edge`).toBeLessThanOrEqual(S.z0 + 0.01);
+    for (const n of SEA_ROW) expect(Math.max(...corners(named(n)).map((c) => c.z)), `${n} front wall on the edge`).toBeCloseTo(S.z0, 6);
+    const xs = SEA_ROW.map((n) => poseOf(n).x);
+    for (let i = 1; i < xs.length; i++) expect(xs[i]).toBeGreaterThan(xs[i - 1]);
+    expect(L.market.x).toBeLessThan(-L.pierHalfWidth - 1);
+    expect(L.iceBox.x).toBeGreaterThan(L.pierHalfWidth + 1);
+    expect(L.bellTower.x).toBe(poseOf('tower').x);
+    expect(L.bellTower.z).toBe(poseOf('tower').z);
   });
-  it('keeps real room between the buildings and between every pair of solids', () => {
-    for (const arm of Object.values(ARMS)) for (let i = 1; i < 4; i++) {
-      const a = named(arm[i - 1]), b = named(arm[i]);
-      expect(overlap(a, b, 1.9), `${a.name} / ${b.name} need about 2 units between them`).toBe(false);
+  it('stands the side rows outside the square with their front walls on its edges, the shipyard at the water\'s corner', () => {
+    for (const n of WEST_ROW) expect(Math.max(...corners(named(n)).map((c) => c.x)), n).toBeCloseTo(S.x0, 6);
+    for (const n of EAST_ROW) expect(Math.min(...corners(named(n)).map((c) => c.x)), n).toBeCloseTo(S.x1, 6);
+    const zs = WEST_ROW.map((n) => poseOf(n).z);
+    for (let i = 1; i < zs.length; i++) expect(zs[i]).toBeGreaterThan(zs[i - 1]);
+    expect(L.plots.restaurant.z).toBeGreaterThan(L.inn.z);
+    for (const n of [...WEST_ROW, ...EAST_ROW]) for (const c of corners(named(n))) expect(c.z, `${n} stays inside the square's depth`).toBeLessThanOrEqual(S.z1);
+    // the shipyard's sea end is the northernmost thing on the west side, at the shore
+    expect(Math.min(...corners(named('shipyard')).map((c) => c.z))).toBeLessThan(L.shoreZ + 1.5);
+  });
+  it('keeps real room between neighbours in a row and between every pair of solids', () => {
+    for (const row of [SEA_ROW, WEST_ROW, EAST_ROW]) for (let i = 1; i < row.length; i++) {
+      const a = named(row[i - 1]), b = named(row[i]);
+      expect(overlap(a, b, 0.3), `${a.name} / ${b.name} need room between them`).toBe(false);
     }
+    for (const row of [WEST_ROW, EAST_ROW]) for (let i = 1; i < row.length; i++) expect(overlap(named(row[i - 1]), named(row[i]), 1.3), `${row[i - 1]} / ${row[i]} need about 1.5 units`).toBe(false);
     for (let i = 0; i < BOXES.length; i++) for (let j = i + 1; j < BOXES.length; j++) expect(overlap(BOXES[i], BOXES[j], /table/.test(BOXES[i].name + BOXES[j].name) ? 0 : 0.3), `${BOXES[i].name} / ${BOXES[j].name}`).toBe(false);
   });
-  it('is no wider than about 60 units across', () => {
+  it('is no wider than 40 units across, side buildings included (x from -20 to 20)', () => {
     let lo = 1e9, hi = -1e9;
-    for (const b of BOXES.filter((b) => !/table|npc/.test(b.name))) {
-      const c = Math.cos(b.a), s = Math.sin(b.a), ex = b.hx * Math.abs(c) + b.hz * Math.abs(s);
-      lo = Math.min(lo, b.cx - ex); hi = Math.max(hi, b.cx + ex);
-    }
-    expect(hi - lo).toBeLessThan(60);
+    for (const b of BOXES.filter((b) => !/table|npc/.test(b.name))) for (const c of corners(b)) { lo = Math.min(lo, c.x); hi = Math.max(hi, c.x); }
+    expect(lo).toBeGreaterThanOrEqual(-20);
+    expect(hi).toBeLessThanOrEqual(20);
+    expect(hi - lo).toBeLessThanOrEqual(40);
+    for (const [x0, x1] of WALK_RECTS) { expect(x0).toBeGreaterThanOrEqual(-20); expect(x1).toBeLessThanOrEqual(20); }
   });
-  it('keeps every solid in the horseshoe outside the walkable square, or on the rim', () => {
-    for (const b of BOXES.filter((b) => !/table|npc|icebox|queue/.test(b.name))) {
-      const c = Math.cos(b.a), s = Math.sin(b.a);
-      for (const [sx, sz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-        const lx = sx * b.hx, lz = sz * b.hz;
-        const x = b.cx + lx * c + lz * s, z = b.cz - lx * s + lz * c;
-        if (Math.abs(deg(b.cx, b.cz)) > 85) continue;
-        expect(Math.hypot(x - L.ring.cx, z - L.ring.cz), `${b.name} corner`).toBeGreaterThanOrEqual(L.ring.front - 0.05);
-      }
+  it('keeps decoration (lamp posts, trees) out of the square: only the pier, the wall and the gaps between side buildings', () => {
+    for (const r of ROUNDS.filter((r) => /street lamp|tree/.test(r.name))) {
+      const inSquare = r.cx > S.x0 && r.cx < S.x1 && r.cz > S.z0 && r.cz < S.z1;
+      expect(inSquare, r.name).toBe(false);
     }
   });
   it('lets workers walk to every door without crossing anything', () => {
-    for (const [id, dx, dz] of DOORS) {
-      const path = walkPath(L.dockhandHome, { x: dx, z: dz });
+    const homes = [L.dockhandHome, { x: 1.4, z: 0.6 }];
+    for (const home of homes) for (const [id, dx, dz] of DOORS) {
+      const path = walkPath(home, { x: dx, z: dz });
       for (let i = 1; i < path.length; i++) {
         for (let t = 0; t <= 1; t += 0.01) {
           const x = path[i - 1].x + (path[i].x - path[i - 1].x) * t, z = path[i - 1].z + (path[i].z - path[i - 1].z) * t;
@@ -137,12 +182,22 @@ describe('town layout', () => {
       }
     }
   });
-  it('leaves room on the restaurant terrace for three tables, beside the door approach', () => {
+  it('lets workers walk between any two doors without crossing anything', () => {
+    for (const [ida, ax, az] of DOORS) for (const [idb, bx, bz] of DOORS) {
+      const path = walkPath({ x: ax, z: az }, { x: bx, z: bz });
+      for (let i = 1; i < path.length; i++) for (let t = 0; t <= 1; t += 0.02) {
+        const x = path[i - 1].x + (path[i].x - path[i - 1].x) * t, z = path[i - 1].z + (path[i].z - path[i - 1].z) * t;
+        for (const b of SOLID_BOXES) expect(inside(b, x, z, 0.1), `${ida} to ${idb} crosses ${b.name} at ${x.toFixed(1)},${z.toFixed(1)}`).toBe(false);
+        for (const r of ROUNDS) expect(insideRound(r, x, z, 0.1), `${ida} to ${idb} crosses ${r.name}`).toBe(false);
+      }
+    }
+  });
+  it('leaves room on the restaurant terrace for three tables, in the frontage beside the door approach', () => {
     expect(TABLES).toHaveLength(3);
     for (const t of TABLES) {
-      const { r } = ringOf(t.cx, t.cz);
-      expect(r, `${t.name} stays out of the free ring walkway`).toBeGreaterThan(RING_BAND.r1 + 0.4);
-      expect(r, `${t.name} stays on the square`).toBeLessThan(L.ring.front);
+      expect(t.cx, `${t.name} is on the square, not on the lane`).toBeGreaterThan(FRONTAGE.east + 0.4);
+      expect(Math.max(...corners(t).map((c) => c.x)), `${t.name} stays on the square`).toBeLessThan(S.x1);
+      expect(Math.max(...corners(t).map((c) => c.z)), `${t.name} stays on the square`).toBeLessThan(S.z1);
     }
   });
 });
@@ -150,57 +205,76 @@ describe('town layout', () => {
 describe('nothing blocks the way', () => {
   const ok = walkGrid();
   const fromStart = flood(ok, L.playerStart.x, L.playerStart.z);
-  const fromPier = flood(ok, 0, 1.6);
+  const PIER_MOUTH = { x: 0, z: 1.6 };
+  const fromPier = flood(ok, PIER_MOUTH.x, PIER_MOUTH.z);
+  const walk = walkDist(ok, PIER_MOUTH.x, PIER_MOUTH.z);
+  const spots: [string, number, number][] = [...DOORS, ['fishing spot', L.fishingSpot.x, L.fishingSpot.z], ...L.berths.map((b, i) => [`boat spot ${i}`, b.edgeX, b.edgeZ] as [string, number, number])];
+  /** Walking distance to a spot: to the spot itself, or (for a spot on a pier edge or in the water) to the nearest standing place within 1 unit. */
+  const toSpot = (x: number, z: number) => near(walk, x, z, 1, Infinity);
 
   it('reaches every door, interaction point, plot, boat spot and the fishing spot from the start and from the pier head', () => {
     for (const dist of [fromStart, fromPier]) {
       for (const [name, x, z] of DOORS) {
         expect(dist[iz(z) * W + ix(x)], `${name} door point is free and reachable`).toBeGreaterThanOrEqual(0);
-        expect(reachNear(dist, x, z, INTERACT_RANGE), name).toBeLessThan(Infinity);
+        expect(near(dist, x, z, INTERACT_RANGE, -1), name).toBeLessThan(Infinity);
       }
-      for (const [i, b] of L.berths.entries()) expect(reachNear(dist, b.edgeX, b.edgeZ, BOAT_RANGE), `boat spot ${i}`).toBeLessThan(Infinity);
-      expect(reachNear(dist, L.fishingSpot.x, L.fishingSpot.z, 3.2)).toBeLessThan(Infinity);
+      for (const [i, b] of L.berths.entries()) expect(near(dist, b.edgeX, b.edgeZ, BOAT_RANGE, -1), `boat spot ${i}`).toBeLessThan(Infinity);
+      expect(near(dist, L.fishingSpot.x, L.fishingSpot.z, 3.2, -1)).toBeLessThan(Infinity);
       expect(dist[iz(L.fishingSpot.z) * W + ix(L.fishingSpot.x)], 'fishing spot itself').toBeGreaterThanOrEqual(0);
     }
   });
-  it('keeps the ring walkway unbroken, at least 5 wide even after the player\'s width, all round the horseshoe', () => {
-    expect(RING_BAND.r1 - RING_BAND.r0).toBeGreaterThanOrEqual(5);
-    let n = 0;
-    for (let d = -88; d <= 88; d += 0.5) {
-      const a = (d * Math.PI) / 180;
-      for (let r = RING_BAND.r0; r <= RING_BAND.r1; r += 0.25) {
-        const x = L.ring.cx + r * Math.sin(a), z = L.ring.cz - r * Math.cos(a);
-        expect(ok[iz(z) * W + ix(x)], `ring blocked at ${d} degrees, radius ${r}`).toBe(1);
-        n++;
-      }
-      expect(fromStart[iz(L.ring.cz - 18 * Math.cos(a)) * W + ix(18 * Math.sin(a))], `ring unreachable at ${d}`).toBeGreaterThanOrEqual(0);
+  it('is at most 20 units of walking from the pier head to every door and interaction point, and at most 26 to the lighthouse', () => {
+    let far = 0, farName = '';
+    for (const [name, x, z] of spots) {
+      const d = toSpot(x, z);
+      expect(d, `${name} is reachable`).toBeLessThan(Infinity);
+      if (name === 'lighthouse') expect(d, 'lighthouse door').toBeLessThanOrEqual(26);
+      else if (d > far) { far = d; farName = name; }
     }
-    expect(n).toBeGreaterThan(1000);
+    expect(far, `the furthest is ${farName}`).toBeLessThanOrEqual(20);
+    expect(far).toBeGreaterThan(8);
+    // counted in blocks (no diagonal steps) it is still short
+    let blocks = 0;
+    for (const [name, x, z] of spots) if (name !== 'lighthouse') blocks = Math.max(blocks, near(fromPier, x, z, 1, -1) * STEP);
+    expect(blocks).toBeLessThanOrEqual(25);
   });
-  it('keeps a wide, clear approach from the ring to every door, interaction point, the pier head and the fishing spot', () => {
+  it('keeps a clear lane at least 4 wide along the inside of all three rows, even after the player\'s width', () => {
+    expect(LANES).toHaveLength(3);
+    for (const l of LANES) {
+      expect(Math.min(l.hx, l.hz) * 2, `${l.name} width`).toBeGreaterThanOrEqual(4);
+      expect(blockers(l), l.name).toEqual([]);
+      for (let x = l.cx - l.hx + R; x <= l.cx + l.hx - R; x += 0.25) for (let z = l.cz - l.hz + R; z <= l.cz + l.hz - R; z += 0.25) expect(ok[iz(z) * W + ix(x)], `${l.name} blocked at ${x},${z}`).toBe(1);
+    }
+    // the three lanes make one U: each meets the next
+    expect(overlap(LANES[0], LANES[1], 0.05)).toBe(true);
+    expect(overlap(LANES[0], LANES[2], 0.05)).toBe(true);
+  });
+  it('connects every door to a lane with a wide, clear approach, and the pier head to the square with a path at least 3 wide', () => {
     for (const a of APPROACHES) {
-      expect(a.hx * 2, a.name).toBeGreaterThanOrEqual(2.7);
+      expect(a.hx * 2, a.name).toBeGreaterThanOrEqual(3);
       expect(blockers(a), a.name).toEqual([]);
     }
-  });
-  it('keeps the middle of the square open: nothing stands inside a radius of 15, and all of it can be walked', () => {
-    const square: Box = { name: 'square', cx: L.ring.cx, cz: L.ring.cz, hx: 1, hz: 1, a: 0 };
-    for (const b of SOLID_BOXES) expect(Math.hypot(b.cx - square.cx, b.cz - square.cz) - Math.max(b.hx, b.hz) * 1.5, b.name).toBeGreaterThan(SQUARE_R - 1);
-    for (const r of ROUNDS.filter((r) => r.cz < WALK_DISC.zMax)) expect(Math.hypot(r.cx - L.ring.cx, r.cz - L.ring.cz) - r.r, r.name).toBeGreaterThan(SQUARE_R - 1);
-    for (let x = -SQUARE_R + 1; x <= SQUARE_R - 1; x += 0.5) for (let z = L.ring.cz - SQUARE_R + 1; z <= L.ring.cz + L.ring.south - 0.6; z += 0.5) {
-      if (Math.hypot(x - L.ring.cx, z - L.ring.cz) > SQUARE_R - 1) continue;
-      expect(ok[iz(z) * W + ix(x)], `${x},${z}`).toBe(1);
+    const pier = APPROACHES.find((a) => /pier/.test(a.name))!;
+    expect(pier.hx * 2).toBeGreaterThanOrEqual(3);
+    for (const [name, x, z] of DOORS) {
+      const a = APPROACHES.find((l) => l.name === `approach to ${name}`)!;
+      expect(inside(a, x, z, 0.3), `${name} stands in its own approach`).toBe(true);
+      expect(LANES.some((l) => overlap(a, l, 0.05)) || name === 'lighthouse', `${name} approach reaches a lane`).toBe(true);
     }
+    expect(LANES.some((l) => overlap(pier, l, 0.05))).toBe(true);
+    // the lighthouse's way leads back to the square
+    const lh = APPROACHES.find((l) => l.name === 'approach to lighthouse')!;
+    expect(lh.cz + lh.hz).toBeGreaterThanOrEqual(S.z0 - 0.01);
+  });
+  it('keeps the middle of the square clear: no solid inside the lanes and the open middle, and all of it can be walked', () => {
+    const inner: Box = { name: 'inner square', cx: 0, cz: (FRONTAGE.sea + S.z1) / 2, hx: FRONTAGE.east, hz: (S.z1 - FRONTAGE.sea) / 2, a: 0 };
+    expect(blockers(inner), 'inner square').toEqual([]);
+    expect(blockers(MIDDLE), 'middle').toEqual([]);
+    for (let x = inner.cx - inner.hx + R; x <= inner.cx + inner.hx - R; x += 0.25) for (let z = inner.cz - inner.hz + R; z <= inner.cz + inner.hz - R; z += 0.25) expect(ok[iz(z) * W + ix(x)], `${x},${z}`).toBe(1);
   });
   it('keeps the queue, the terrace tables and the pier crowd beside the lanes, not across them', () => {
-    const hits = (b: Box) => APPROACHES.filter((l) => overlap(l, b)).map((l) => l.name);
+    const hits = (b: Box) => [...APPROACHES, ...LANES].filter((l) => overlap(l, b)).map((l) => l.name);
     expect(hits(QUEUE_BOX), 'queue').toEqual([]);
     for (const t of TABLES) expect(hits(t), t.name).toEqual([]);
-  });
-  it('is no more than about 70 grid steps (block distance, about 50 as the crow walks) from the pier head to the furthest door', () => {
-    let far = 0;
-    for (const [, x, z] of DOORS) far = Math.max(far, fromPier[iz(z) * W + ix(x)] * STEP);
-    expect(far).toBeLessThan(70);
-    expect(far).toBeGreaterThan(15);
   });
 });

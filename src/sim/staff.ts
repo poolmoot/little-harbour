@@ -1,5 +1,5 @@
 import {
-  CAPTAIN_NAMES, CAPTAIN_WAGE, CANDIDATE_COUNT, DOCKHAND_NAMES, DOCKHAND_SPEED, DOCKHAND_WAGE, ICE_CAPACITY, LAYOUT, ringOf,
+  CAPTAIN_NAMES, CAPTAIN_WAGE, CANDIDATE_COUNT, DOCKHAND_NAMES, DOCKHAND_SPEED, DOCKHAND_WAGE, ICE_CAPACITY, LAYOUT,
   MAX_DOCKHANDS, THRIFTY_MULT, TRAITS,
 } from './config';
 import type { ZoneId } from './config';
@@ -152,21 +152,43 @@ function mkJob(phase: Job['phase'], path: Pt[], crateIds: number[], dest: Job['d
 const BUILDING_DEST: Partial<Record<Job['dest'], keyof typeof LAYOUT.plots>> = { cold: 'coldstore', restaurant: 'restaurant', smoke: 'smokehouse' };
 const doorOf = (id: keyof typeof LAYOUT.plots): Pt => ({ x: LAYOUT.plots[id].doorX, z: LAYOUT.plots[id].doorZ });
 
+/** The walking lane as a U round the open middle of the square: down the west side, along the sea side, down the east side (centre lines). */
+const SQ = LAYOUT.square;
+const LANE_W = SQ.x0 + SQ.front + SQ.lane / 2, LANE_E = SQ.x1 - SQ.front - SQ.lane / 2, LANE_S = SQ.z0 + SQ.front + SQ.lane / 2, LANE_END = SQ.z1 - 1.5;
+const U: Pt[] = [{ x: LANE_W, z: LANE_END }, { x: LANE_W, z: LANE_S }, { x: LANE_E, z: LANE_S }, { x: LANE_E, z: LANE_END }];
+const clampTo = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+/** The nearest spot on the lane's centre line, and how far along the U it is (in distance from its west end). */
+function joinLane(p: Pt): { pt: Pt; s: number } {
+  let best = { pt: U[0], s: 0 }, bd = Infinity, s0 = 0;
+  for (let i = 1; i < U.length; i++) {
+    const a = U[i - 1], b = U[i], len = Math.hypot(b.x - a.x, b.z - a.z);
+    const t = clampTo(((p.x - a.x) * (b.x - a.x) + (p.z - a.z) * (b.z - a.z)) / (len * len), 0, 1);
+    const q = { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t }, d = Math.hypot(p.x - q.x, p.z - q.z);
+    if (d < bd) { bd = d; best = { pt: q, s: s0 + t * len }; }
+    s0 += len;
+  }
+  return best;
+}
+/** Waypoints from a spot to where it joins the lane (the lighthouse's breakwater leaves the square's top-right corner and joins at the east end of the sea lane). */
+function toLane(p: Pt): { via: Pt[]; join: { pt: Pt; s: number } } {
+  if (p.x > SQ.x1 && p.z < SQ.z0) return { via: [{ x: p.x, z: SQ.z0 - 0.4 }, { x: SQ.x1 - 0.6, z: SQ.z0 + 0.5 }], join: joinLane({ x: LANE_E, z: LANE_S }) };
+  return { via: [], join: joinLane(p) };
+}
+
 /**
- * A walk between two places in the harbour: out of the pier lane, in along the spoke to the free ring walkway, round the ring to the
- * angle of the goal, then out along the spoke to the spot. Everything on the ring walkway is kept clear by the layout tests.
+ * A walk between two places in the harbour: out of the pier lane, across to the walking lane, along it (down one side, along the sea side
+ * and down the other as far as needed), then across to the spot. The lanes and the frontage are kept clear by the layout tests.
  */
 export function walkPath(from: Pt, to: Pt): Pt[] {
   const raw: Pt[] = [from];
-  if (from.z < 1.5) raw.push(laneEntry(from.x));
-  const last = raw[raw.length - 1];
-  const R = LAYOUT.ring, a0 = ringOf(last.x, last.z).deg, a1 = to.x > LAYOUT.point.x0 ? (LAYOUT.gate.from + LAYOUT.gate.to) / 2 : ringOf(to.x, to.z).deg;
-  const onRing = (deg: number): Pt => ({ x: R.cx + R.pathR * Math.sin((deg * Math.PI) / 180), z: R.cz - R.pathR * Math.cos((deg * Math.PI) / 180) });
-  const steps = Math.ceil(Math.abs(a1 - a0) / 10);
-  for (let i = 0; i <= steps; i++) raw.push(onRing(a0 + ((a1 - a0) * i) / steps));
-  // the lighthouse: out through the gap in the low wall and along the causeway to the point
-  if (to.x > LAYOUT.point.x0) { const cz = (LAYOUT.causeway.z0 + LAYOUT.causeway.z1) / 2; raw.push({ x: R.front + 1, z: cz }, { x: to.x, z: cz }); }
-  raw.push(to);
+  if (from.z < 1.5 && Math.abs(from.x) < 3) raw.push(laneEntry(from.x));
+  const a = toLane(raw[raw.length - 1]), b = toLane(to);
+  raw.push(...a.via, a.join.pt);
+  let s0 = 0;
+  const corners: { s: number; pt: Pt }[] = [];
+  for (let i = 1; i < U.length; i++) { s0 += Math.hypot(U[i].x - U[i - 1].x, U[i].z - U[i - 1].z); if (i < U.length - 1) corners.push({ s: s0, pt: U[i] }); }
+  const mids = corners.filter((c) => c.s > Math.min(a.join.s, b.join.s) + 0.01 && c.s < Math.max(a.join.s, b.join.s) - 0.01);
+  raw.push(...(a.join.s <= b.join.s ? mids : mids.reverse()).map((c) => c.pt), b.join.pt, ...b.via.slice().reverse(), to);
   return raw.filter((p, i) => i === 0 || Math.hypot(p.x - raw[i - 1].x, p.z - raw[i - 1].z) > 0.01);
 }
 

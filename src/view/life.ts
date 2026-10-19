@@ -55,7 +55,7 @@ const WALKERS: { look: FigureLook; pace: number }[] = [
 const HAUNTS: [number, number][] = [
   ...[LAYOUT.market, LAYOUT.noticeBoard, LAYOUT.inn, LAYOUT.shipyard, LAYOUT.plots.coldstore, LAYOUT.plots.smokehouse, LAYOUT.plots.restaurant, LAYOUT.bellTower]
     .map((o) => { const p = toWorld(o, 0, 5.5); return [p.x, p.z] as [number, number]; }),
-  [0, 4], [0, 2], [0, -3], [-1, -10], [1, -6], [-5, 8], [5, 8], [0, 24], [-8, 20], [8, 20], [0, 14],
+  [0, 4], [0, 2], [0, -3], [-1, -10], [1, -6], [-5, 8], [5, 8], [0, 12], [-7, 12], [7, 12], [0, 14],
 ];
 const WALKER_RADIUS = 0.32;
 
@@ -96,6 +96,8 @@ class Walker {
       this.figure.pose.carry = 1;
       this.figure.pose.load = 1;
     }
+    // background people leave out the shadow pass: it would double their draw calls (the harbour's named people and the player keep theirs)
+    this.figure.group.traverse((o) => { (o as THREE.Mesh).castShadow = false; });
     this.root.visible = false;
     this.root.scale.setScalar(0.001);
     scene.add(this.root);
@@ -117,8 +119,8 @@ class Walker {
     for (let i = 0; i < 16; i++) {
       const haunt = HAUNTS[Math.floor(Math.random() * HAUNTS.length)];
       const anywhere = Math.random() < 0.35;
-      const x = anywhere ? LAYOUT.ring.cx + (Math.random() - 0.5) * 2 * 22 : haunt[0] + (Math.random() - 0.5) * 2.4;
-      const z = anywhere ? LAYOUT.ring.cz + (Math.random() - 0.5) * 2 * 22 : haunt[1] + (Math.random() - 0.5) * 2;
+      const x = anywhere ? LAYOUT.square.cx + (Math.random() - 0.5) * 2 * 12 : haunt[0] + (Math.random() - 0.5) * 2.4;
+      const z = anywhere ? LAYOUT.square.cz + (Math.random() - 0.5) * 2 * 7 : haunt[1] + (Math.random() - 0.5) * 2;
       if (this.world.walkable(x, z, WALKER_RADIUS + 0.1) && Math.hypot(x - this.x, z - this.z) > 3) {
         this.tx = x;
         this.tz = z;
@@ -518,6 +520,7 @@ export class Life {
     for (const d of defs) {
       const figure = new Figure(d.fig);
       figure.group.position.set(d.x, 0, d.z);
+      figure.group.traverse((o) => { (o as THREE.Mesh).castShadow = false; });   // the shadow pass would double the draw calls of every figure
       scene.add(figure.group);
       const el = document.createElement('div');
       el.className = 'bubble';

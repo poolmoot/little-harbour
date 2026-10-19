@@ -97,7 +97,7 @@ describe('worker routing', () => {
     expect(s.dockhands[0].job!.dest).toBe('ice');
   });
   it('walk paths stay on the quay and have a length', () => {
-    const p = walkPath({ x: 1.2, z: 1.6 }, { x: 18.5, z: 5.9 });
+    const p = walkPath({ x: 1.2, z: 1.6 }, { x: LAYOUT.plots.lighthouse.doorX, z: LAYOUT.plots.lighthouse.doorZ });
     for (const pt of p) expect(pt.x).toBeGreaterThanOrEqual(LAYOUT.quayMinX);
     for (const pt of p) expect(pt.z).toBeLessThanOrEqual(LAYOUT.quayMaxZ);
     expect(p.length).toBeGreaterThanOrEqual(3);

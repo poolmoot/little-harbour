@@ -4,14 +4,14 @@ import { blob } from './textures';
 import type { SkyState } from './scene';
 import { LAYOUT } from '../sim/config';
 
-/** Half-width of the quay as a GLSL number, so the shoreline foam follows the real quay edge. */
-const QUAY_SIDE = LAYOUT.quayMaxX.toFixed(1);
-/** The round town: the centre of the square and the radius of the ground behind the buildings, and the water's notch at the top. */
-const TOWN_C = `${LAYOUT.ring.cx.toFixed(2)}, ${LAYOUT.ring.cz.toFixed(2)}`;
-const SOUTH_Z = LAYOUT.ring.cz.toFixed(1);
-/** The lighthouse point, as a box for the shoreline foam. */
-const POINT_C = `${((LAYOUT.point.x0 + LAYOUT.point.x1) / 2).toFixed(2)}, ${((LAYOUT.point.z0 + LAYOUT.point.z1) / 2).toFixed(2)}`;
-const POINT_H = `${((LAYOUT.point.x1 - LAYOUT.point.x0) / 2).toFixed(2)}, ${((LAYOUT.point.z1 - LAYOUT.point.z0) / 2).toFixed(2)}`;
+/** The town's ground as boxes for the shoreline foam: the main block (x, z centre and half sizes), the extra bit behind the shipyard, the breakwater, and where the land on the camera side starts. */
+const box = (x0: number, x1: number, z0: number, z1: number) => ({ c: `${((x0 + x1) / 2).toFixed(2)}, ${((z0 + z1) / 2).toFixed(2)}`, h: `${((x1 - x0) / 2).toFixed(2)}, ${((z1 - z0) / 2).toFixed(2)}` });
+const TOWN = box(-LAYOUT.quayMaxX, LAYOUT.quayMaxX, LAYOUT.shoreZ, LAYOUT.square.z1 + 0.2);
+const YARD = box(-LAYOUT.quayMaxX, LAYOUT.square.x0, LAYOUT.shipyardShoreZ, LAYOUT.shoreZ + 0.1);
+const POINT = box(LAYOUT.breakwater.x0 + 1, LAYOUT.breakwater.x1, LAYOUT.breakwater.z0, LAYOUT.shoreZ + 0.1);
+const LINK = box(LAYOUT.square.x1, LAYOUT.breakwater.x1, LAYOUT.breakwater.z0, LAYOUT.breakwater.z1);
+const PIER_GAP = LAYOUT.pierHalfWidth + 1;
+const SOUTH_Z = (LAYOUT.square.z1 + 0.2).toFixed(1);
 
 /** Lantern positions along the pier (x, z); each casts a light pool on the water. */
 const LAMPS: [number, number][] = [[-1.85, -4], [1.85, -10.5], [-1.85, -16], [1.85, -4], [-1.85, -10.5], [1.85, -16]];
@@ -70,9 +70,11 @@ float noise(vec2 p) {
 float sdBox(vec2 p, vec2 c, vec2 hb) { vec2 q = abs(p - c) - hb; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0); }
 // Distance to the solid land: quay and side shores.
 float landDist(vec2 p) {
-  float d = length(p - vec2(${TOWN_C})) - ${QUAY_SIDE};                        // the round town
-  d = max(d, -sdBox(p, vec2(0.0, -20.5), vec2(3.4, 20.0)));                       // the water's notch at the top of the square
-  d = min(d, sdBox(p, vec2(${POINT_C}), vec2(${POINT_H})));
+  float d = sdBox(p, vec2(${TOWN.c}), vec2(${TOWN.h}));                           // the square and the ground beside it
+  d = max(d, -sdBox(p, vec2(0.0, -20.0), vec2(${PIER_GAP.toFixed(1)}, 20.0)));      // the water's notch where the pier leaves the square
+  d = min(d, sdBox(p, vec2(${YARD.c}), vec2(${YARD.h})));                         // the shipyard's corner
+  d = min(d, sdBox(p, vec2(${LINK.c}), vec2(${LINK.h})));                         // the link and breakwater to the lighthouse
+  d = min(d, sdBox(p, vec2(${POINT.c}), vec2(${POINT.h})));
   return min(d, sdBox(p, vec2(0.0, ${SOUTH_Z} + 43.0), vec2(100.0, 43.0)));       // the land on the camera side and the meadows to each side
 }
 // Distance to the nearest post along the pier edges (the pier stands on posts; water runs under it).

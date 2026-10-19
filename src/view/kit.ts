@@ -34,12 +34,25 @@ export function toon<T extends THREE.MeshStandardMaterial>(m: T): T {
 }
 
 const cache = new Map<string, THREE.MeshStandardMaterial>();
+/** Plain coloured materials made by flat(): bake() merges all of these into one vertex-coloured material per roughness, so they cost one draw call between them. */
+const flatMats = new WeakSet<THREE.Material>();
+const vertexFlat = new Map<number, THREE.MeshStandardMaterial>();
 export function flat(color: number, rough = 0.9): THREE.MeshStandardMaterial {
   const k = `f${color}-${rough}`;
   let m = cache.get(k);
-  if (!m) { m = toon(new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0 })); cache.set(k, m); }
+  if (!m) { m = toon(new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0 })); cache.set(k, m); flatMats.add(m); }
   return m;
 }
+function vertexFlatFor(rough: number): THREE.MeshStandardMaterial {
+  let m = vertexFlat.get(rough);
+  if (!m) { m = toon(new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: rough, metalness: 0 })); vertexFlat.set(rough, m); }
+  return m;
+}
+/** Can this material be replaced by the shared vertex-coloured one (a plain, opaque, front-faced flat() colour that nobody has changed)? */
+const isPlainFlat = (m: THREE.Material): m is THREE.MeshStandardMaterial => {
+  const f = m as THREE.MeshStandardMaterial;
+  return flatMats.has(m) && f.side === THREE.FrontSide && !f.transparent && f.opacity === 1 && !f.map && f.emissive.getHex() === 0;
+};
 export function tex(key: string, map: THREE.Texture, rough = 0.92, color = 0xffffff): THREE.MeshStandardMaterial {
   let m = cache.get(key);
   if (!m) { m = toon(new THREE.MeshStandardMaterial({ map, roughness: rough, color })); cache.set(key, m); }
@@ -116,9 +129,17 @@ export function bake(root: THREE.Object3D): void {
     for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name);
     if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
     g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, mesh.matrixWorld));
-    const key = `${mesh.material.uuid}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}`;
+    let material = mesh.material;
+    if (isPlainFlat(material)) {
+      // every flat colour in this group shares one vertex-coloured material (one draw call instead of one per colour)
+      const n = g.attributes.position.count, col = new Float32Array(n * 3), c = material.color;
+      for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      material = vertexFlatFor(material.roughness);
+    }
+    const key = `${material.uuid}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}`;
     let b = buckets.get(key);
-    if (!b) { b = { m: mesh.material, cast: mesh.castShadow, recv: mesh.receiveShadow, gs: [] }; buckets.set(key, b); }
+    if (!b) { b = { m: material, cast: mesh.castShadow, recv: mesh.receiveShadow, gs: [] }; buckets.set(key, b); }
     b.gs.push(g);
     dead.push(mesh);
     const shell = mesh.castShadow && !mesh.userData.noInk ? inkGeometry(g, thinnestSide(mesh)) : null;
@@ -213,9 +234,10 @@ export function net(parent: THREE.Object3D, w: number, h: number, x: number, y: 
   return m;
 }
 
+/** A signboard: a thin box with the sign painted on it (one material, so one draw call; the edges are too thin to matter). It casts no shadow. */
 export function signMesh(text: string, w: number, h: number, bg?: string, fg?: string): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), [flat(0x3a2a1c), flat(0x3a2a1c), flat(0x3a2a1c), flat(0x3a2a1c), toon(new THREE.MeshStandardMaterial({ map: TX.sign(text, w, h, bg, fg), roughness: 0.9 })), flat(0x3a2a1c)]);
-  m.castShadow = true;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.07), toon(new THREE.MeshStandardMaterial({ map: TX.sign(text, w, h, bg, fg), roughness: 0.9 })));
+  m.castShadow = false;
   m.userData.keep = true;
   addInk(m);
   return m;

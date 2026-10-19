@@ -4,12 +4,13 @@ import { flat, put } from './kit';
 import type { Build } from './worldParts';
 
 /**
- * Ground dressing for the round square: a compass rose set into the middle of it. Flat and walkable, so none of it belongs in the layout data.
+ * Ground dressing for the square: a compass rose set into the middle of it. Flat and walkable, so none of it belongs in the layout data.
  * (The kerbs, worn stones and flower verge of the long street were dropped with it; the graphics chat re-dresses the round square.)
  */
 
-const SQUARE_CENTRE = { x: LAYOUT.ring.cx, z: LAYOUT.ring.cz };
-const ROSE_R = 5.5;
+/** The open middle of the square: the lanes' inner edges and the sea lane's edge frame it. */
+const SQUARE_CENTRE = { x: LAYOUT.square.cx, z: LAYOUT.square.z0 + LAYOUT.square.front + (LAYOUT.square.z1 - LAYOUT.square.z0 - LAYOUT.square.front) / 2 };
+const ROSE_R = 4.6;
 /** A star-shaped compass rose inlaid in the square: four long points, four short ones, a gold boss in the middle. */
 function compassRose(w: Build): void {
   const s = w.stat, { x, z } = SQUARE_CENTRE;

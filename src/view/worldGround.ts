@@ -6,117 +6,45 @@ import { lampHead } from './worldLamps';
 import type { Build } from './worldParts';
 import { BEDS } from './worldParts';
 
-const DEG = Math.PI / 180;
-/** The half-angle of the water that comes up to the square at the top, between the first building on each side. */
-export const NOTCH_DEG = 6;
-
 /**
- * A slab shaped like a ring sector (or a whole disc when the angles run all the way round) round the square's centre: from radius r0 to r1,
- * between two angles measured from straight up (east positive), with its top at `topY` and `depth` below it. Texture tiles `tile` units wide.
- * `mats` is [top, side].
+ * The ground: the paved square with the sea row's strip behind it, the grass behind the two side rows, the paved link and breakwater out to the
+ * lighthouse, the low wall on the camera side (with a gap for the steps up to the hillside) and the planted beds outside it. Every slab is a flat
+ * box (they merge into a handful of draw calls); the heights of the land behind the town are shaped in nature.ts.
  */
-export function sectorSlab(r0: number, r1: number, a0: number, a1: number, depth: number, topY: number, tile: number, mats: THREE.Material[]): THREE.Mesh {
-  const shape = new THREE.Shape();
-  const full = a1 - a0 >= 359.9, n = Math.max(2, Math.ceil(Math.abs(a1 - a0) / 3));
-  const pt = (deg: number, r: number): [number, number] => [r * Math.sin(deg * DEG), r * Math.cos(deg * DEG)];   // shape y is minus world z; the centre is added below
-  if (full) {
-    shape.absarc(0, 0, r1, 0, Math.PI * 2, false);
-    if (r0 > 0) { const hole = new THREE.Path(); hole.absarc(0, 0, r0, 0, Math.PI * 2, true); shape.holes.push(hole); }
-  } else {
-    // shape y = -world z, so "up the page" (towards the sea, -z) is +y: a point at angle a is (r sin a, r cos a) in shape space
-    if (r0 > 0) {
-      const [sx, sy] = pt(a0, r0);
-      shape.moveTo(sx, sy);
-      for (let i = 1; i <= n; i++) { const [x, y] = pt(a0 + ((a1 - a0) * i) / n, r0); shape.lineTo(x, y); }
-    } else { const [sx, sy] = pt(a1, r1); shape.moveTo(sx, sy); }
-    for (let i = n; i >= 0; i--) { const [x, y] = pt(a0 + ((a1 - a0) * i) / n, r1); shape.lineTo(x, y); }
-    shape.closePath();
-  }
-  return extrude(shape, depth, topY, tile, mats);
-}
-
-/** Extrude a shape drawn round the square's centre (x east, y = minus world z) into a slab. */
-function extrude(shape: THREE.Shape, depth: number, topY: number, tile: number, mats: THREE.Material[]): THREE.Mesh {
-  const L = LAYOUT.ring;
-  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 72 });
-  g.rotateX(-Math.PI / 2);                       // shape (x, y, depth) -> world (x, depth, -y)
-  g.translate(L.cx, topY - depth, L.cz);          // the centre of the square sits at world z = L.cz
-  const uv = g.attributes.uv as THREE.BufferAttribute;
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / tile, uv.getY(i) / tile);
-  const m = new THREE.Mesh(g, mats);
-  m.receiveShadow = true;
-  return m;
-}
-
-/**
- * The ground behind the buildings on one side (sg = -1 west, 1 east): from the rim of the square to the water's edge at radius `rOut`,
- * and from the east or west end round to the pier. Its edge towards the pier is a slanting line, so the water beside the pier stays open for the boats.
- */
-export function backGround(sg: number, rOut: number, depth: number, topY: number, tile: number, mats: THREE.Material[]): THREE.Mesh {
-  const L = LAYOUT.ring, rIn = L.front - 0.05, pts: [number, number][] = [];
-  const at = (deg: number, r: number): [number, number] => [sg * r * Math.sin(deg * DEG), r * Math.cos(deg * DEG)];
-  for (let d = 90; d >= NOTCH_DEG; d -= 3) pts.push(at(d, rIn));
-  pts.push(at(NOTCH_DEG, rIn));
-  // the slanting edge: from the rim beside the pier out to the first corner and then the outer arc
-  const c1 = [sg * 3.0, -(-3.2 - L.cz)] as [number, number];
-  const outDeg = 12.7;
-  pts.push(c1, at(outDeg, rOut));
-  for (let d = outDeg; d <= 90; d += 3) pts.push(at(d, rOut));
-  pts.push(at(90, rOut));
-  const shape = new THREE.Shape();
-  pts.forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y)));
-  shape.closePath();
-  return extrude(shape, depth, topY, tile, mats);
-}
-
 export function buildGround(w: Build): void {
-  const L = LAYOUT, M = w.M, s = w.stat, Rf = L.ring.front, Rb = L.quayMaxX;
-  const slab = (r0: number, r1: number, a0: number, a1: number, depth: number, topY: number, tile: number, top: THREE.Material, side: THREE.Material, shadow = false) => {
-    const m = sectorSlab(r0, r1, a0, a1, depth, topY, tile, [top, side]);
-    m.castShadow = shadow;
-    s.add(m);
-    return m;
+  const L = LAYOUT, S = L.square, M = w.M, s = w.stat;
+  const slab = (x0: number, x1: number, z0: number, z1: number, mat: THREE.Material, tile: number) => {
+    tBox(x1 - x0, 1.4, z1 - z0, mat, tile, (x0 + x1) / 2, -0.7, (z0 + z1) / 2, s).castShadow = false;
   };
-  // the round square: paved to the edge of the water, with a stone lip round its rim
-  const C = L.ring.south, ca = 180 - Math.acos(C / Rf) / DEG;    // the angle where the straight front wall meets the circle
-  slab(0, Rf, -ca, ca, 1.4, 0, 2.4, M.cobble, M.wall);
-  slab(Rf - 0.6, Rf, -ca, ca, 0.2, 0.012, 2, M.lip, M.lip);
-  const wz = L.ring.cz + C;
-  tBox(2 * Rf * Math.sin(ca * DEG), 0.2, 0.6, M.lip, 2, 0, 0.012, wz - 0.3, s).castShadow = false;
-  // the ground behind the buildings, on each side, from the water's notch round to the east and west ends
-  for (const sg of [-1, 1]) {
-    const m = backGround(sg, Rb, 1.4, 0, 3, [M.grass, M.wall]);
-    m.castShadow = false;
-    s.add(m);
-  }
+  const zEnd = S.z1 + 0.2, pier = L.pierHalfWidth + 1, B = L.breakwater;
+  // the square, and the sea row's strip behind it on each side of the pier gap
+  slab(S.x0, S.x1, S.z0, zEnd, M.cobble, 2.4);
+  slab(S.x0, -pier, L.shoreZ, S.z0, M.cobble, 2.4);
+  slab(pier, S.x1, L.shoreZ, S.z0, M.cobble, 2.4);
+  // a stone lip along the water's edge behind the sea row
+  for (const [x0, x1] of [[S.x0, -pier], [pier, S.x1]]) tBox(x1 - x0, 0.16, 0.45, M.lip, 2, (x0 + x1) / 2, 0.0, L.shoreZ + 0.225, s).castShadow = false;
+  // grass behind the two side rows (the shipyard reaches a little further out to the water)
+  slab(L.quayMinX, S.x0, L.shipyardShoreZ, zEnd, M.grass, 3);
+  slab(S.x1, L.quayMaxX, B.z1, zEnd, M.grass, 3);
+  slab(B.x1, L.quayMaxX, L.shoreZ, B.z1, M.grass, 3);
+  // the paved link from the square's top-right corner and the breakwater out to the lighthouse
+  slab(S.x1, B.x1, B.z0, B.z1, M.cobble, 2.4);
+  tBox(0.3, 0.16, B.z1 - B.z0, M.lip, 2, B.x1 - 0.15, 0.0, (B.z0 + B.z1) / 2, s).castShadow = false;
+  tBox(B.x1 - S.x1, 0.16, 0.3, M.lip, 2, (S.x1 + B.x1) / 2, 0.0, B.z0 + 0.15, s).castShadow = false;
   // planted beds outside the low wall on the camera side: a stone surround and a lawn, with a tree trunk (solid, from the layout data)
   for (const [x0, x1, z0, z1] of BEDS) {
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     tBox(x1 - x0 + 0.5, 0.05, z1 - z0 + 0.5, M.lip, 2, cx, 0.02, cz, s).castShadow = false;
     tBox(x1 - x0, 0.05, z1 - z0, M.grass, 3, cx, 0.045, cz, s).castShadow = false;
   }
-  // the low wall on the camera side of the square, with a stair-gap in the middle and a gate at the east end
-  const g = L.gate, stair = 3;
-  const wall = (a0: number, a1: number) => {
-    slab(Rf + 0.05, Rf + 0.55, a0, a1, 0.7, 0.45, 1.6, M.wall, M.wall, true);
-    slab(Rf, Rf + 0.65, a0, a1, 0.12, 0.55, 2, M.lip, M.lip);
-  };
-  wall(90, g.from);
-  wall(g.to, ca);
-  wall(-ca, -90);
-  // and the straight front: a long low wall with a gap for the steps up to the hillside in the middle
-  for (const [x0, x1] of [[-Rf * Math.sin(ca * DEG), -stair], [stair, Rf * Math.sin(ca * DEG)]]) {
-    tBox(x1 - x0, 0.7, 0.5, M.wall, 1.6, (x0 + x1) / 2, 0.1, wz + 0.25, s);
-    tBox(x1 - x0 + 0.1, 0.12, 0.65, M.lip, 2, (x0 + x1) / 2, 0.49, wz + 0.25, s);
+  // the low wall along the camera side of the square, with a gap in the middle for the steps up to the hillside
+  const stair = 3, wz = zEnd + 0.25, half = L.quayMaxX;
+  for (const [x0, x1] of [[-half, -stair], [stair, half]]) {
+    tBox(x1 - x0, 0.7, 0.5, M.wall, 1.6, (x0 + x1) / 2, 0.1, wz, s);
+    tBox(x1 - x0 + 0.1, 0.12, 0.65, M.lip, 2, (x0 + x1) / 2, 0.49, wz, s);
   }
   // the land behind the town: grass round the whole camera side, rising into hills (the ground height is shaped in nature.ts)
-  const gtex = M.grass.map as THREE.Texture;
-  w.group.add(landPatch(gtex, -100, 100, L.ring.cz, 110));
-  // the causeway to the lighthouse point, through the gate in the wall
-  const cw = L.causeway;
-  tBox(cw.x1 - cw.x0, 1.4, cw.z1 - cw.z0, M.cobble, 2.4, (cw.x0 + cw.x1) / 2, -0.7, (cw.z0 + cw.z1) / 2, s).castShadow = false;
-  tBox(cw.x1 - cw.x0, 0.1, 0.3, M.lip, 2, (cw.x0 + cw.x1) / 2, 0.0, cw.z0 + 0.15, s).castShadow = false;
-  tBox(cw.x1 - cw.x0, 0.1, 0.3, M.lip, 2, (cw.x0 + cw.x1) / 2, 0.0, cw.z1 - 0.15, s).castShadow = false;
+  w.group.add(landPatch(M.grass.map as THREE.Texture, -100, 100, zEnd, 110));
 }
 
 export function buildPier(w: Build): void {

@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import { LAYOUT, toWorld } from '../sim/config';
+import { FOOT, LAYOUT, toWorld } from '../sim/config';
+
+const FOOT_SHIPYARD_X = FOOT.shipyard[0];
 import { Smoke } from './fx';
 import { hullGeometry } from './hull';
 import { BOAT_TIERS } from './boatModels';
@@ -26,14 +28,17 @@ export function buildShipyard(w: Build): void {
   const smoke = chimney(g, -2.1, 3.6, -1.0, 2.0);
   g.updateMatrixWorld(true);
   w.smokes.push(new Smoke(w.group, g.localToWorld(smoke)));
-  // upturned hull on trestles, behind the yard where it is quiet (its footprint is in layoutBoxes.ts)
-  const hullMat = flat(0x7b4b32, 0.85);
-  const hull = put(hullGeometry(BOAT_TIERS[0].shape, { bottom: 0, stripe: 0, side: 0, sheer: 0 }), hullMat, 0, 1.15, -4.7, g);
+  // a slipway runs down into the water on the sea (north) side, with an upturned hull on trestles (its footprint is in layoutBoxes.ts); local +x is towards the sea here
+  const ramp = bx(6.2, 0.22, 2.4, M.wood, 6.6, -0.28, 0, g);
+  ramp.rotation.z = -0.16;
+  for (const sz of [-1, 1]) bx(6.2, 0.1, 0.16, M.dark, 6.6, -0.12 + 0.02, sz * 1.25, g).rotation.z = -0.16;
+  const hullMat = flat(0x7b4b32, 0.85), hx = FOOT_SHIPYARD_X + 2.2;
+  const hull = put(hullGeometry(BOAT_TIERS[0].shape, { bottom: 0, stripe: 0, side: 0, sheer: 0 }), hullMat, hx, 0.95, 0, g);
   hull.rotation.set(0, Math.PI / 2, Math.PI);
   hull.scale.set(0.75, 1, 0.75);
   (hull.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
-  bx(0.25, 0.75, 1.5, M.dark, -1, 0.38, -4.7, g);
-  bx(0.25, 0.75, 1.5, M.dark, 1, 0.38, -4.7, g);
+  bx(0.25, 0.7, 1.5, M.dark, hx - 1, 0.3, 0, g);
+  bx(0.25, 0.7, 1.5, M.dark, hx + 1, 0.15, 0, g);
   w.signs.push({ m: net(live, 1.6, 1.0, 1.9, 0.9, 3.0, 0.2), phase: 3.3 });
 }
 

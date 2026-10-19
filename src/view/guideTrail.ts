@@ -11,8 +11,8 @@ export interface P2 { x: number; z: number }
 export type Walkable = (x: number, z: number) => boolean;
 
 const CELL = 0.8;
-const X0 = LAYOUT.quayMinX - 3, X1 = LAYOUT.point.x1 + 3;
-const Z0 = LAYOUT.pierEndZ - 3, Z1 = LAYOUT.ring.cz + LAYOUT.ring.front + 3;
+const X0 = LAYOUT.quayMinX - 3, X1 = LAYOUT.quayMaxX + 3;
+const Z0 = LAYOUT.pierEndZ - 3, Z1 = LAYOUT.square.z1 + 3;
 const NX = Math.ceil((X1 - X0) / CELL), NZ = Math.ceil((Z1 - Z0) / CELL);
 const DOTS = 90, SPACING = 0.85, DOT_R = 0.17;
 /** Within this distance of the target the trail has faded away completely; it is full strength beyond FADE_FAR. */

@@ -14,7 +14,8 @@ const behind = (z: number): number => (z > 13.5 ? z + ZS : z);
 const beside = (x: number): number => (Math.abs(x) > 22 ? x + Math.sign(x) * (QUAY_SIDE - 22) : x);
 
 export function groundH(x: number, z: number): number {
-  const R = LAYOUT.ring, flatten = sm(R.front + 7, R.front + 16, Math.hypot(x - R.cx, z - R.cz));   // the ground round the town is level
+  // the ground round the town is level: no hills within about 19 units of the camera-side edge of the town or of its side edges
+  const flatten = sm(19, 28, Math.hypot(Math.max(0, Math.abs(x) - QUAY_SIDE - 4), Math.max(0, z - LAYOUT.square.z1 - 2)));
   let h = -0.02;
   h += sm(15 + ZS, 46 + ZS, z) * 5.5 * (0.75 + 0.25 * Math.sin(x * 0.09 + 1));
   h += Math.sin(x * 0.17) * Math.cos(z * 0.13) * 0.45 * sm(14 + ZS, 24 + ZS, z);
