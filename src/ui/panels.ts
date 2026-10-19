@@ -275,6 +275,14 @@ export class Panels {
     box.querySelector('.btn')?.classList.toggle('off', !fb.ok);
   }
 
+  /** Enter presses the open window's main (hero) button, when it has one that can be pressed. Returns whether it did. */
+  pressMain(): boolean {
+    const b = this.win.querySelector<HTMLElement>('.btn.hero:not(.off)');
+    if (!this.kind || !b) return false;
+    this.act(b.dataset.act ?? '', b.dataset.a ?? '', b.dataset.b ?? '');
+    return true;
+  }
+
   private act(act: string, a: string, b: string): void {
     // A button press ends the typing: take what was typed, then hand the keyboard back so the window can redraw.
     const typed = this.focusedField()?.value ?? '';

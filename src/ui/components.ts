@@ -28,11 +28,15 @@ export interface ButtonOpts {
   off?: boolean;
   size?: 'sm' | 'lg';
   wide?: boolean;
+  /** The window's main action: larger, shining, and pressed with Enter. Use at most one per window. */
+  hero?: boolean;
 }
 
 export function button(o: ButtonOpts): string {
   const data = `${o.act ? ` data-act="${o.act}"` : ''}${o.a !== undefined ? ` data-a="${o.a}"` : ''}${o.b !== undefined ? ` data-b="${o.b}"` : ''}`;
-  return `<button class="${cls('btn ol', o.tone && o.tone !== 'go' && o.tone, o.size, o.wide && 'wide', o.off && 'off')}"${data}>${o.label}</button>`;
+  const hero = o.hero && !o.off;
+  const key = hero ? '<span class="kbd hero-key">Enter</span>' : '';
+  return `<button class="${cls('btn ol', o.tone && o.tone !== 'go' && o.tone, o.hero ? 'lg' : o.size, o.wide && 'wide', o.off && 'off', hero && 'hero')}"${data}>${o.label}${key}</button>`;
 }
 
 /** Button label for a purchase: a coin and the price, or the reason it is unavailable. */

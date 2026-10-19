@@ -16,6 +16,6 @@ export const endingScreen: Screen = ({ state }) => {
     host: portrait(NPC_LOOK.innkeeper),
     note: ENDING.story,
     body: stat(ENDING_TEXT.days, String(e.days)) + stat(ENDING_TEXT.earned, `$${money(e.earned)}`) + stat(ENDING_TEXT.fish, money(e.fishCaught)) + stat(ENDING_TEXT.boats, String(e.boats)),
-    foot: `<span class="dim">${ENDING_TEXT.bram}</span>${button({ label: ENDING.keepPlaying, act: 'close', size: 'lg' })}`,
+    foot: `<span class="dim">${ENDING_TEXT.bram}</span>${button({ label: ENDING.keepPlaying, act: 'close', hero: true })}`,
   };
 };

@@ -62,6 +62,6 @@ export const marketScreen: Screen = (ctx) => {
     tabs: TABS,
     tab,
     body: tab === 'sell' ? sell(s) : prices(s),
-    foot: `<span class="dim">Fresh fish sell for more. Prices go down when you sell a lot. Fish that an order wants pay double.</span>${carrying ? button({ label: `Sell all ${icon('coin', 18)}${money(sellAllValue(s))}`, act: 'sellall' }) : ''}`,
+    foot: `<span class="dim">Fresh fish sell for more. Prices go down when you sell a lot. Fish that an order wants pay double.</span>${carrying ? button({ label: `Sell all ${icon('coin', 18)}${money(sellAllValue(s))}`, act: 'sellall', hero: true }) : ''}`,
   };
 };

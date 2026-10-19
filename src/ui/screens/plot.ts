@@ -29,7 +29,7 @@ export function forSaleView(s: GameState, id: BuildingId): ScreenView {
       + stat(PLOT_TEXT.price, `$${cost.toLocaleString('en')}`)
       + stat(PLOT_TEXT.rankNeeded, `<span class="${rankOk ? 'good' : 'bad'}">${RANK_NAME[BUILDINGS[id].rank]}</span>`)
       + (later ? section(PLOT_TEXT.laterTitle) + later : ''),
-    foot: `<span class="${rankOk ? 'dim' : 'bad'}">${rankOk ? BUILDING_LABEL.empty : buildingNeeds(id)}</span>${button({ label: chk.ok ? `${PLOT_TEXT.build} ${priceLabel(cost)}` : denyText(chk.reason, chk.needRank), act: 'build', a: id, off: !chk.ok })}`,
+    foot: `<span class="${rankOk ? 'dim' : 'bad'}">${rankOk ? BUILDING_LABEL.empty : buildingNeeds(id)}</span>${button({ label: chk.ok ? `${PLOT_TEXT.build} ${priceLabel(cost)}` : denyText(chk.reason, chk.needRank), act: 'build', a: id, off: !chk.ok, hero: true })}`,
   };
 }
 

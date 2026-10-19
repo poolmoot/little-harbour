@@ -46,6 +46,6 @@ export const ledgerScreen: Screen = ({ state: s, summary }) => {
     icon: ic,
     note: `06:00. A new day starts. ${REPORT_TEXT.today}: ${WEATHER[s.weather].name}${s.special ? ` · ${specialName(s.special)}` : ''}.`,
     body,
-    foot: `<span></span>${button({ label: 'Start the day', act: 'close' })}`,
+    foot: `<span></span>${button({ label: 'Start the day', act: 'close', hero: true })}`,
   };
 };

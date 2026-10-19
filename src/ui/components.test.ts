@@ -123,3 +123,17 @@ describe('text field', () => {
     expect(nameFeedback("Mum's boat!").ok).toBe(true);
   });
 });
+
+describe('main action button', () => {
+  it('is large, marked as the hero and shows the Enter key while it can be pressed', () => {
+    const h = button({ label: 'Send out', act: 'send', hero: true });
+    expect(h).toMatch(/class="[^"]*\bhero\b/);
+    expect(h).toMatch(/class="[^"]*\blg\b/);
+    expect(h).toContain('Enter');
+  });
+  it('drops the shine and the key when it is greyed out', () => {
+    const h = button({ label: 'Too dark', act: 'send', hero: true, off: true });
+    expect(h).not.toMatch(/\bhero\b/);
+    expect(h).not.toContain('Enter');
+  });
+});

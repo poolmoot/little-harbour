@@ -261,7 +261,9 @@ export class Game {
       return;
     }
     if (isHalted(this.mode)) return;
-    if (code === 'KeyL') {
+    if (code === 'Enter') {
+      if (this.panels.pressMain()) this.audio.click();
+    } else if (code === 'KeyL') {
       this.panels.toggle('logbook');
     } else if (code === 'KeyE') {
       if (this.panels.isOpen()) {

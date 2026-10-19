@@ -14,7 +14,7 @@ export const welcomeScreen: Screen = () => ({
   host: portrait(HARBOUR_MASTER_LOOK),
   note: GUIDE.masterName,
   body: GUIDE.welcome.map((t) => `<p class="guide-welcome">${t}</p>`).join(''),
-  foot: `${button({ label: GUIDE.welcomeSkip, act: 'welcomeskip', tone: 'ghost', size: 'sm' })}${button({ label: GUIDE.welcomeGo, act: 'close', tone: 'go' })}`,
+  foot: `${button({ label: GUIDE.welcomeSkip, act: 'welcomeskip', tone: 'ghost', size: 'sm' })}${button({ label: GUIDE.welcomeGo, act: 'close', tone: 'go', hero: true })}`,
 });
 
 function listBody(ctx: ScreenCtx): string {

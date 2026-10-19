@@ -101,7 +101,7 @@ function foot(s: GameState, boat: Boat): string {
   const poor = s.money < cost;
   const ok = boat.status === 'docked' && !night && !poor && !stays;
   const label = stays ? 'Stays home (storm)' : night ? 'Too dark' : boat.status !== 'docked' ? 'Boat is away' : poor ? `Not enough money ($${money(cost)} needed)` : `Send out ${priceLabel(cost)}`;
-  return `${where}${button({ label, act: 'send', a: boat.id, b: boat.target, off: !ok })}`;
+  return `${where}${button({ label: ok ? `${icon(HULL_ICONS[boat.hull], 26)}${label}` : label, act: 'send', a: boat.id, b: boat.target, off: !ok, hero: true })}`;
 }
 
 export const boatScreen: Screen = (ctx) => {
