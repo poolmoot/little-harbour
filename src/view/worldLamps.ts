@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 
+import { PIER_LAMPS, STREET_LAMPS } from '../sim/layoutBoxes';
 import { haloSprite } from './fx';
 
 import { bx, cy, lampMat, put } from './kit';
@@ -29,12 +30,14 @@ export function lampHead(w: Build, x: number, y: number, z: number, withLight: b
 }
 
 export function buildLanterns(w: Build): void {
-  const spots: [number, number, boolean][] = [[-1.85, -4, true], [1.85, -10.5, true], [-1.85, -16, true], [-9.8, 7.6, true], [9.6, 7.8, true], [0, 13, true], [-19, 8.8, false], [19.6, 6.4, false], [-1.85, -10.5, false], [1.85, -4, false], [1.85, -16, false]];
-  for (const [x, z, light] of spots) {
+  // Lamp posts along the camera side of the street and on the pier, from the layout data. Only a few cast real light.
+  const lit = (x: number, z: number) => z < 0 ? PIER_LAMPS.some(([px, pz, l]) => px === x && pz === z && l) : Math.abs(x) === 7 || Math.abs(x) === 21;
+  const spots: [number, number][] = [...PIER_LAMPS.map(([x, z]) => [x, z] as [number, number]), ...STREET_LAMPS];
+  for (const [x, z] of spots) {
     const base = z < 0 ? 0.055 : 0;
     cy(0.14, 0.17, 0.3, w.M.iron, x, base + 0.15, z, w.stat, 8);
     cy(0.05, 0.07, 2.2, w.M.iron, x, base + 1.3, z, w.stat, 6);
     bx(0.06, 0.06, 0.4, w.M.iron, x, base + 2.3, z, w.stat);
-    lampHead(w, x, base + 2.55, z, light);
+    lampHead(w, x, base + 2.55, z, lit(x, z));
   }
 }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BUILDING_IDS, LAYOUT, PLOT_HALF, toWorld } from '../sim/config';
+import { BUILDING_IDS, LAYOUT, toWorld } from '../sim/config';
 import type { BuildingId, WeatherId } from '../sim/config';
 import type { GameState } from '../sim/state';
 import { Smoke } from './fx';
@@ -15,7 +15,7 @@ import type { World } from './world';
 // ---- where crates sit at the new buildings (used by cratesView) -------------------------------
 
 const SMOKE = LAYOUT.plots.smokehouse, COLD = LAYOUT.plots.coldstore;
-const RACK_X = -1.75, RACK_Z = 2.2, RACK_STEP = 0.55, RACK_SHELF = [0.72, 1.2];
+const RACK_X = -2.0, RACK_Z = 2.2, RACK_STEP = 0.55, RACK_SHELF = [0.72, 1.2];
 /** Spot on the smokehouse racks for the i-th smoking crate. */
 export function smokeRackPos(i: number, out: THREE.Vector3): THREE.Vector3 {
   const p = toWorld(SMOKE, RACK_X + (i % 3) * RACK_STEP, RACK_Z);
@@ -70,10 +70,10 @@ const PLANS: Record<BuildingId, Plan> = {
         bx(1.4, 0.7, 1.0, flat(0x8a97a2, 0.6), -1.1, 0.3 + h + 0.64, -0.6, g);
         cy(0.3, 0.3, 0.08, flat(0x2d3236, 0.5), -1.1, 0.3 + h + 1.03, -0.6, g, 12);
       }
-      if (level >= 3) {                                                                    // side store room
-        bx(1.6, 1.9, 2.6, wall, 3.0, 1.25, -0.4, g);
-        bx(1.8, 0.18, 2.8, trim, 3.0, 2.3, -0.4, g);
-        bx(1.4, 0.7, 1.0, flat(0x8a97a2, 0.6), 0.9, 0.3 + h + 0.64, 0.5, g);
+      if (level >= 3) {                                                                    // store room on the roof, towards the back
+        bx(2.2, 1.2, 1.4, wall, 0.9, 0.3 + h + 0.9, -1.0, g);
+        bx(2.4, 0.16, 1.6, trim, 0.9, 0.3 + h + 1.57, -1.0, g);
+        bx(1.0, 0.6, 0.8, flat(0x8a97a2, 0.6), -1.1, 0.3 + h + 0.6, 0.7, g);
       }
       const sign = signMesh('COLD STORE', 2.4, 0.5, '#2f6f9a');
       sign.position.set(0, 0.3 + h - 0.38, 1.96);
@@ -87,7 +87,7 @@ const PLANS: Record<BuildingId, Plan> = {
       bx(4.0, 0.3, 3.8, M.wall, 0, 0.15, 0, g);
       tBox(3.8, 2.3, 3.6, M.dark, 1.6, 0, 1.45, 0, g);
       gableRoof(g, 3.8, 3.6, 2.6, 1.7, M.redRoof, M.dark, 0.4);
-      doorAt(g, 0.9, 1.8, 1.0, 1.9);
+      doorAt(g, 1.2, 1.8, 1.0, 1.9);
       const top = chimney(g, -1.0, 3.2, -0.6, 1.9 + level * 0.3);
       v.addSmoke(v.worldOf(g, top), 30 + level * 8);
       if (level >= 3) v.addSmoke(v.worldOf(g, chimney(g, 1.1, 3.2, -0.6, 1.6)), 30);
@@ -217,10 +217,7 @@ export class TycoonView {
       group.rotation.y = LAYOUT.plots[id].rot;
       rig.scene.add(group);
       this.plots.set(id, { group, level: -1 });
-      // The lot is solid even while empty (it is fenced), so nobody is standing inside when the building goes up.
-      const p = LAYOUT.plots[id], [hx, hz] = PLOT_HALF[id];
-      if (id === 'lighthouse') world.disc({ cx: p.x, cz: p.z, r: 1.7 });
-      else world.box({ cx: p.x, cz: p.z, hx: hx - 0.1, hz: hz - 0.1, a: p.rot });
+      // The lot is solid even while empty (it is fenced); the world registers it from the layout data.
     }
     const cone = new THREE.Mesh(
       new THREE.ConeGeometry(1.3, 22, 16, 1, true),

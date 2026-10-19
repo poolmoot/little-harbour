@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BUILDING_IDS, LAYOUT, toWorld } from '../sim/config';
+import { BUILDING_IDS, LAYOUT } from '../sim/config';
 
 import { barrel, bollard, bx, crateBox, cy, flat, net, put, ropeCoil, tBox } from './kit';
 import { landPatch } from './nature';
@@ -11,34 +11,40 @@ export function buildGround(w: Build): void {
   const L = LAYOUT, M = w.M, s = w.stat;
   tBox(L.quayMaxX - L.quayMinX, 1.4, L.quayMaxZ, M.cobble, 2.4, 0, -0.7, L.quayMaxZ / 2, s).castShadow = false;
   tBox(L.quayMaxX - L.quayMinX + 0.2, 0.16, 0.6, M.lip, 2, 0, 0.0, 0.3, s).castShadow = false;
-  // flagstone avenue from the pier to the square, and a worn forecourt in front of each building
-  tBox(5.2, 0.03, L.quayMaxZ, M.lip, 2, 0, 0.012, L.quayMaxZ / 2, s).castShadow = false;
-  const yard = (cx: number, cz: number, rot: number, bw: number, bd: number) => {
-    const m = tBox(bw, 0.02, bd, M.lip, 2, cx, 0.01, cz, s);
-    m.rotation.y = rot;
+  // the main street: a long paved band along the fronts of the buildings, and the square at the head of the pier
+  const street = L.street, bandZ0 = L.doorLineZ, bandZ1 = street.z1;
+  const band = tBox(L.quayMaxX - L.quayMinX - 0.4, 0.03, bandZ1 - bandZ0, M.lip, 2, 0, 0.012, (bandZ0 + bandZ1) / 2, s);
+  band.castShadow = false;
+  const SQ = { x0: -7, x1: 7, z0: 0.3, z1: bandZ1 };
+  const sq = tBox(SQ.x1 - SQ.x0, 0.03, SQ.z1 - SQ.z0, flat(0xd8ccb2, 0.95), 2.4, 0, 0.022, (SQ.z0 + SQ.z1) / 2, s);
+  sq.castShadow = false;
+  const medal = put(new THREE.CircleGeometry(3.2, 48).rotateX(-Math.PI / 2), flat(0xcdbf9e, 0.95), 0, 0.035, 6.6, s);
+  medal.castShadow = false;
+  put(new THREE.RingGeometry(3.2, 3.5, 48).rotateX(-Math.PI / 2), M.wall, 0, 0.037, 6.6, s).castShadow = false;
+  // a worn forecourt in front of each building, running into the street
+  const yard = (cx: number, bw: number) => {
+    const m = tBox(bw, 0.02, 3.4, flat(0xcfc3a8, 0.95), 2.4, cx, 0.03, L.doorLineZ + 1.7, s);
     m.castShadow = false;
   };
-  yard(L.market.x, L.market.z + 3.3, 0, 10, 3.6);
-  yard(L.inn.x, L.inn.z + 3.9, 0, 7.6, 3.0);
-  const sy = toWorld(L.shipyard, 0, 3.6);
-  yard(sy.x, sy.z, L.shipyard.rot, 7, 3.4);
+  yard(L.market.x, 9);
+  yard(L.shipyard.x, 7);
+  yard(L.inn.x, 8);
+  yard(L.bellTower.x, 4.4);
   for (const id of BUILDING_IDS) {
     if (id === 'lighthouse') continue;
-    const p = L.plots[id], c = toWorld(p, 0, 3.2);
-    yard(c.x, c.z, p.rot, 6, 3.4);
+    yard(L.plots[id].x, 6);
   }
-  // planted beds on the quay: a stone surround, a lawn, and a tree trunk to walk around
+  // planted beds on the camera side of the street: a stone surround and a lawn, with a tree trunk (solid, from the layout data)
   for (const [x0, x1, z0, z1] of BEDS) {
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     tBox(x1 - x0 + 0.5, 0.05, z1 - z0 + 0.5, M.lip, 2, cx, 0.02, cz, s).castShadow = false;
     tBox(x1 - x0, 0.05, z1 - z0, M.grass, 3, cx, 0.045, cz, s).castShadow = false;
-    w.solid({ x0: cx - 0.3, x1: cx + 0.3, z0: cz - 0.3, z1: cz + 0.3 });
   }
   // retaining wall between quay and the green verge
   tBox(L.quayMaxX - L.quayMinX, 0.5, 0.35, M.wall, 1.6, 0, 0.1, L.quayMaxZ + 0.15, s);
   tBox(L.quayMaxX - L.quayMinX + 0.3, 0.1, 0.55, M.lip, 2, 0, 0.38, L.quayMaxZ + 0.15, s);
   const gtex = M.grass.map as THREE.Texture;
-  w.group.add(landPatch(gtex, -100, L.quayMinX, -8, 110), landPatch(gtex, L.quayMaxX, 100, -8, 110), landPatch(gtex, L.quayMinX, L.quayMaxX, 14, 110));
+  w.group.add(landPatch(gtex, -100, L.quayMinX, -8, 110), landPatch(gtex, L.quayMaxX, 100, -8, 110), landPatch(gtex, L.quayMinX, L.quayMaxX, L.quayMaxZ + 0.6, 110));
   // stone skirts where the land meets the water
   tBox(78, 1.5, 0.4, M.wall, 1.8, L.quayMaxX + 39, -0.78, -8.2, s);
   tBox(78, 1.5, 0.4, M.wall, 1.8, L.quayMinX - 39, -0.78, -8.2, s);
@@ -95,13 +101,9 @@ export function buildPier(w: Build): void {
 
 export function buildQuayDetail(w: Build): void {
   const s = w.stat;
-  for (let x = -20; x <= 15; x += 5) if (Math.abs(x) > 3) bollard(s, x, 0.08, 0.75);
-  barrel(s, 14.7, 6.4, 0, 1, true);
-  ropeCoil(s, -2.9, 0, 0.8, 1.1);
-  ropeCoil(s, 2.8, 0, 0.8, 1);
-  crateBox(s, 8.6, 0, 6.6, 0.7, 0.4);
-  barrel(s, 19.6, 5.6);
-  barrel(s, 20.4, 5.2);
-  crateBox(s, -15.4, 0, 12.2 + 0.4, 0.7, 0.2);
+  // a few bollards on the quay edge beside the pier mouth and at the two ends, and a rope coil each side of the pier
+  for (const x of [-6, -4.5, 4.5, 6, LAYOUT.quayMinX + 1.5, LAYOUT.quayMaxX - 1.5]) bollard(s, x, 0.08, 0.45);
+  ropeCoil(s, -3.2, 0, 0.9, 1.1);
+  ropeCoil(s, 3.2, 0, 0.9, 1);
   w.signs.push({ m: net(w.group, 1.4, 0.8, -2.5, 0.5, 0.9, 0.1), phase: 2.1 });
 }

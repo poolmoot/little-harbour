@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
+import { BOXES, ROUNDS, STALL_REACH } from '../sim/layoutBoxes';
 import type { SkyState } from './scene';
 import { Fireflies, windU } from './fx';
 import { bake, lampMat, mats, windowMat } from './kit';
@@ -19,9 +20,10 @@ export type { Rect };
 /** The harbour: builds the quay, pier and buildings once, then animates lamps, signs, smoke and flags. */
 export class World implements Build {
   readonly group = new THREE.Group();
-  readonly obstacles: Rect[] = [];
   /** Everything the walkers collide with: turned boxes and discs (plain rectangles are turned into boxes). */
   readonly solids: Solid[] = [];
+  /** Plain rectangles of the same solid boxes, for stepping a player out of a building that has just gone up. */
+  readonly obstacles: Rect[] = [];
   /** The ground you can walk on: the quay, the pier and the lighthouse point. */
   readonly areas: Area[] = [
     [LAYOUT.quayMinX, LAYOUT.quayMaxX, 0, LAYOUT.quayMaxZ],
@@ -39,7 +41,6 @@ export class World implements Build {
   private fireflies!: Fireflies;
   flag!: THREE.Mesh;
   readonly stallWings: THREE.Group[] = [];
-  stallSolid!: Rect;
   vane = new THREE.Group();
   vaneArrow = new THREE.Group();
 
@@ -60,21 +61,25 @@ export class World implements Build {
     buildLanterns(this);
     buildVane(this);
     bake(this.stat);
+    // Everything solid comes from the layout data, the same lists the layout tests walk through.
+    for (const b of BOXES) {
+      if (/^table /.test(b.name)) continue;   // the terrace adds its tables as they are put out
+      const o: Obb = { cx: b.cx, cz: b.cz, hx: b.hx, hz: b.hz, a: b.a };
+      this.solids.push(o);
+      this.obstacles.push({ x0: b.cx - b.hx, x1: b.cx + b.hx, z0: b.cz - b.hz, z1: b.cz + b.hz });
+      if (b.name === 'market') { o.hx = STALL_REACH[0]; this.stallObb = o; }
+    }
+    for (const r of ROUNDS) this.solids.push({ cx: r.cx, cz: r.cz, r: r.r });
+    const hill = LAYOUT.quayMaxZ;
     const n = buildNature(this.group, (x, z) => {
       if (z < -8) return false;
       if (Math.abs(x) < LAYOUT.quayMaxX + 0.2 && z < LAYOUT.quayMaxZ + 0.2) return false;
-      if (Math.abs(x) < LAYOUT.quayMaxX + 5 && z > 14.4 && z < 32) return false;   // the hillside terraces and houses
+      if (Math.abs(x) < LAYOUT.quayMaxX + 5 && z > hill + 1 && z < hill + 19) return false;   // the hillside terraces and houses
       return true;
     }, BEDS);
     this.fireflies = new Fireflies(this.group, [...n.fireflies, [-1.85, 0, -4], [1.85, 0, -10.5], [-10, 0, 8.6], [10, 0, 8.6]], 5);
   }
 
-  solid(r: Rect): void {
-    this.obstacles.push(r);
-    const o: Obb = { cx: (r.x0 + r.x1) / 2, cz: (r.z0 + r.z1) / 2, hx: (r.x1 - r.x0) / 2, hz: (r.z1 - r.z0) / 2, a: 0 };
-    this.solids.push(o);
-    if (r === this.stallSolid) this.stallObb = o;
-  }
   box(o: Obb): void { this.solids.push(o); }
   disc(d: Disc): void { this.solids.push(d); }
   place(x: number, z: number, rot: number): { s: THREE.Group; live: THREE.Group } {
@@ -88,10 +93,7 @@ export class World implements Build {
   /** Market stall upgrades: a wing on each side per level (wings are built in worldMarket.ts). */
   setStall(level: number): void {
     this.stallWings.forEach((g, i) => (g.visible = i < level));
-    const reach = [2.2, 3.4, 4.4][level] ?? 2.2;
-    this.stallSolid.x0 = LAYOUT.market.x - reach;
-    this.stallSolid.x1 = LAYOUT.market.x + reach;
-    if (this.stallObb) { this.stallObb.cx = LAYOUT.market.x; this.stallObb.hx = reach; }
+    if (this.stallObb) this.stallObb.hx = STALL_REACH[level] ?? STALL_REACH[0];
   }
 
   /** Golden weathervane on the inn (top rank). */
@@ -131,10 +133,6 @@ export class World implements Build {
   /** Move from (px,pz) toward (nx,nz): pushed out of walls, corners and posts and kept on the ground, so it slides and never snags. */
   resolve(px: number, pz: number, nx: number, nz: number, r: number): { x: number; z: number } {
     return resolveMove(this.areas, this.solids, { x: px, z: pz }, nx, nz, r);
-  }
-
-  addObstacle(r: Rect): void {
-    this.solid(r);
   }
 }
 export { groundH };

@@ -189,15 +189,13 @@ function haulPath(from: Pt, dest: Job['dest']): Pt[] {
   const bld = BUILDING_DEST[dest];
   if (bld) return walkPath(from, doorOf(bld));
   if (from.z > 4 && dest === 'market') return walkPath(from, LAYOUT.marketDrop); // collecting from a building on the quay
+  if (dest === 'market') return walkPath(from, LAYOUT.marketDrop);
   const e = laneEntry(from.x);
-  return dest === 'market'
-    ? [from, e, { x: -2.2, z: 6.4 }, { x: LAYOUT.marketDrop.x, z: 6.4 }, LAYOUT.marketDrop]
-    : [from, e, { x: -2.4, z: LAYOUT.iceDrop.z }, LAYOUT.iceDrop];
+  return [from, e, { x: e.x - 2, z: LAYOUT.iceDrop.z }, LAYOUT.iceDrop];
 }
 function backPath(from: Pt, home: Pt, dest: Job['dest']): Pt[] {
-  if (BUILDING_DEST[dest] || from.x > 8 || from.x < -9.5) return walkPath(from, home);
-  if (dest === 'market' && from.z > 4) return [from, { x: LAYOUT.marketDrop.x, z: 6.4 }, { x: -2.2, z: 6.4 }, home];
-  if (dest === 'ice' && from.z > 3) return [from, { x: -2.4, z: LAYOUT.iceDrop.z }, home];
+  if (BUILDING_DEST[dest] || dest === 'market') return walkPath(from, home);
+  if (dest === 'ice' && from.z > 3) return [from, { x: -3.5, z: LAYOUT.iceDrop.z }, home];
   return [from, laneEntry(from.x), home];
 }
 

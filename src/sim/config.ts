@@ -106,7 +106,7 @@ export const CAPTAIN_WAGE = 40;
 export const DOCKHAND_WAGE = 25;
 export const MAX_DOCKHANDS = 4;
 export const CANDIDATE_COUNT = 3;
-export const DOCKHAND_SPEED = 2.8;
+export const DOCKHAND_SPEED = 3.36;
 export const SWIFT_MULT = 0.85;
 export const LUCKY_MULT = 1.25;
 export const THRIFTY_MULT = 0.7;
@@ -124,9 +124,12 @@ const plot = (x: number, z: number, rot: number, doorLx: number, doorLz: number)
   return { x, z, rot, doorX: Math.round(d.x * 100) / 100, doorZ: Math.round(d.z * 100) / 100 };
 };
 /**
- * The town is a crescent round a small square at the head of the pier. Doors face the camera (+z); the
- * buildings on the two arms are turned towards the square so their fronts show. Every walk from the pier
- * head to a door is about 20 units or less.
+ * The town is one wide street. The sea is at -z, the pier runs out from x = 0, and every usable building stands in one
+ * row on the sea side of the main street with its door towards the camera (+z), all at the same angle and all
+ * with their fronts on one door line (`doorLineZ`). West of the pier is the work quarter, in the order fish
+ * travels: ice box, market, cold store, smokehouse, shipyard. East of the pier is the town quarter: notice board,
+ * clock tower, inn, restaurant. The lighthouse stands on its own point at the east end. On the camera side of
+ * the street is a low wall with decoration (see `layoutBoxes.ts` for every solid thing and the lanes that stay clear).
  */
 export const LAYOUT = {
   quayZ: 0,
@@ -141,40 +144,56 @@ export const LAYOUT = {
   slotRows: 4,
   slotDZ: -0.75,
   fishingSpot: { x: 0, z: -17.2 },
-  market: { x: -8.8, z: 2.6 },
-  shipyard: { x: -18.2, z: 4.3, rot: 0.25 },
-  inn: { x: 10.2, z: 2.8 },
+  /** The fronts of the whole row of buildings (z of the front wall). */
+  doorLineZ: 5.6,
+  /** The main street: a clear lane, 6 wide, along the whole quay. Nothing solid stands in it. */
+  street: { z0: 9.0, z1: 15.0 },
+  /** Width kept clear in front of every door, interaction point and the pier head. */
+  approachWidth: 3.5,
+  market: { x: -16.8, z: 4.4 },
+  shipyard: { x: -44.7, z: 3.5, rot: 0 },
+  inn: { x: 23.8, z: 3.0 },
   /** The clock and bell tower, the landmark. The harbour bell rings from here. */
-  bellTower: { x: 4.6, z: 1.8 },
+  bellTower: { x: 14.65, z: 3.95 },
   dockhandHome: { x: 1.2, z: 1.6 },
-  marketDrop: { x: -8.8, z: 5.9 },
-  iceDrop: { x: -3.0, z: 3.6 },
-  noticeBoard: { x: 2.9, z: 5.6 },
-  iceBox: { x: -3.0, z: 2.4 },
-  /** Four building plots. The door is where workers stop (in front, towards the camera); `rot` turns the building. The lighthouse stands on its own rocky point at the east end. */
+  marketDrop: { x: -18.3, z: 6.7 },
+  iceDrop: { x: -7.9, z: 6.7 },
+  noticeBoard: { x: 8.0, z: 5.4 },
+  iceBox: { x: -7.9, z: 4.9 },
+  /** Where the player stands to use the market, shipyard, board, ice box and inn (in front of each door, on the approach). */
+  stations: {
+    market: { x: -18.3, z: 6.7 },
+    shipyard: { x: -45.8, z: 6.5 },
+    board: { x: 8.0, z: 6.6 },
+    icebox: { x: -7.9, z: 6.7 },
+    inn: { x: 22.0, z: 6.6 },
+  },
+  /** Four building plots, all unturned. The door is where workers stop (in front, towards the camera). The lighthouse stands on its own rocky point at the east end. */
   plots: {
-    coldstore: plot(-12.6, 8.8, 0.5, 0, 2.7),
-    smokehouse: plot(16.6, 3.2, -0.12, 0.9, 3.0),
-    restaurant: plot(13.4, 8.7, -0.5, -1.5, 2.8),
-    lighthouse: plot(20.2, -3.3, 0, 0, 2.0),
+    coldstore: plot(-27.2, 3.6, 0, 0, 3.0),
+    smokehouse: plot(-35.6, 3.7, 0, 1.2, 2.9),
+    restaurant: plot(33.9, 3.7, 0, -1.5, 3.0),
+    lighthouse: plot(46, -2.8, 0, 0, 2.6),
   },
   /** The rocky point the lighthouse stands on (walkable): x0, x1, z0, z1. */
-  point: { x0: 18.4, x1: 24, z0: -5.2, z1: 0 },
-  /** Workers walk east-west along this line when going between buildings. */
-  corridorZ: 12.2,
-  playerStart: { x: 0, z: 6 },
-  quayMinX: -24,
-  quayMaxX: 24,
-  quayMaxZ: 13.4,
-  /** Open space kept clear for the town-life agent: a market queue, restaurant tables, a pier-head crowd (x0, x1, z0, z1). */
-  queueZone: { x0: -12.8, x1: -4.8, z0: 4.4, z1: 5.5 },
-  /** The restaurant terrace, in the restaurant's own frame (x across, z towards its door): room for up to three tables. Use toWorld(plots.restaurant, ...) to place things. */
-  terrace: { x0: -3, x1: 3, z0: 2.2, z1: 3.6 },
-  crowdZone: { x0: -3.2, x1: 3.2, z0: 0.8, z1: 4.6 },
+  point: { x0: 42.6, x1: 49.4, z0: -5.2, z1: 0 },
+  /** Workers walk east-west along this line (inside the main street, next to the buildings) when going between buildings. */
+  corridorZ: 10.2,
+  playerStart: { x: 0, z: 8 },
+  quayMinX: -55,
+  quayMaxX: 55,
+  quayMaxZ: 19,
+  /** Open space kept for the town-life code: the market queue in front of the stall's east half (it never covers the market's door), restaurant tables, a pier-head crowd (x0, x1, z0, z1). */
+  queueZone: { x0: -16.5, x1: -12.6, z0: 6.0, z1: 7.2 },
+  /** The restaurant terrace, in the restaurant's own frame (x across, z towards its door): room for up to three tables, east of the door's clear approach. Use toWorld(plots.restaurant, ...) to place things. */
+  terrace: { x0: 0.4, x1: 5.4, z0: 2.7, z1: 4.0 },
+  /** The crowd that gathers at the pier head. The middle (|x| below `crowdGap`) stays clear so the way to the pier is open. */
+  crowdZone: { x0: -5.0, x1: 5.0, z0: 1.0, z1: 6.0 },
+  crowdGap: 2.2,
 };
 /** Half sizes (across, deep) of what each plot's building takes up on the ground. */
 export const PLOT_HALF: Record<'coldstore' | 'smokehouse' | 'restaurant' | 'lighthouse', [number, number]> = {
-  coldstore: [2.4, 2.0], smokehouse: [2.0, 1.9], restaurant: [2.5, 1.9], lighthouse: [1.6, 1.6],
+  coldstore: [2.4, 2.0], smokehouse: [2.0, 1.9], restaurant: [2.6, 1.9], lighthouse: [1.6, 1.6],
 };
 export const INTERACT_RANGE = 2.8;
 export const CRATE_RANGE = 1.3;

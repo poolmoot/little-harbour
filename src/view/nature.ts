@@ -7,13 +7,16 @@ import { withSeeThrough } from './occlusion';
 const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 /** Half-width of the quay. The meadows, hills and trees on either side are laid out relative to it. */
 const QUAY_SIDE = LAYOUT.quayMaxX;
+/** The hillside was authored behind a quay 13.4 deep; this moves it back with the quay's camera edge. */
+const ZS = LAYOUT.quayMaxZ - 13.4;
+const behind = (z: number): number => (z > 13.5 ? z + ZS : z);
 /** Things placed out on the side meadows were authored for a quay 22 wide; this moves them out with the quay edge. */
 const beside = (x: number): number => (Math.abs(x) > 22 ? x + Math.sign(x) * (QUAY_SIDE - 22) : x);
 
 export function groundH(x: number, z: number): number {
   let h = -0.02;
-  h += sm(15, 46, z) * 5.5 * (0.75 + 0.25 * Math.sin(x * 0.09 + 1));
-  h += Math.sin(x * 0.17) * Math.cos(z * 0.13) * 0.45 * sm(14, 24, z);
+  h += sm(15 + ZS, 46 + ZS, z) * 5.5 * (0.75 + 0.25 * Math.sin(x * 0.09 + 1));
+  h += Math.sin(x * 0.17) * Math.cos(z * 0.13) * 0.45 * sm(14 + ZS, 24 + ZS, z);
   h += sm(QUAY_SIDE + 4, QUAY_SIDE + 40, Math.abs(x)) * 4.5 * (0.6 + 0.4 * Math.sin(z * 0.1));
   return h;
 }
@@ -102,8 +105,8 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   };
   const spots: [number, number][] = [];
   const tryAdd = (x: number, z: number) => { if (onGround(x, z)) spots.push([x, z]); };
-  for (let i = 0; i < 7000; i++) tryAdd((r() - 0.5) * 100, 14.4 + Math.pow(r(), 1.5) * 38);
-  for (let i = 0; i < 2600; i++) tryAdd((r() < 0.5 ? -1 : 1) * (QUAY_SIDE + 0.3 + r() * 24), -7.6 + r() * 21.5);
+  for (let i = 0; i < 12000; i++) tryAdd((r() - 0.5) * 190, 14.4 + ZS + Math.pow(r(), 1.5) * 38);
+  for (let i = 0; i < 2600; i++) tryAdd((r() < 0.5 ? -1 : 1) * (QUAY_SIDE + 0.3 + r() * 24), -7.6 + r() * (21.5 + ZS));
   const grass = new THREE.InstancedMesh(tuft(5, false), gm, spots.length);
   const pal = [0x3f8f3a, 0x5aa83e, 0x78bf45, 0x92cf55, 0x4a9a52];
   spots.forEach(([x, z], i) => {
@@ -140,7 +143,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   }
 
   // --- flowers
-  const centres: [number, number, number][] = [[-14, 35, 3], [4, 36, 3], [16, 35, 3], [-31, 6, 2.2], [31, 5, 2.4], [28, 11, 2], [-28, 11, 2], [-27, 36, 3], [24, 36, 3]].map(([x, z, s]) => [beside(x), z, s]);
+  const centres: [number, number, number][] = [[-14, 35, 3], [4, 36, 3], [16, 35, 3], [-31, 6, 2.2], [31, 5, 2.4], [28, 11, 2], [-28, 11, 2], [-27, 36, 3], [24, 36, 3]].map(([x, z, s]) => [beside(x), behind(z), s]);
   const fl: [number, number, number][] = [];
   for (const [cx, cz, rad] of centres) for (let i = 0; i < 70; i++) {
     const a = r() * 6.28, d = Math.sqrt(r()) * rad;
@@ -169,7 +172,8 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   scene.add(stems, heads);
 
   // --- trees (instanced trunks + foliage blobs)
-  const trees: [number, number, number][] = ([[-25, 12, 1.2], [27, 10, 1.2], [-33, 4, 1.4], [34, 2, 1.3], [0, 36, 1.6], [-30, 20, 1.5], [30, 22, 1.5], [24, 34, 1.7], [-12, 38, 1.7], [-20, 35, 1.4], [12, 37, 1.5], [-28, 28, 1.6], [29, 6, 1.3], [-29, 2, 1.2]] as [number, number, number][]).map(([x, z, s]) => [beside(x), z, s] as [number, number, number]).filter(([x, z]) => onGround(x, z));
+  const trees: [number, number, number][] = ([[-25, 12, 1.2], [27, 10, 1.2], [-33, 4, 1.4], [34, 2, 1.3], [0, 36, 1.6], [-30, 20, 1.5], [30, 22, 1.5], [24, 34, 1.7], [-12, 38, 1.7], [-20, 35, 1.4], [12, 37, 1.5], [-28, 28, 1.6], [29, 6, 1.3], [-29, 2, 1.2]] as [number, number, number][]).map(([x, z, s]) => [beside(x), behind(z), s] as [number, number, number]).filter(([x, z]) => onGround(x, z));
+  for (let x = -QUAY_SIDE - 6; x <= QUAY_SIDE + 6; x += 13) { const t: [number, number, number] = [x + (r() - 0.5) * 6, 36 + ZS + r() * 8, 1.3 + r() * 0.5]; if (onGround(t[0], t[1])) trees.push(t); }
   for (const b of beds) trees.push([(b[0] + b[1]) / 2, (b[2] + b[3]) / 2, 0.8]);
   const blobG = new THREE.IcosahedronGeometry(1, 2);
   {
@@ -227,7 +231,7 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
     }
     rockG.computeVertexNormals();
   }
-  const rocks: [number, number, number][] = [[-28, 3, 1.3], [28, 4, 1.1], [29, -3, 1.4], [-29, -3.5, 1.2], [30, -6.5, 1.0], [-31, -6, 1.5], [6, 38, 1.2], [-34, 14, 1.8], [33, 16, 1.6]].map(([x, z, r]) => [beside(x), z, r]);
+  const rocks: [number, number, number][] = [[-28, 3, 1.3], [28, 4, 1.1], [29, -3, 1.4], [-29, -3.5, 1.2], [30, -6.5, 1.0], [-31, -6, 1.5], [6, 38, 1.2], [-34, 14, 1.8], [33, 16, 1.6]].map(([x, z, r]) => [beside(x), behind(z), r]);
   const rockM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true });
   const rk = new THREE.InstancedMesh(rockG, rockM, rocks.length);
   const rpal = [0x8a9096, 0x7d8387, 0x9a9890, 0x6f767c];
@@ -242,5 +246,5 @@ export function buildNature(scene: THREE.Object3D, onGround: (x: number, z: numb
   rk.castShadow = rk.receiveShadow = true;
   scene.add(rk);
 
-  return { fireflies: [[-14, 15.5, 0], [-4, 16, 0], [8, 15.5, 0], [17, 16.5, 0], [-24, 14, 0], [25, 13, 0]] };
+  return { fireflies: [[-14, 15.5, 0], [-4, 16, 0], [8, 15.5, 0], [17, 16.5, 0], [-24, 14, 0], [25, 13, 0]].map(([x, z, y]) => [x, behind(z) , y]) as [number, number, number][] };
 }

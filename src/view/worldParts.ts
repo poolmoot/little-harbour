@@ -1,10 +1,11 @@
 import type * as THREE from 'three';
+import { LAWNS } from '../sim/layoutBoxes';
 import type { Smoke } from './fx';
 import type { mats } from './kit';
 import type { Disc, Obb } from './collide';
 
-/** Planted beds on the quay as [x0, x1, z0, z1]: lawns with a tree, kept out of the worker corridor (z 12.2) and the queue and table space. */
-export const BEDS: [number, number, number, number][] = [[-23.6, -15.4, 9.8, 13.2], [18.6, 23.6, 6.6, 13.2], [-10.4, -6.0, 9.8, 11.6], [6.2, 9.2, 9.8, 11.6]];
+/** Planted beds on the quay as [x0, x1, z0, z1]: lawns with a tree, on the camera side of the main street (the same list the layout tests use). */
+export const BEDS = LAWNS;
 
 export interface Rect {
   x0: number; x1: number; z0: number; z1: number;
@@ -21,11 +22,9 @@ export interface Build {
   readonly signs: { m: THREE.Object3D; phase: number; /** extra swing (radians) from the player brushing past */ kick?: number }[];
   readonly smokes: Smoke[];
   readonly stallWings: THREE.Group[];
-  stallSolid: Rect;
   vane: THREE.Group;
   vaneArrow: THREE.Group;
   flag: THREE.Mesh;
-  solid(r: Rect): void;
   /** A solid box turned by `a` radians (same turn as Three.js rotation.y), or a round post. */
   box(o: Obb): void;
   disc(d: Disc): void;
