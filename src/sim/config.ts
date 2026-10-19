@@ -87,7 +87,7 @@ export const BOAT_NAMES = ['Gull', 'Wren', 'Marigold', 'Albatross'];
 /** Cost to reach level i of each track (index 0 unused). Hold, Gear and Sails are multiplied by TIER_COST_MULT[hull]. */
 export const TRACK_COST: Record<Track, number[]> = {
   hull: [0, 400, 2500, 4500],
-  hold: [0, 300, 450, 1200],
+  hold: [0, 110, 450, 1200],
   gear: [0, 350, 950],
   sails: [0, 350, 800],
 };

@@ -26,6 +26,8 @@ export interface ScreenCtx {
   audio: Readonly<AudioSettings>;
   /** What the harbour earned while the player was away (welcome-back window). */
   away?: AwayInfo | null;
+  /** The Show guide tips switch. */
+  guideTips?: boolean;
   /** Seconds since this window opened (lets a number count up). */
   age?: number;
 }

@@ -1,6 +1,7 @@
 import { button, esc, money } from '../components';
 import { icon } from '../icons';
 import { GAME_NAME, GAME_TAGLINE, MENU } from '../menuText';
+import { GUIDE } from '../guideText';
 import { emblem } from '../intro';
 import type { Screen } from './types';
 
@@ -22,6 +23,7 @@ export const titleScreen: Screen = ({ state: s, hasSave, confirmNew }) => {
     button({ label: MENU.newGame, act: 'newgame', tone: hasSave ? 'gold' : 'go', size: 'lg', wide: true }),
     button({ label: `${icon('gear', 24)}${MENU.settings}`, act: 'settings', tone: 'info', size: 'lg', wide: true }),
     button({ label: `${icon('help', 24)}${MENU.howToPlay}`, act: 'howto', tone: 'info', size: 'lg', wide: true }),
+    button({ label: `${icon('note', 24)}${GUIDE.menuButton}`, act: 'tips', tone: 'info', size: 'lg', wide: true }),
   ].filter(Boolean);
   return { title: GAME_NAME, icon: '', menu: true, bare: true, body: `${hero}${harbour}<div class="menu-list">${items.join('')}</div>` };
 };

@@ -124,7 +124,7 @@ scripted player never bought one before the top rank; now it buys three.
 | Item | Cost |
 |---|---|
 | Hull: Sloop / Cutter / Trawler | 400 / 2,500 / 4,500 |
-| Hold II / III / IV (rowboat prices) | 300 / 450 / 1,200 |
+| Hold II / III / IV (rowboat prices) | 110 / 450 / 1,200 |
 | Gear I / II (rowboat prices) | 350 / 950 |
 | Sails I / II (rowboat prices) | 350 / 800 |
 | Hold, Gear, Sails multiplier by hull: Rowboat / Sloop / Cutter / Trawler | ×1 / ×1.6 / ×2.6 / ×4 |

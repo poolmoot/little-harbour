@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { BUILDING_IDS, LAYOUT, PLOT_HALF, toWorld } from '../sim/config';
-import type { BuildingId, GoalArrow, WeatherId } from '../sim/config';
-import { currentGoal } from '../sim/sim';
+import type { BuildingId, WeatherId } from '../sim/config';
 import type { GameState } from '../sim/state';
 import { Smoke } from './fx';
 import { bake, barrel, bx, chimney, crateBox, cy, doorAt, fishGeo, flat, gableRoof, lampMat, put, signMesh, tBox, windowAt } from './kit';
@@ -155,35 +154,6 @@ const PLANS: Record<BuildingId, Plan> = {
   },
 };
 
-// ---- goal arrow ------------------------------------------------------------------------------------
-
-const SHIPYARD_FRONT = toWorld(LAYOUT.shipyard, 0, 2);
-const ARROW_SPOT: Record<GoalArrow, [x: number, y: number, z: number]> = {
-  boat: [LAYOUT.berths[0].boatX, 3.6, LAYOUT.berths[0].boatZ],
-  market: [LAYOUT.market.x, 4.4, LAYOUT.market.z],
-  pierEnd: [LAYOUT.fishingSpot.x, 2.6, LAYOUT.fishingSpot.z],
-  shipyard: [SHIPYARD_FRONT.x, 5.6, SHIPYARD_FRONT.z],
-  board: [LAYOUT.noticeBoard.x, 3.2, LAYOUT.noticeBoard.z],
-  inn: [LAYOUT.inn.x - 1.8, 6.4, LAYOUT.inn.z + 3],
-};
-
-function buildArrow(): THREE.Group {
-  const g = new THREE.Group();
-  const gold = new THREE.MeshBasicMaterial({ color: 0xffd23a, toneMapped: false, fog: false });
-  const ink = new THREE.MeshBasicMaterial({ color: 0x0b1a44, side: THREE.BackSide, fog: false });
-  const head = new THREE.ConeGeometry(0.42, 0.6, 4), shaft = new THREE.BoxGeometry(0.3, 0.6, 0.3);
-  for (const [geo, y, flip] of [[head, 0.3, true], [shaft, 0.85, false]] as const) {
-    const m = new THREE.Mesh(geo, gold);
-    m.position.y = y;
-    if (flip) m.rotation.x = Math.PI;
-    const outline = new THREE.Mesh(geo, ink);
-    outline.scale.setScalar(1.18);
-    m.add(outline);
-    g.add(m);
-  }
-  return g;
-}
-
 // ---- weather ---------------------------------------------------------------------------------------
 
 /** How each kind of day looks: how dark, how misty, how hard it rains (all 0 to 1), and how windy the rain falls. */
@@ -235,7 +205,6 @@ export class TycoonView {
   /** The lighthouse's turning beam (placed by its building plan). */
   readonly beam = new THREE.Group();
   private plots = new Map<BuildingId, { group: THREE.Group; level: number }>();
-  private arrow = buildArrow();
   private rain = buildRain();
   private look = { dim: 0, mist: 0, rain: 0, slant: 0 };
   private flash = 0;
@@ -262,8 +231,7 @@ export class TycoonView {
     cone.userData.keep = true;
     this.beam.add(cone);
     this.beam.userData.keep = true;
-    this.arrow.visible = false;
-    rig.scene.add(this.arrow, this.rain);
+    rig.scene.add(this.rain);
   }
 
   /** World position of a point given in a plot group's own frame (the plots are turned). */
@@ -295,13 +263,6 @@ export class TycoonView {
     this.beam.visible = sky.lantern > 0.3 || this.look.dim > 0.4;
     this.beam.rotation.y = now * 0.7;
 
-    const goal = currentGoal(state);
-    const spot = goal?.arrow ? ARROW_SPOT[goal.arrow] : null;
-    this.arrow.visible = !!spot;
-    if (spot) {
-      this.arrow.position.set(spot[0], spot[1] + Math.abs(Math.sin(now * 3.2)) * 0.5, spot[2]);
-      this.arrow.rotation.y = now * 1.6;
-    }
     this.weather(state.weather, now, dt);
   }
 

@@ -12,6 +12,7 @@ import { crateSize, crateStars } from '../sim/fishbook';
 import { fishIcon, HULL_ICONS, icon } from './icons';
 import { goalDoneHtml, goalHtml, rateHtml, weatherHtml } from './hudParts';
 import { HUD_TEXT } from './screenText';
+import { GUIDE } from './guideText';
 import { HINTS } from './menuText';
 import type { PanelKind } from './panels';
 import { FISH_NAME, LABEL, PHASE_NAME, RANK_NAME, boatType, crates, sizeText, starText } from './text';
@@ -86,6 +87,8 @@ export class Hud {
   private clock: HTMLDivElement;
   private money: HTMLDivElement;
   private goal: HTMLDivElement;
+  /** The left column; the guide cards slide in at its top. */
+  readonly left: HTMLDivElement;
   private weather: HTMLDivElement;
   private orders: HTMLDivElement;
   private tiles: HTMLDivElement;
@@ -109,7 +112,7 @@ export class Hud {
     this.clock = div('well pill hud-clock ol', tr);
     this.weather = div('well pill hud-weather', tr);
     this.money = div('well pill hud-money ol', tr);
-    const left = div('hud-left', root);
+    const left = this.left = div('hud-left', root);
     this.goal = div('pn hud-goal', left);
     this.orders = div('pn hud-orders', left);
     const right = div('hud-right', root);
@@ -152,7 +155,8 @@ export class Hud {
       state.orders.length ? state.orders.map((o) => orderRow(state, o)).join('') : '<div class="hud-orders-row dim">No orders right now.</div>'}`);
 
     set(this.tiles, `<button class="tile ol" data-open="board">${icon('note', 30)}Orders${state.orders.length ? `<span class="dot">${state.orders.length}</span>` : ''}</button>
-      <button class="tile ol" data-open="logbook">${icon('book', 30)}Fish book</button>`);
+      <button class="tile ol" data-open="logbook">${icon('book', 30)}Fish book</button>
+      <button class="tile ol" data-open="help">${icon('help', 30)}${GUIDE.helpTile}</button>`);
     set(this.boats, state.boats.map(boatCard).join(''));
     this.notice(this.boats, `back${state.boats.filter((b) => b.status === 'returned').length}`, true);
     this.notice(this.orders, `orders${state.orders.map((o) => o.id).join(',')}`, state.orders.length > 0);
@@ -193,6 +197,11 @@ export class Hud {
     }
     this.money.classList.toggle('tick', diff > 0.5);
     set(this.money, `${rateHtml(state)}${money(this.shownMoney)}${icon('coin', 34)}`);
+  }
+
+  /** Leave out the goal panel while a guide card is in its place. */
+  hideGoal(hide: boolean): void {
+    this.goal.classList.toggle('hidden', hide);
   }
 
   /** Shows "Goal done" in the goal panel for a moment. */
