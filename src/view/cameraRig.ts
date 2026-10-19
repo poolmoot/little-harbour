@@ -6,6 +6,14 @@ const JUMP = 3.5;
 /** A little look-ahead in the direction of movement, in metres per m/s of speed, and its limit. */
 const AHEAD = 0.14, AHEAD_MAX = 0.9;
 
+/** Title-screen camera: a slow circle round the harbour, starting far out over the sea and drifting in. */
+const SHOW_CENTRE = new THREE.Vector3(0, 0, 2);
+const SHOW_FAR = 70, SHOW_NEAR = 34, SHOW_DOLLY_S = 6, SHOW_SPIN = 0.045, SHOW_START = Math.PI - 0.45, SHOW_HEIGHT = 0.5;
+/** How fast the camera blends between the title circle and following the player (per second). */
+const SHOW_BLEND = 0.7;
+const smooth = (x: number) => x * x * (3 - 2 * x);
+const tmpPos = new THREE.Vector3(), tmpLook = new THREE.Vector3(), showPos = new THREE.Vector3();
+
 /** Fixed-yaw angled camera, smooth follow. The pitch eases flatter out on the pier so the sea and haze show. */
 export class CameraRig {
   readonly focus = new THREE.Vector3();
@@ -13,6 +21,10 @@ export class CameraRig {
   pitchGoal = 55;
   distance = 20;
   override: { pitch: number; dist: number } | null = null;
+  /** True while the title screen is up: the camera circles the harbour instead of following the player. */
+  showcase = false;
+  private show = 0;
+  private showT = 0;
   private fx = new Damped();
   private fz = new Damped();
   private pitch = new Damped(55);
@@ -54,6 +66,8 @@ export class CameraRig {
     this.focus.z = this.fz.update(target.z + this.aheadZ, 0.2, dt);
     this.focus.y += (target.y - this.focus.y) * (1 - Math.exp(-dt * 5));
     this.pitchDeg = this.pitch.update(this.pitchGoal, 0.6, dt);
+    if (this.showcase) this.showT += dt;
+    this.show = Math.min(1, Math.max(0, this.show + (this.showcase ? 1 : -1) * dt * SHOW_BLEND));
     this.apply();
   }
 
@@ -61,7 +75,16 @@ export class CameraRig {
     const pitch = this.override?.pitch ?? this.pitchDeg;
     const dist = this.override?.dist ?? this.distance;
     const p = (pitch * Math.PI) / 180;
-    this.camera.position.set(this.focus.x, this.focus.y + Math.sin(p) * dist, this.focus.z + Math.cos(p) * dist);
-    this.camera.lookAt(this.focus.x, this.focus.y + 0.6, this.focus.z);
+    tmpPos.set(this.focus.x, this.focus.y + Math.sin(p) * dist, this.focus.z + Math.cos(p) * dist);
+    tmpLook.set(this.focus.x, this.focus.y + 0.6, this.focus.z);
+    if (this.show > 0) {
+      // Blend from the follow camera towards the title circle (and back again when play starts).
+      const r = SHOW_FAR + (SHOW_NEAR - SHOW_FAR) * smooth(Math.min(1, this.showT / SHOW_DOLLY_S));
+      const a = SHOW_START + this.showT * SHOW_SPIN, k = smooth(this.show);
+      tmpPos.lerp(showPos.set(SHOW_CENTRE.x + Math.sin(a) * r, r * SHOW_HEIGHT, SHOW_CENTRE.z + Math.cos(a) * r), k);
+      tmpLook.lerp(SHOW_CENTRE, k);
+    }
+    this.camera.position.copy(tmpPos);
+    this.camera.lookAt(tmpLook);
   }
 }

@@ -1,0 +1,18 @@
+/* First-time tutorial: a small bar at the top, an instruction bubble with a bouncing arrow, an edge arrow, and a ring round the button to press. */
+.coach-bar { position: absolute; top: calc(12px * var(--ui-zoom)); left: 50%; transform: translateX(-50%); scale: var(--ui-zoom); transform-origin: top center;
+  display: flex; align-items: center; gap: 12px; padding: 4px 6px 6px 14px; pointer-events: auto; z-index: 15; }
+.coach-tip { position: absolute; z-index: 16; translate: -50% -100%; display: flex; flex-direction: column; align-items: center; pointer-events: none; scale: var(--ui-zoom); transform-origin: bottom center; }
+.coach-tip:not(.pointing) { translate: -50% 0; transform-origin: top center; }
+.coach-tip:not(.pointing) .coach-arrow { display: none; }
+.coach-tip.pop { animation: pop-in 0.3s var(--ease-pop); }
+.coach-text { max-width: 300px; padding: 8px 16px 11px; text-align: center; font-size: var(--fs-lg); line-height: 1.15; background: linear-gradient(var(--gold-hi), var(--gold-lo)); border-color: var(--ink); }
+.coach-arrow { width: 0; height: 0; margin-top: 4px; border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 22px solid var(--gold-hi);
+  filter: drop-shadow(0 3px 0 var(--ink)) drop-shadow(0 -2px 0 var(--ink)); animation: coach-bounce 0.7s ease-in-out infinite alternate; }
+@keyframes coach-bounce { from { transform: translateY(0); } to { transform: translateY(10px); } }
+.coach-edge { position: absolute; z-index: 16; width: 0; height: 0; pointer-events: none; }
+.coach-edge-arrow { position: absolute; left: -24px; top: -24px; width: 48px; height: 48px; rotate: var(--angle); scale: var(--ui-zoom);
+  background: var(--gold-hi); clip-path: polygon(0 25%, 55% 25%, 55% 0, 100% 50%, 55% 100%, 55% 75%, 0 75%); animation: coach-nudge 0.6s ease-in-out infinite alternate; }
+@keyframes coach-nudge { from { translate: 0 0; } to { translate: 6px 0; } }
+.coach-ring { position: fixed; z-index: 60; pointer-events: none; border: 4px solid var(--gold-hi); border-radius: 14px; box-shadow: 0 0 0 3px var(--ink), 0 0 18px 4px rgba(255, 216, 58, 0.7);
+  animation: coach-ring 0.8s ease-in-out infinite alternate; }
+@keyframes coach-ring { from { transform: scale(1); } to { transform: scale(1.06); } }

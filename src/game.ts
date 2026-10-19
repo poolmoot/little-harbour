@@ -11,6 +11,8 @@ import { acceptContract, buyBuilding, collectSmoked, repairBoat, sellToRestauran
 import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
+import { playIntro } from './ui/intro';
+import { Coach } from './ui/coach';
 import { Hud } from './ui/hud';
 import { EventRouter } from './events';
 import { STATIONS, findTarget, interact, promptFor } from './interaction';
@@ -82,6 +84,17 @@ export class Game {
   private marker: TargetMarker;
   private hud: Hud;
   private panels: Panels;
+  private coach: Coach;
+  private projected = new Vector3();
+  private projectedOut = { x: 0, y: 0, front: true };
+  /** World point to screen pixels, for the tutorial's pointers. */
+  private project = (p: { x: number; y: number; z: number }) => {
+    const v = this.projected.set(p.x, p.y, p.z).project(this.rig.camera), o = this.projectedOut;
+    o.x = (v.x * 0.5 + 0.5) * innerWidth;
+    o.y = (-v.y * 0.5 + 0.5) * innerHeight;
+    o.front = v.z < 1;
+    return o;
+  };
   private target: Target | null = null;
   private last = performance.now();
   private now = 0;
@@ -123,6 +136,7 @@ export class Game {
     this.fishView = new FishingView(this.rig.scene, this.player);
     this.marker = new TargetMarker(this.rig.scene);
     this.hud = new Hud(uiRoot, (kind) => { this.audio.click(); this.panels.toggle(kind); });
+    this.coach = new Coach(uiRoot);
     this.events = new EventRouter({
       audio: this.audio,
       hud: this.hud,
@@ -193,7 +207,7 @@ export class Game {
 
     this.events.syncWeather(this.state.weather);
     if (skipTitle()) this.beginPlay();
-    else this.panels.open('title');
+    else { playIntro(uiRoot); this.panels.open('title'); }
     if (import.meta.env.DEV) {
       const self = this;
       void import('./debug').then((m) => m.installDebug({
@@ -394,6 +408,7 @@ export class Game {
     }
 
     // view
+    this.cameraRig.showcase = this.mode === 'title';
     this.cameraRig.update(dt, this.player.pos);
     this.tycoonView.sync(s, this.now, sdt);
     this.unstickPlayer();
@@ -434,6 +449,7 @@ export class Game {
 
     // ui
     this.hud.update(s, promptFor(s, this.target));
+    this.coach.update(s, this.panels.current, this.player.pos.x, this.player.pos.z, this.project, this.mode === 'play');
     this.panels.update();
   }
 }

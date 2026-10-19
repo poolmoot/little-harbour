@@ -1,3 +1,4 @@
+import { trackUiScale } from './uiScale';
 import { HOUR_SECONDS } from '../sim/config';
 import { carryCapacity, handCrates } from '../sim/crates';
 import { holdSize } from '../sim/fleet';
@@ -21,6 +22,8 @@ const URGENT_SECONDS = 15;
 const ORDER_METER_SECONDS = 60;
 const TOAST_MS = 3400;
 const TOAST_FADE_MS = 400;
+/** How long a HUD panel's attention flash lasts (matches hud-flash in scale.css). */
+const FLASH_MS = 1400;
 const MAX_TOASTS = 4;
 /** How long the "goal done" panel stays before the next goal is shown. */
 const GOAL_DONE_MS = 1800;
@@ -93,11 +96,14 @@ export class Hud {
   private shownMoney = -1;
   private lastTick = performance.now();
   private lastSlow = -1000;
+  /** What each flashing panel last showed, so it only flashes on a real change. */
+  private seen = new Map<HTMLElement, string>();
   /** After a goal is finished the panel shows "Goal done" for a moment before the next goal appears. */
   private goalDoneUntil = 0;
   private goalDoneReward = 0;
 
   constructor(private root: HTMLElement, onOpen: (kind: PanelKind) => void) {
+    trackUiScale();
     this.rank = div('hud-tl', root);
     const tr = div('hud-tr', root);
     this.clock = div('well pill hud-clock ol', tr);
@@ -136,6 +142,7 @@ export class Hud {
     const done = now < this.goalDoneUntil;
     this.goal.classList.toggle('done', done);
     set(this.goal, done ? goalDoneHtml(this.goalDoneReward) : goalHtml(state));
+    this.notice(this.goal, `goal${state.goal}`);
 
     const rp = rankProgress(state);
     set(this.rank, `<div class="hud-shield">${icon('shield', 48)}<span class="ol">${rankOf(state) + 1}</span></div>
@@ -147,6 +154,8 @@ export class Hud {
     set(this.tiles, `<button class="tile ol" data-open="board">${icon('note', 30)}Orders${state.orders.length ? `<span class="dot">${state.orders.length}</span>` : ''}</button>
       <button class="tile ol" data-open="logbook">${icon('book', 30)}Fish book</button>`);
     set(this.boats, state.boats.map(boatCard).join(''));
+    this.notice(this.boats, `back${state.boats.filter((b) => b.status === 'returned').length}`, true);
+    this.notice(this.orders, `orders${state.orders.map((o) => o.id).join(',')}`, state.orders.length > 0);
 
     const hand = handCrates(state);
     const cap = carryCapacity(state);
@@ -156,6 +165,17 @@ export class Hud {
       slots += c ? slotHtml(c) : '<div class="slot empty">+</div>';
     }
     set(this.carry, `<div class="ol">Carrying ${hand.length} / ${cap}</div><div class="hud-slots">${slots}</div>`);
+  }
+
+  /** Flash a HUD panel when what it shows changes in a way the player should act on (a new goal, order or returned boat). */
+  private notice(el: HTMLElement, key: string, worth = true): void {
+    const last = this.seen.get(el);
+    this.seen.set(el, key);
+    if (last === undefined || last === key || !worth) return;
+    el.classList.remove('flash');
+    void el.offsetWidth; // restart the animation
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), FLASH_MS);
   }
 
   /** The counter ticks up (or down) towards the real balance. */

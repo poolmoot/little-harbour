@@ -1,9 +1,10 @@
 import { button, esc, money } from '../components';
 import { icon } from '../icons';
 import { GAME_NAME, GAME_TAGLINE, MENU } from '../menuText';
+import { emblem } from '../intro';
 import type { Screen } from './types';
 
-const hero = `<div class="menu-hero ol">${GAME_NAME}</div><p class="menu-tag">${GAME_TAGLINE}</p>`;
+const hero = `<div class="menu-emblem">${emblem(170)}</div><div class="menu-hero ol">${GAME_NAME}</div><p class="menu-tag">${GAME_TAGLINE}</p>`;
 
 /** The first screen: Continue (only with a save), New game, Settings, How to play. */
 export const titleScreen: Screen = ({ state: s, hasSave, confirmNew }) => {
