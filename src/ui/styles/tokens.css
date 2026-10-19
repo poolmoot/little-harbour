@@ -32,7 +32,13 @@
   --lift: 0 4px 0 var(--ink-soft);
   --lift-sm: 0 3px 0 var(--ink-soft);
 
+  /* Two faces: the chunky display face for names, titles, numbers and buttons; a rounded sans with real weights for
+     everything you read in sentences. Weight and face carry the hierarchy as much as size does. */
   --font: 'Lilita One', 'Trebuchet MS', system-ui, sans-serif;
+  --font-body: 'Nunito', 'Trebuchet MS', system-ui, sans-serif;
+  --w-body: 700;
+  --w-strong: 800;
+  --w-heavy: 900;
   --fs-xs: 13px;
   --fs-sm: 14px;
   --fs-md: 16px;

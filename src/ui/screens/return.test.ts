@@ -92,7 +92,7 @@ describe('sizes, stars and golden fish in crate windows', () => {
     const s = rich();
     addCrate(s, 'tuna', 'hand', 0, { golden: true });
     const body = marketScreen(ctx(s)).body;
-    expect(body).toContain('item gold');
+    expect(body).toContain('mk-row gold');
     expect(body).toContain('Golden Tuna');
     expect(body).toContain(`pays ${GOLDEN_MULT} times as much`);
     expect(body).toContain('gold-tag');

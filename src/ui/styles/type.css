@@ -1,0 +1,30 @@
+/*
+ * Type hierarchy, from loudest to quietest:
+ *   1. window titles and big numbers ......... display face, 26 px
+ *   2. section headings ...................... display face, 17 px, gold
+ *   3. names of things (fish, boats, cards) .. display face, 17 px
+ *   4. sentences and facts ................... body face, heavy (800), 15 px
+ *   5. hints, captions, "why" lines .......... body face, bold (700), 14 px, dimmed
+ * Anything outlined (.ol) or on a button stays in the display face; everything else reads in the body face.
+ */
+#ui { font-family: var(--font-body); font-weight: var(--w-strong); letter-spacing: 0.1px; }
+#ui button { font: inherit; font-family: var(--font); }
+#ui .ol, #ui .btn, #ui .tab, #ui .tile, #ui .pill, #ui .price, #ui .tag, #ui .kbd, #ui .section, #ui .card-name, #ui .item-title,
+#ui .win-title, #ui .menu-hero, #ui .stat .ol, #ui .chip b { font-family: var(--font); font-weight: 400; letter-spacing: 0.3px; }
+
+/* Buttons take their own designed sizes instead of whatever text they sit in. */
+#ui .btn { font-size: 17px; }
+#ui .btn.sm { font-size: var(--fs-md); }
+#ui .btn.lg { font-size: 22px; }
+#ui .btn.hero { font-size: 23px; }
+
+.win-title { font-size: 26px; }
+.section { font-size: 17px; margin-top: 14px; }
+.item-title { font-size: 17px; }
+.item-sub { font-size: 14px; font-weight: var(--w-body); line-height: 1.3; }
+.card-line { font-size: 14px; line-height: 1.2; }
+.card-name { font-size: 17px; }
+.win-note, .win-foot .dim { font-size: 14px; font-weight: var(--w-body); line-height: 1.3; }
+.dim { font-weight: var(--w-body); }
+.chip { font-weight: var(--w-heavy); }
+.empty { font-size: 15px; font-weight: var(--w-strong); }

@@ -207,3 +207,24 @@ export const MARK_TEXT = {
   /** Small bubbles over a building: smoked fish is done, something can be bought now, a building has just opened up. */
   bubble: { ready: 'ready', up: 'up', new: 'new' },
 };
+
+// ---- fish market window ------------------------------------------------------------------------------
+
+export const MARKET_TEXT = {
+  title: 'Fish Market',
+  yourFish: 'Your fish',
+  carrying: (n: number, total: number) => `${n} ${n === 1 ? 'crate' : 'crates'} · worth $${total}`,
+  emptyTitle: 'Your hands are empty',
+  emptySteps: ['Walk to a boat that is back and press E to unload it', 'Pick up a crate on the dock with E', 'Bring it here and sell it'],
+  prices: "Today's prices",
+  pricesNote: 'Price for a full-fresh crate. Selling a lot of one fish lowers its price for a while.',
+  wanted: 'Order wants it: double',
+  level: (d: number) => (d >= 0.9 ? 'Good price' : d >= 0.7 ? 'Price is lower' : 'Price is low'),
+  unknown: 'Not caught yet',
+  sell: 'Sell',
+  sellAll: 'Sell all',
+  smoked: 'Smoked. It never goes bad.',
+  bad: 'Gone bad',
+  fresh: (pct: number) => `${pct}% fresh`,
+  tip: 'Fresh fish sell for more. Fish an order wants pay double.',
+};

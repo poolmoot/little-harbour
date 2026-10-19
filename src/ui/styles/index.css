@@ -1,4 +1,7 @@
 @import '@fontsource/lilita-one/latin-400.css';
+@import '@fontsource/nunito/latin-700.css';
+@import '@fontsource/nunito/latin-800.css';
+@import '@fontsource/nunito/latin-900.css';
 @import './tokens.css';
 @import './base.css';
 @import './components.css';
@@ -6,4 +9,6 @@
 @import './window.css';
 @import './menu.css';
 @import './scale.css';
+@import './type.css';
+@import './market.css';
 @import './coach.css';
