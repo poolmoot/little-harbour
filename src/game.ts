@@ -464,7 +464,7 @@ export class Game {
     // view
     this.cameraRig.showcase = this.mode === 'title';
     this.cameraRig.update(dt, this.player.pos);
-    this.tycoonView.sync(s, this.now, sdt);
+    this.tycoonView.sync(s, this.now, sdt, this.player.pos);
     this.unstickPlayer();
     this.rig.update(s.dayTime, this.cameraRig.focus, this.now);
     updateOcclusion(this.rig.camera, this.player.pos);

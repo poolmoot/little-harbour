@@ -26,10 +26,6 @@ export function buildShipyard(w: Build): void {
   const smoke = chimney(g, -2.1, 3.6, -1.0, 2.0);
   g.updateMatrixWorld(true);
   w.smokes.push(new Smoke(w.group, g.localToWorld(smoke)));
-  const sign = signMesh('SHIPYARD', 2.4, 0.55, '#3b5167');
-  sign.position.set(0.9, 3.0, 2.2);
-  live.add(sign);
-  w.signs.push({ m: sign, phase: 1.2 });
   // upturned hull on trestles, beside the yard on the west side where it is quiet (its footprint is in layoutBoxes.ts)
   const hullMat = flat(0x7b4b32, 0.85);
   const hull = put(hullGeometry(BOAT_TIERS[0].shape, { bottom: 0, stripe: 0, side: 0, sheer: 0 }), hullMat, -6.9, 1.15, 0.5, g);
@@ -62,12 +58,6 @@ export function buildInn(w: Build): void {
   windowAt(g, 3.3, 4.1, 0, 0.9, 0.9, { ry: Math.PI / 2 });
   const top = chimney(g, 2.5, 5.9, -0.8, 1.7);
   w.smokes.push(new Smoke(w.group, top.add(new THREE.Vector3(x, 0, z)), 32));
-  // hanging anchor sign
-  for (const sx of [-1.3, 1.7]) bx(0.05, 0.4, 0.05, M.iron, sx, 3.35, 2.7, g);
-  const sign = signMesh('THE ANCHOR INN', 3.0, 0.55, '#7a2f2a');
-  sign.position.set(x + 0.2, 3.35, z + 2.74);
-  w.group.add(sign);
-  w.signs.push({ m: sign, phase: 2.4 });
   // pennant on the ridge
   const pole = cy(0.03, 0.03, 1.6, M.iron, 3.1, 7.9, 0, g, 5);
   pole.castShadow = false;

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
 import { SPECIES_COLOUR } from '../palette';
 
-import { bake, barrel, bx, crateBox, cy, fishGeo, flat, put, signMesh, tBox } from './kit';
+import { bake, barrel, bx, crateBox, cy, fishGeo, flat, put, tBox } from './kit';
 import { lampHead } from './worldLamps';
 import type { Build } from './worldParts';
 
@@ -39,10 +39,6 @@ export function buildMarket(w: Build): void {
     f.scale.setScalar(0.5);
     f.rotation.set(0, 0, Math.PI / 2);
   }
-  const sign = signMesh('FISH MARKET', 2.6, 0.5, '#2f6f8f');
-  sign.position.set(x, 1.9, z + 1.1);
-  w.group.add(sign);
-  w.signs.push({ m: sign, phase: 0 });
   lampHead(w, x + 1.7, 2.5, z + 0.6, false, true);
   // scale + baskets on the counter
   cy(0.2, 0.2, 0.04, flat(0xb89a5a, 0.4), x + 1.2, 1.14, z - 0.5, s, 10);
