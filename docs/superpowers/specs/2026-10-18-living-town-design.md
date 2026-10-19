@@ -141,19 +141,21 @@ Sections 4 (movement and camera) and 5 (the walk).
 - Camera: critically damped follow (0.2 s), a small look-ahead in the direction of movement (up to 0.9 m), a softer pitch
   change on the pier, and a straight cut instead of a swoop when the player is moved more than 3.5 m in a frame.
 
-## Layout: done
+## Layout: done (redone as one wide street)
 
-The town is a crescent round a small square at the head of the pier (all positions in `LAYOUT`, `src/sim/config.ts`; rotations in radians; `toWorld` turns a point in a building's own frame into world coordinates).
+One street, no turned buildings. All positions are in `LAYOUT` (`src/sim/config.ts`); every solid thing and every lane that must stay clear is in `src/sim/layoutBoxes.ts`, and the view builds its walking collision from that same data (`World` reads `BOXES` and `ROUNDS`).
 
-- Quay is 48 wide (x -24 to 24) and 13.4 deep. Far row, doors facing the camera: shipyard (-18.2, 4.3, turned 0.25), market (-8.8, 2.6), ice box (-3, 2.4), clock tower (4.6, 1.8, the landmark and the harbour bell), inn (10.2, 2.8), smokehouse (16.6, 3.2). Arms turned towards the square: cold store (-12.6, 8.8, turned 0.5) and restaurant (13.4, 8.7, turned -0.5).
-- The lighthouse stands on its own rocky point at the east end (door at about 20.2, -1.3; point rectangle `LAYOUT.point`). A breakwater of boulders runs out from the west end.
-- Square: a flagstone disc at (0, 8.7) with a fountain (5, 8.7) and a well (-5, 8.7); the middle stays open for the workers' lanes. Notice board (2.9, 5.6). Lawns with trees at the corners.
-- Behind the town: stairs up to two terraces of pastel houses (decorative, doors towards the town).
-- Workers: lane up from the pier, corridor at z 12.2, then straight down to each door; all of it is checked clear of buildings by `layout.test.ts`. The market and ice drops keep their short routes at z 6.4.
-- Longest straight walk from the pier head (0, 1) to a door: shipyard about 18.6, lighthouse about 20.7. The pacing test passes unchanged.
-- Space kept clear for the town-life work: market queue `LAYOUT.queueZone` (x -12.8 to -4.8, z 4.4 to 5.5, in front of the stall); restaurant terrace `LAYOUT.terrace` in the restaurant's own frame (x -3 to 3, z 2.2 to 3.6, room for three tables; use `toWorld(LAYOUT.plots.restaurant, ...)`); pier-head crowd `LAYOUT.crowdZone` (x -3.2 to 3.2, z 0.8 to 4.6) plus the pier itself.
-- Collision (`src/view/collide.ts`) pushes the walker out of turned boxes and discs and back onto the ground, so walls and corners slide and never snag. Anything solid is a box or disc in `World.solids`.
-- Fade: `src/view/occlusion.ts` thins out (never fully) anything between the camera and the player, in the shader, for all town materials, the ink outlines and the trees.
+- Quay is 110 wide (x -55 to 55) and 19 deep. The sea is at -z, the camera at +z, the pier runs out from x = 0.
+- **One row** on the sea side of the street, every door towards the camera, nothing turned, all fronts on one door line (`LAYOUT.doorLineZ`, z 5.6), about 4 units between buildings. West of the pier, in the order fish travels: ice box (-7.9), market (-16.8), cold store (-27.2), smokehouse (-35.6), shipyard (-44.7, with the upturned hull beside it at -51.6). East of the pier: notice board (8.0), clock tower (14.65, the landmark; `LAYOUT.bellTower`), inn (23.8), restaurant (33.9). The lighthouse stands on its own rocky point at the east end (46, -2.8; door at 46, -0.2).
+- **The main street** is a clear lane 6 wide (`LAYOUT.street`, z 9 to 15) along the whole quay. In front of every door is a clear approach 3.5 wide (the pier one is 2.8). Nothing solid stands in either.
+- **The square** at the head of the pier: at least 14 wide (x -7 to 7) and 10 deep of clear paving, with a flat medallion; the pier mouth between the ice box and the notice board is open.
+- **Camera side of the street** (z 15 to 19): a low wall, a few benches, flower tubs, lamp posts and four lawns with a tree each. No fountain and no well. Behind the wall, two terraces of low, soft-coloured houses with windows and no doors (decoration only).
+- Forecourt (z 5.6 to 9): the market queue `LAYOUT.queueZone` (x -16.5 to -12.6, east half of the stall, never over its door); the restaurant terrace `LAYOUT.terrace` (restaurant frame, east of the door's approach, three tables); the pier crowd `LAYOUT.crowdZone` (x -5 to 5) which keeps `LAYOUT.crowdGap` (2.2) clear in the middle.
+- Workers walk the pier lane, then the street line `LAYOUT.corridorZ` (10.2), then straight down to the door. Player speed is 6.2 and worker speed 3.36 (both up 20 percent for the longer walks).
+- Longest walk from the pier head to a door: about 48 units (shipyard, lighthouse). Pacing test passes unchanged.
+- `layout.test.ts` rasterises the quay (0.1 grid, solids grown by the player's radius) and searches from the start and the pier head: every door, interaction point, plot, boat spot and the fishing spot is reachable; the street is unbroken; approaches are clear; the square is clear; queue, tables and crowd stay out of the lanes.
+- Usable buildings (`src/view/buildingMarks.ts`): hanging icon signboard lit at night, doormat and lantern, a ground glow and a floating name plate when the player is near, and bubbles (ready, up arrow, new) worked out from the state. Wording in `MARK_TEXT` in `src/ui/screenText.ts`.
+- Collision (`src/view/collide.ts`) pushes the walker out of boxes and discs and back onto the ground. Fade: `src/view/occlusion.ts` thins out anything between the camera and the player, in the shader.
 
 ## Town life: done
 
