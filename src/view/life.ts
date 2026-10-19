@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { LAYOUT, toWorld } from '../sim/config';
+import { LAYOUT } from '../sim/config';
+import { NPC_POSTS } from '../sim/layoutBoxes';
 import type { Crate } from '../sim/state';
 import { Figure, mat } from './figures';
 import { NPC_TITLE, pickLine } from '../ui/text';
@@ -52,8 +53,8 @@ const WALKERS: { look: FigureLook; pace: number }[] = [
 ];
 /** Places people like to walk to: stalls, doors, the board, the pier head. */
 const HAUNTS: [number, number][] = [
-  [LAYOUT.market.x, LAYOUT.market.z + 2.8], [LAYOUT.noticeBoard.x, LAYOUT.noticeBoard.z + 1.4], [LAYOUT.inn.x - 1, LAYOUT.inn.z + 5],
-  [toWorld(LAYOUT.shipyard, 3, 5.5).x, toWorld(LAYOUT.shipyard, 3, 5.5).z], [0, 2], [0, -3], [-1, -10], [1, -6], [-16, 11], [16, 12.8], [8, 12.4], [-8, 12.6], [0, 8.7],
+  [LAYOUT.market.x, 11], [LAYOUT.noticeBoard.x, 10], [LAYOUT.inn.x, 11], [LAYOUT.shipyard.x, 11], [LAYOUT.plots.coldstore.x, 11], [LAYOUT.plots.smokehouse.x, 11],
+  [LAYOUT.plots.restaurant.x, 11], [LAYOUT.bellTower.x, 10.5], [0, 4], [0, 2], [0, -3], [-1, -10], [1, -6], [-5, 6.5], [5, 6.5], [0, 12],
 ];
 const WALKER_RADIUS = 0.32;
 
@@ -509,15 +510,14 @@ export class Life {
 
   constructor(scene: THREE.Scene, world: World, private camera: THREE.Camera, uiRoot: HTMLElement, private hooks: TownHooks = NO_HOOKS) {
     const defs: { role: Role; title: string; name: string; x: number; z: number; fig: ConstructorParameters<typeof Figure>[0] }[] = [
-      { role: 'fishmonger', title: NPC_TITLE.fishmonger, name: 'Greta', x: LAYOUT.market.x, z: LAYOUT.market.z - 1.9, fig: NPC_LOOK.fishmonger },
-      { role: 'shipwright', title: NPC_TITLE.shipwright, name: 'Osric', ...toWorld(LAYOUT.shipyard, 2.6, 3.6), fig: NPC_LOOK.shipwright },
-      { role: 'innkeeper', title: NPC_TITLE.innkeeper, name: 'Bram', x: LAYOUT.inn.x - 3.0, z: LAYOUT.inn.z + 3.4, fig: NPC_LOOK.innkeeper },
+      { role: 'fishmonger', title: NPC_TITLE.fishmonger, name: 'Greta', ...NPC_POSTS.fishmonger, fig: NPC_LOOK.fishmonger },
+      { role: 'shipwright', title: NPC_TITLE.shipwright, name: 'Osric', ...NPC_POSTS.shipwright, fig: NPC_LOOK.shipwright },
+      { role: 'innkeeper', title: NPC_TITLE.innkeeper, name: 'Bram', ...NPC_POSTS.innkeeper, fig: NPC_LOOK.innkeeper },
     ];
     for (const d of defs) {
       const figure = new Figure(d.fig);
       figure.group.position.set(d.x, 0, d.z);
       scene.add(figure.group);
-      world.addObstacle({ x0: d.x - 0.4, x1: d.x + 0.4, z0: d.z - 0.4, z1: d.z + 0.4 });
       const el = document.createElement('div');
       el.className = 'bubble';
       uiRoot.appendChild(el);

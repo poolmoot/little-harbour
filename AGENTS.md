@@ -255,7 +255,8 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `away.ts` — earnings while the player is away (measures a rate on a copy, credits half of it).
 - `fishbook.ts` — fish sizes, stars, golden fish, the fish book figures and zone rewards.
 - `names.ts` — harbour and boat names and their checks.
-- `layoutBoxes.ts` — ground footprints of the buildings, used only by the layout tests (`layout.test.ts`, `../layoutStations.test.ts`).
+- `guide.ts` — the starting guide: steps, unlock cards, the gentle first minutes (saved in `state.guide`). `guideAdvice.ts` — what to do instead while a step costs too much or it is night.
+- `layoutBoxes.ts` — every solid footprint on the quay (buildings, plots, tubs, benches, lamps, trees, terrace tables) and the lanes that must stay clear (main street, door approaches, the square). The view builds its collision from it and the layout tests walk it (`layout.test.ts`, `../layoutStations.test.ts`, `../view/townLayout.test.ts`).
 
 **src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
 - `text.ts` — all names and wording the player reads in the game.
@@ -273,6 +274,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `screens/plot.ts` — the window for a plot (For sale, or the right building window); `coldstore.ts`, `smokehouse.ts`, `restaurant.ts`, `lighthouse.ts` — the four building windows. `screens/ending.ts` — the King Fish ending.
 - `screens/logbook.ts` — the fish book (completion meters, sea zones with their rewards, one card per fish). `screens/ledger.ts` — the day report (with the away-earnings line).
 - `screens/title.ts` — the title screen (shows the harbour name). `screens/pause.ts` — the pause menu. `screens/away.ts` — the welcome-back window (money counting up) and the one-time captain tip.
+- `guideText.ts` — wording for the welcome, step cards, unlock cards and advice. `guideParts.ts` (card and help-list builders), `guideCards.ts` (the sliding cards), `guideSetting.ts` (the Show guide tips switch), `coach.ts` (button ring and edge arrow), `screens/guide.ts` (welcome, "?" help list, menu tips list). `src/guideTargets.ts` turns guide targets into world positions.
 - `awayFlow.ts` — pure rules for what the player sees on coming back (welcome, tip or nothing) and the counter easing (tested). `fishParts.ts` — shared crate pieces: golden art and name, size and stars, what the size does to the price.
 - `screens/settings.ts` — volumes, mute, picture quality, reset game.
 - `screens/howto.ts` — the how-to-play page.
@@ -296,9 +298,10 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `world.ts` — the harbour: builds it from the area files, animates lamps and flags, walkable test and sliding movement (`resolve`).
 - `collide.ts` — walking collision maths: a circle against turned boxes and discs, kept on the ground; slides along walls and corners (tested).
 - `occlusion.ts` — the see-through fade for anything between the camera and the player (shader patch, two shared uniforms, `updateOcclusion` called once a frame from `game.ts`).
-- `worldTown.ts` — the clock tower (landmark), the square with fountain and well, the hillside houses and stairs, the breakwater boulders and the lighthouse point.
+- `worldTown.ts` — the clock tower (landmark), the benches and tubs on the camera side of the street, the low decorative hillside houses and stairs, the breakwater boulders and the lighthouse point.
+- `buildingMarks.ts` — signboards, doormats, lanterns, glow, name plate and status bubbles for usable buildings; `markIcons.ts` draws the sign icons on a canvas.
 - `worldParts.ts` — shared types for the area builders.
-- `worldGround.ts` — quay, pier, quay details.
+- `worldGround.ts` — quay, the main street and square paving, lawns, pier, quay details.
 - `worldMarket.ts` — market stall, stall wings, weathervane.
 - `worldBuildings.ts` — shipyard, inn, notice board, ice box.
 - `worldLamps.ts` — lanterns.
@@ -316,6 +319,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `life.ts` — townspeople, speech bubbles, cat, gulls.
 - `kit.ts` — shared materials, geometry helpers and props.
 - `textures.ts` — canvas-drawn textures.
+- `guideTrail.ts` — the glowing dotted trail on the ground for the starting guide.
 - `fx.ts` — smoke, fireflies, wind, light halos.
 - `townLife.ts` — `TownLife`: reads state and events (`EventDeps.watch`), runs the queue, terrace, pier crowd, wet cobbles, dust and sway; sounds go out through `townHooks.ts` (wired in `game.ts`). `townRules.ts` — pure rules and quality caps (tested). `townPlaces.ts` — gates, queue slots, tables, crowd spots, all derived from `LAYOUT`. `townFolk.ts` — pooled fading citizens. `townQueue.ts`, `townTerrace.ts`, `townCrowd.ts` — the three crowds. `townReact.ts` — particles, wetness and puddles, sway springs.
 

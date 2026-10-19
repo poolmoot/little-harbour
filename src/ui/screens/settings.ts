@@ -1,11 +1,12 @@
 import { button, item, section, slider, textField } from '../components';
 import { icon } from '../icons';
+import { GUIDE } from '../guideText';
 import { MENU, SETTINGS } from '../menuText';
 import { NAME_LABEL, QUALITY_CHOICES, QUALITY_NOTE, QUALITY_TITLE } from '../text';
 import type { Screen } from './types';
 
 /** Volumes and mute, picture quality, and reset game. Opened from the title screen and the pause menu. */
-export const settingsScreen: Screen = ({ state, audio, quality, confirmReset }) => {
+export const settingsScreen: Screen = ({ state, audio, quality, confirmReset, guideTips = true }) => {
   const harbour = item({
     title: NAME_LABEL.harbour,
     sub: SETTINGS.harbourNote,
@@ -26,6 +27,11 @@ export const settingsScreen: Screen = ({ state, audio, quality, confirmReset }) 
     sub: QUALITY_NOTE,
     right: QUALITY_CHOICES.map(([k, name]) => button({ label: name, act: 'quality', a: k, tone: quality === k ? 'go' : 'ghost', size: 'sm' })).join(''),
   });
+  const tips = item({
+    title: GUIDE.settingsTitle,
+    sub: GUIDE.settingsNote,
+    right: button({ label: guideTips ? SETTINGS.on : SETTINGS.off, act: 'guidetips', tone: guideTips ? 'go' : 'ghost', size: 'sm' }),
+  });
   const reset = confirmReset
     ? item({
       title: SETTINGS.resetAsk,
@@ -40,7 +46,7 @@ export const settingsScreen: Screen = ({ state, audio, quality, confirmReset }) 
     title: MENU.settings,
     icon: icon('gear', 28),
     menu: true,
-    body: section(SETTINGS.harbourTitle) + harbour + section(SETTINGS.sound) + mute + volumes + section(QUALITY_TITLE) + picture + section(SETTINGS.resetTitle) + reset,
+    body: section(SETTINGS.harbourTitle) + harbour + section(SETTINGS.sound) + mute + volumes + section(QUALITY_TITLE) + picture + section(GUIDE.helpTitle) + tips + section(SETTINGS.resetTitle) + reset,
     foot: `${button({ label: MENU.back, act: 'menuback', tone: 'info', size: 'sm' })}<span class="dim">Esc</span>`,
   };
 };

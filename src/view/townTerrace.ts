@@ -7,7 +7,8 @@ import type { Citizen } from './townFolk';
 import { CHAIR_OFFSETS, TABLE_SPOTS, nearestGate, seatsOf } from './townPlaces';
 import type { SeatSpot } from './townPlaces';
 import type { World } from './world';
-import type { Disc } from './collide';
+import type { Obb } from './collide';
+import { TABLES } from '../sim/layoutBoxes';
 
 const SEATED = 1, LEAVING = 2, ARRIVING = 3;
 const EAT_SECONDS = [24, 48];
@@ -45,7 +46,7 @@ export class Terrace {
   readonly group = new THREE.Group();
   private tables: THREE.Group[] = [];
   private halos: THREE.Sprite[] = [];
-  private discs: Disc[] = [];
+  private discs: Obb[] = [];
   private discOn: boolean[] = [false, false, false];
   private pool: CitizenPool;
   private seats: SeatSpot[] = [];
@@ -65,8 +66,7 @@ export class Terrace {
       t.visible = false;
       this.group.add(t);
       this.tables.push(t);
-      const w = toWorld(plot, TABLE_SPOTS[i].x, TABLE_SPOTS[i].z);
-      this.discs.push({ cx: w.x, cz: w.z, r: 0.95 });
+      this.discs.push({ cx: TABLES[i].cx, cz: TABLES[i].cz, hx: TABLES[i].hx, hz: TABLES[i].hz, a: 0 });
       const h = haloSprite(0xffc060, 1.5);
       h.position.set(TABLE_SPOTS[i].x + 0.18, 0.95, TABLE_SPOTS[i].z + 0.05);
       h.visible = false;

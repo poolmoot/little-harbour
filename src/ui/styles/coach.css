@@ -1,6 +1,4 @@
-/* First-time tutorial: a small bar at the top, an instruction bubble with a bouncing arrow, an edge arrow, and a ring round the button to press. */
-.coach-bar { position: absolute; top: calc(12px * var(--ui-zoom)); left: 50%; transform: translateX(-50%); scale: var(--ui-zoom); transform-origin: top center;
-  display: flex; align-items: center; gap: 12px; padding: 4px 6px 6px 14px; pointer-events: auto; z-index: 15; }
+/* Starting guide pointers: a ring round the button to press (with a short note above it) and an arrow at the screen edge when the place to go is out of view. */
 .coach-tip { position: absolute; z-index: 16; translate: -50% -100%; display: flex; flex-direction: column; align-items: center; pointer-events: none; scale: var(--ui-zoom); transform-origin: bottom center; }
 .coach-tip:not(.pointing) { translate: -50% 0; transform-origin: top center; }
 .coach-tip:not(.pointing) .coach-arrow { display: none; }
@@ -16,3 +14,4 @@
 .coach-ring { position: fixed; z-index: 60; pointer-events: none; border: 4px solid var(--gold-hi); border-radius: 14px; box-shadow: 0 0 0 3px var(--ink), 0 0 18px 4px rgba(255, 216, 58, 0.7);
   animation: coach-ring 0.8s ease-in-out infinite alternate; }
 @keyframes coach-ring { from { transform: scale(1); } to { transform: scale(1.06); } }
+.coach-point { position: fixed; z-index: 61; translate: -50% -100%; pointer-events: none; scale: var(--ui-zoom); transform-origin: bottom center; }

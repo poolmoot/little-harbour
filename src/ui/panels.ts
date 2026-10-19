@@ -15,6 +15,7 @@ import { logbookScreen } from './screens/logbook';
 import { marketScreen } from './screens/market';
 import { noticesScreen } from './screens/notices';
 import { endingScreen } from './screens/ending';
+import { helpScreen, tipsScreen, welcomeScreen } from './screens/guide';
 import { howtoScreen } from './screens/howto';
 import { plotScreen } from './screens/plot';
 import { pauseScreen } from './screens/pause';
@@ -23,7 +24,7 @@ import { shipyardScreen } from './screens/shipyard';
 import { titleScreen } from './screens/title';
 import type { AwayInfo, Screen, ScreenView } from './screens/types';
 
-export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away';
+export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away' | 'welcome' | 'help' | 'tips';
 
 const SCREENS: Record<PanelKind, Screen> = {
   boat: boatScreen,
@@ -41,6 +42,9 @@ const SCREENS: Record<PanelKind, Screen> = {
   plot: plotScreen,
   ending: endingScreen,
   away: awayScreen,
+  welcome: welcomeScreen,
+  help: helpScreen,
+  tips: tipsScreen,
 };
 
 export interface PanelActions {
@@ -86,6 +90,12 @@ export interface PanelActions {
   resume(): void;
   toTitle(): void;
   onClose(): void;
+  /** A window was opened (the guide notices the notice board). */
+  onOpen(kind: PanelKind): void;
+  getGuideTips(): boolean;
+  setGuideTips(on: boolean): void;
+  /** Show a guide card and its trail again (from the help list). */
+  replayGuide(key: string): void;
 }
 
 /** Seconds between live re-renders, so countdowns and prices stay current. */
@@ -198,6 +208,7 @@ export class Panels {
     this.overlay.classList.add('open');
     this.render(true);
     this.playEntrance();
+    this.actions.onOpen(kind);
   }
 
   showSummary(day: number, stats: DayStats): void {
@@ -215,7 +226,7 @@ export class Panels {
 
   /** Leave settings or how to play for the screen that opened it. */
   back(): void {
-    if (this.kind === 'settings' || this.kind === 'howto') this.open(this.returnTo);
+    if (this.kind === 'settings' || this.kind === 'howto' || this.kind === 'tips') this.open(this.returnTo);
   }
 
   toggle(kind: PanelKind): void {
@@ -304,11 +315,14 @@ export class Panels {
       case 'reset': this.confirmReset = true; this.render(true); break;
       case 'resetno': this.confirmReset = false; this.render(true); break;
       case 'resetyes': this.actions.resetGame(); break;
-      case 'settings': case 'howto':
+      case 'settings': case 'howto': case 'tips':
         this.returnTo = this.kind === 'pause' ? 'pause' : 'title';
         this.open(act);
         break;
       case 'menuback': this.back(); break;
+      case 'guidetips': this.actions.setGuideTips(!this.actions.getGuideTips()); this.render(true); break;
+      case 'welcomeskip': this.actions.setGuideTips(false); this.close(); break;
+      case 'guidereplay': this.actions.replayGuide(a); break;
       case 'mute': this.actions.setMuted(!this.actions.getAudio().muted); this.render(true); break;
       case 'continue': this.actions.continueGame(); break;
       case 'newgame':
@@ -336,7 +350,7 @@ export class Panels {
     this.lastUpdate = performance.now() / 1000;
     const view = SCREENS[this.kind]({
       state: this.getState(), arg: this.arg, tab: this.tab, confirmReset: this.confirmReset, quality: this.actions.getQuality(), summary: this.summary,
-      hasSave: this.actions.hasSave(), confirmNew: this.confirmNew, audio: this.actions.getAudio(),
+      hasSave: this.actions.hasSave(), guideTips: this.actions.getGuideTips(), confirmNew: this.confirmNew, audio: this.actions.getAudio(),
       away: this.kind === 'away' ? this.actions.getAway() : null, age: (performance.now() - this.openedAt) / 1000,
     });
     const html = frame(view);
@@ -346,7 +360,7 @@ export class Panels {
     this.last = html;
     this.overlay.classList.toggle('menu', !!view.menu);
     this.win.classList.toggle('menu', !!view.menu);
-    this.win.classList.toggle('wide', this.kind === 'settings' || this.kind === 'howto');
+    this.win.classList.toggle('wide', this.kind === 'settings' || this.kind === 'howto' || this.kind === 'tips');
     // Keep the reader's place when live data re-renders the list.
     const scroll = this.win.querySelector('.win-body')?.scrollTop ?? 0;
     this.win.innerHTML = html;

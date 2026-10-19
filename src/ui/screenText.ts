@@ -197,3 +197,13 @@ export const SAY2 = {
   smokedWaiting: (n: number): string => `${n} smoked crate${n === 1 ? ' is' : 's are'} ready.`,
   promptKing: 'Show the King Fish to everyone',
 };
+
+// ---- signs, name plates and status bubbles over the buildings (drawn in 3D by view/buildingMarks.ts) ------------------
+
+export const MARK_TEXT = {
+  /** The words on each signboard and name plate. */
+  names: { market: 'Fish market', icebox: 'Ice box', board: 'Notice board', shipyard: 'Shipyard', inn: 'The inn', coldstore: 'Cold store', smokehouse: 'Smokehouse', restaurant: 'Restaurant', lighthouse: 'Lighthouse' },
+  forSale: 'For sale',
+  /** Small bubbles over a building: smoked fish is done, something can be bought now, a building has just opened up. */
+  bubble: { ready: 'ready', up: 'up', new: 'new' },
+};

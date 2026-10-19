@@ -35,6 +35,9 @@ export const NPC_LOOK: Record<Role, FigureOpts> = {
   innkeeper: { shirt: 0xb5483a, pants: 0x5a4a3a, apron: 0xf0e8d8, skin: 0xe8b890, scale: 1.05, hair: 0x3a2a1a, beard: 0x3a2a1a },
 };
 
+/** The old harbour master who welcomes the player (shown in the welcome window). */
+export const HARBOUR_MASTER_LOOK: FigureOpts = { shirt: 0x2f4f7f, pants: 0x3a3a44, hat: 'cap', hatColor: 0x1f2f55, hair: 0xd8d8d8, beard: 0xd8d8d8, skin: 0xe8b890, scale: 1.0 };
+
 const TOWN_SHIRTS = [0xe8c14a, 0xd9705a, 0x6fae7e, 0xb58ad6, 0x4a7aa8, 0xe29a5c, 0x8fb8d8, 0xc86a8a, 0x7ab07a, 0xf0e8d8];
 const TOWN_PANTS = [0x5a4a6a, 0x3f4f5f, 0x6a5238, 0x4a4038, 0x2f3b47, 0x5f6a4a];
 const TOWN_HATS: (FigureOpts['hat'])[] = ['none', 'cap', 'straw', 'none', 'cap'];

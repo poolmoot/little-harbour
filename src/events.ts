@@ -35,6 +35,8 @@ export interface EventDeps {
   saveNow(): void;
   /** Told about every batch of events, for the town's life in the drawing code. */
   watch?(evs: Ev[]): void;
+  /** An unlock card is ready to show. */
+  guideUnlock?(id: string): void;
 }
 
 /** Turns sim events into sounds, toasts, pop-ups and saves. */
@@ -206,6 +208,12 @@ export class EventRouter {
           a.dayReport();
           this.d.showSummary(e.day, e.stats);
           saveNow = true;
+          break;
+        case 'guideStep':
+          if (e.index > 0) a.fx.upgrade();
+          break;
+        case 'guideUnlock':
+          this.d.guideUnlock?.(e.id);
           break;
         case 'goalDone':
           a.fx.goalComplete();

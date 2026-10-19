@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { BUILDING_IDS, LAYOUT, PLOT_HALF, toWorld } from '../sim/config';
-import type { BuildingId, GoalArrow, WeatherId } from '../sim/config';
-import { currentGoal } from '../sim/sim';
+import { BUILDING_IDS, LAYOUT, toWorld } from '../sim/config';
+import type { BuildingId, WeatherId } from '../sim/config';
 import type { GameState } from '../sim/state';
 import { Smoke } from './fx';
-import { bake, barrel, bx, chimney, crateBox, cy, doorAt, fishGeo, flat, gableRoof, lampMat, put, signMesh, tBox, windowAt } from './kit';
+import { bake, bx, chimney, cy, doorAt, fishGeo, flat, gableRoof, lampMat, put, tBox, windowAt } from './kit';
 import type { SceneRig } from './scene';
+import { BuildingMarks, addDoorFurniture } from './buildingMarks';
 import type { World } from './world';
 
 /**
@@ -16,7 +16,7 @@ import type { World } from './world';
 // ---- where crates sit at the new buildings (used by cratesView) -------------------------------
 
 const SMOKE = LAYOUT.plots.smokehouse, COLD = LAYOUT.plots.coldstore;
-const RACK_X = -1.75, RACK_Z = 2.2, RACK_STEP = 0.55, RACK_SHELF = [0.72, 1.2];
+const RACK_X = -2.0, RACK_Z = 2.2, RACK_STEP = 0.55, RACK_SHELF = [0.72, 1.2];
 /** Spot on the smokehouse racks for the i-th smoking crate. */
 export function smokeRackPos(i: number, out: THREE.Vector3): THREE.Vector3 {
   const p = toWorld(SMOKE, RACK_X + (i % 3) * RACK_STEP, RACK_Z);
@@ -40,9 +40,6 @@ function emptyLot(g: THREE.Group, p: Plan): void {
   for (const sx of [-1, 1]) bx(0.035, 0.035, p.d, rope, (sx * p.w) / 2, 0.55, 0, g);
   bx(p.w, 0.035, 0.035, rope, 0, 0.55, -p.d / 2, g);
   cy(0.05, 0.05, 1.5, post, 0, 0.75, p.d / 2, g, 6);
-  const sign = signMesh('FOR SALE', 1.5, 0.45, '#b5483a');
-  sign.position.set(0, 1.45, p.d / 2 + 0.05);
-  g.add(sign);
 }
 
 const ICE = 0xbfe9ff, FROST = 0xf2f7fb;
@@ -50,7 +47,7 @@ const ICE = 0xbfe9ff, FROST = 0xf2f7fb;
 const PLANS: Record<BuildingId, Plan> = {
   coldstore: {
     w: 4.6, d: 3.8,
-    build(g, level) {
+    build(g, level, v) {
       const wall = flat(FROST, 0.8), trim = flat(0x3f8fbf, 0.7), h = 2.5 + (level - 1) * 0.35;
       bx(4.8, 0.3, 4.0, flat(0x9aa7b2, 0.9), 0, 0.15, 0, g);
       bx(4.6, h, 3.8, wall, 0, 0.3 + h / 2, 0, g);
@@ -66,19 +63,16 @@ const PLANS: Record<BuildingId, Plan> = {
         const ic = put(new THREE.ConeGeometry(0.06, 0.22 + (i % 3) * 0.1, 5), flat(ICE, 0.3), -2.2 + i * 0.55, 0.3 + h - 0.12, 2.05, g);
         ic.rotation.x = Math.PI;
       }
-      for (const [ix, s] of [[1.6, 0.5], [2.1, 0.36], [-1.7, 0.42]] as const) bx(s, s, s, flat(ICE, 0.25), ix, 0.3 + s / 2, 2.4, g).rotation.y = ix;
       if (level >= 2) {                                                                    // cooling unit on the roof
         bx(1.4, 0.7, 1.0, flat(0x8a97a2, 0.6), -1.1, 0.3 + h + 0.64, -0.6, g);
         cy(0.3, 0.3, 0.08, flat(0x2d3236, 0.5), -1.1, 0.3 + h + 1.03, -0.6, g, 12);
       }
-      if (level >= 3) {                                                                    // side store room
-        bx(1.6, 1.9, 2.6, wall, 3.0, 1.25, -0.4, g);
-        bx(1.8, 0.18, 2.8, trim, 3.0, 2.3, -0.4, g);
-        bx(1.4, 0.7, 1.0, flat(0x8a97a2, 0.6), 0.9, 0.3 + h + 0.64, 0.5, g);
+      if (level >= 3) {                                                                    // store room on the roof, towards the back
+        bx(2.2, 1.2, 1.4, wall, 0.9, 0.3 + h + 0.9, -1.0, g);
+        bx(2.4, 0.16, 1.6, trim, 0.9, 0.3 + h + 1.57, -1.0, g);
+        bx(1.0, 0.6, 0.8, flat(0x8a97a2, 0.6), -1.1, 0.3 + h + 0.6, 0.7, g);
       }
-      const sign = signMesh('COLD STORE', 2.4, 0.5, '#2f6f9a');
-      sign.position.set(0, 0.3 + h - 0.38, 1.96);
-      g.add(sign);
+      addDoorFurniture(g, 0, 1.97, 1.5, v.world.M.iron);
     },
   },
   smokehouse: {
@@ -88,7 +82,7 @@ const PLANS: Record<BuildingId, Plan> = {
       bx(4.0, 0.3, 3.8, M.wall, 0, 0.15, 0, g);
       tBox(3.8, 2.3, 3.6, M.dark, 1.6, 0, 1.45, 0, g);
       gableRoof(g, 3.8, 3.6, 2.6, 1.7, M.redRoof, M.dark, 0.4);
-      doorAt(g, 0.9, 1.8, 1.0, 1.9);
+      doorAt(g, 1.2, 1.8, 1.0, 1.9);
       const top = chimney(g, -1.0, 3.2, -0.6, 1.9 + level * 0.3);
       v.addSmoke(v.worldOf(g, top), 30 + level * 8);
       if (level >= 3) v.addSmoke(v.worldOf(g, chimney(g, 1.1, 3.2, -0.6, 1.6)), 30);
@@ -104,11 +98,7 @@ const PLANS: Record<BuildingId, Plan> = {
         f.rotation.z = Math.PI / 2;
         f.scale.setScalar(0.5);
       }
-      barrel(g, -2.4, 1.2);
-      if (level >= 2) { barrel(g, -2.5, 0.3); crateBox(g, -2.5, 0, -0.7, 0.7, 0.3); }
-      const sign = signMesh('SMOKEHOUSE', 2.2, 0.42, '#5a3a2a');
-      sign.position.set(-0.6, 2.35, 1.86);
-      g.add(sign);
+      addDoorFurniture(g, 1.2, 1.8, -0.95, M.iron);
     },
   },
   restaurant: {
@@ -129,14 +119,13 @@ const PLANS: Record<BuildingId, Plan> = {
       for (const sx of [-2.4, 2.4]) cy(0.04, 0.04, 2.3, M.iron, sx, 1.15, 2.95, g, 5);
       // the terrace tables, chairs and diners are live: see townTerrace.ts
       if (level >= 2) for (let i = 0; i < 6; i++) put(new THREE.SphereGeometry(0.07, 6, 5), lampMat, -2.2 + i * 0.88, 2.2 - Math.sin((i / 5) * Math.PI) * 0.18, 3.0, g).userData.keep = true;
-      const sign = signMesh('RESTAURANT', 2.6, 0.5, '#2f5f9a');
-      sign.position.set(0.6, 3.2, 1.9);
-      g.add(sign);
+      addDoorFurniture(g, -1.5, 1.8, 0.95, M.iron);
     },
   },
   lighthouse: {
     w: 2.6, d: 2.6,
     build(g, _level, v) {
+      addDoorFurniture(g, 0, 1.3, 0.7, v.world.M.iron);
       const white = flat(0xf4f1e8, 0.7), red = flat(0xd6453a, 0.7), H = 7.2, bands = 4;
       cy(1.45, 1.55, 0.5, v.world.M.wall, 0, 0.25, 0, g, 14);
       for (let i = 0; i < bands; i++) {
@@ -154,35 +143,6 @@ const PLANS: Record<BuildingId, Plan> = {
     },
   },
 };
-
-// ---- goal arrow ------------------------------------------------------------------------------------
-
-const SHIPYARD_FRONT = toWorld(LAYOUT.shipyard, 0, 2);
-const ARROW_SPOT: Record<GoalArrow, [x: number, y: number, z: number]> = {
-  boat: [LAYOUT.berths[0].boatX, 3.6, LAYOUT.berths[0].boatZ],
-  market: [LAYOUT.market.x, 4.4, LAYOUT.market.z],
-  pierEnd: [LAYOUT.fishingSpot.x, 2.6, LAYOUT.fishingSpot.z],
-  shipyard: [SHIPYARD_FRONT.x, 5.6, SHIPYARD_FRONT.z],
-  board: [LAYOUT.noticeBoard.x, 3.2, LAYOUT.noticeBoard.z],
-  inn: [LAYOUT.inn.x - 1.8, 6.4, LAYOUT.inn.z + 3],
-};
-
-function buildArrow(): THREE.Group {
-  const g = new THREE.Group();
-  const gold = new THREE.MeshBasicMaterial({ color: 0xffd23a, toneMapped: false, fog: false });
-  const ink = new THREE.MeshBasicMaterial({ color: 0x0b1a44, side: THREE.BackSide, fog: false });
-  const head = new THREE.ConeGeometry(0.42, 0.6, 4), shaft = new THREE.BoxGeometry(0.3, 0.6, 0.3);
-  for (const [geo, y, flip] of [[head, 0.3, true], [shaft, 0.85, false]] as const) {
-    const m = new THREE.Mesh(geo, gold);
-    m.position.y = y;
-    if (flip) m.rotation.x = Math.PI;
-    const outline = new THREE.Mesh(geo, ink);
-    outline.scale.setScalar(1.18);
-    m.add(outline);
-    g.add(m);
-  }
-  return g;
-}
 
 // ---- weather ---------------------------------------------------------------------------------------
 
@@ -235,8 +195,8 @@ export class TycoonView {
   /** The lighthouse's turning beam (placed by its building plan). */
   readonly beam = new THREE.Group();
   private plots = new Map<BuildingId, { group: THREE.Group; level: number }>();
-  private arrow = buildArrow();
   private rain = buildRain();
+  private marks: BuildingMarks;
   private look = { dim: 0, mist: 0, rain: 0, slant: 0 };
   private flash = 0;
   private nextFlash = 6;
@@ -248,11 +208,9 @@ export class TycoonView {
       group.rotation.y = LAYOUT.plots[id].rot;
       rig.scene.add(group);
       this.plots.set(id, { group, level: -1 });
-      // The lot is solid even while empty (it is fenced), so nobody is standing inside when the building goes up.
-      const p = LAYOUT.plots[id], [hx, hz] = PLOT_HALF[id];
-      if (id === 'lighthouse') world.disc({ cx: p.x, cz: p.z, r: 1.7 });
-      else world.box({ cx: p.x, cz: p.z, hx: hx - 0.1, hz: hz - 0.1, a: p.rot });
+      // The lot is solid even while empty (it is fenced); the world registers it from the layout data.
     }
+    this.marks = new BuildingMarks(world.group);
     const cone = new THREE.Mesh(
       new THREE.ConeGeometry(1.3, 22, 16, 1, true),
       new THREE.MeshBasicMaterial({ color: 0xfff0b8, transparent: true, opacity: 0.06, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false }),
@@ -262,8 +220,7 @@ export class TycoonView {
     cone.userData.keep = true;
     this.beam.add(cone);
     this.beam.userData.keep = true;
-    this.arrow.visible = false;
-    rig.scene.add(this.arrow, this.rain);
+    rig.scene.add(this.rain);
   }
 
   /** World position of a point given in a plot group's own frame (the plots are turned). */
@@ -287,7 +244,7 @@ export class TycoonView {
     bake(plot.group);
   }
 
-  sync(state: GameState, now: number, dt: number): void {
+  sync(state: GameState, now: number, dt: number, player: { x: number; z: number } = LAYOUT.playerStart): void {
     for (const id of BUILDING_IDS) {
       if (this.plots.get(id)!.level !== state.buildings[id]) this.rebuild(id, state.buildings[id]);
     }
@@ -295,13 +252,7 @@ export class TycoonView {
     this.beam.visible = sky.lantern > 0.3 || this.look.dim > 0.4;
     this.beam.rotation.y = now * 0.7;
 
-    const goal = currentGoal(state);
-    const spot = goal?.arrow ? ARROW_SPOT[goal.arrow] : null;
-    this.arrow.visible = !!spot;
-    if (spot) {
-      this.arrow.position.set(spot[0], spot[1] + Math.abs(Math.sin(now * 3.2)) * 0.5, spot[2]);
-      this.arrow.rotation.y = now * 1.6;
-    }
+    this.marks.sync(state, now, dt, player, sky.lantern);
     this.weather(state.weather, now, dt);
   }
 

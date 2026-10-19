@@ -17,7 +17,7 @@ const acts = (html: string) => [...html.matchAll(/data-act="([a-z]+)"/g)].map((m
 
 describe('title screen', () => {
   it('offers New game, Settings and How to play, but not Continue, without a save', () => {
-    expect(acts(titleScreen(ctx()).body)).toEqual(['newgame', 'settings', 'howto']);
+    expect(acts(titleScreen(ctx()).body)).toEqual(['newgame', 'settings', 'howto', 'tips']);
   });
 
   it('offers Continue first, with the day and money, when a save exists', () => {
@@ -25,7 +25,7 @@ describe('title screen', () => {
     state.day = 4;
     state.money = 1234;
     const v = titleScreen(ctx({ state, hasSave: true }));
-    expect(acts(v.body)).toEqual(['continue', 'newgame', 'settings', 'howto']);
+    expect(acts(v.body)).toEqual(['continue', 'newgame', 'settings', 'howto', 'tips']);
     expect(v.body).toContain('Day 4');
     expect(v.body).toContain('$1,234');
   });
@@ -45,7 +45,7 @@ describe('title screen', () => {
 describe('pause menu', () => {
   it('has Resume, Settings, How to play and Back to title', () => {
     const v = pauseScreen(ctx());
-    expect(acts(v.body)).toEqual(['resume', 'settings', 'howto', 'totitle']);
+    expect(acts(v.body)).toEqual(['resume', 'settings', 'howto', 'tips', 'totitle']);
     expect(v.menu).toBe(true);
   });
 });

@@ -8,7 +8,7 @@ import { SEA_Y, waveAt } from './waves';
 import type { Ripple } from './water';
 import type { World } from './world';
 
-const SPEED = 5.2;
+const SPEED = 6.2;
 const RADIUS = 0.4;
 /** Speeding up takes about 0.17 s and letting go about 0.11 s (m/s per second). */
 const ACCEL = 30, DECEL = 47;

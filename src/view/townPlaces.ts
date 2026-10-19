@@ -1,4 +1,5 @@
 import { LAYOUT, toWorld } from '../sim/config';
+import { TABLE_FRACTIONS } from '../sim/layoutBoxes';
 
 /** Fixed spots the town's people use. Everything is in world units (x east, z towards the camera). */
 export interface Spot { x: number; z: number }
@@ -36,7 +37,7 @@ export const FACE_STALL = Math.PI;
 
 /** The tables on the restaurant terrace, in the restaurant's own frame, placed inside `LAYOUT.terrace` and filled in order as the restaurant grows. */
 const TZ = LAYOUT.terrace;
-export const TABLE_SPOTS: Spot[] = [0.68, 0.92, 0.42].map((f) => ({ x: TZ.x0 + (TZ.x1 - TZ.x0) * f, z: (TZ.z0 + TZ.z1) / 2 }));
+export const TABLE_SPOTS: Spot[] = TABLE_FRACTIONS.map((f) => ({ x: TZ.x0 + (TZ.x1 - TZ.x0) * f, z: (TZ.z0 + TZ.z1) / 2 }));
 /** Chair offsets from a table centre in the same frame: one each side, in front and behind. */
 export const CHAIR_OFFSETS: Spot[] = [{ x: 0, z: -0.62 }, { x: 0, z: 0.62 }];
 
@@ -58,8 +59,8 @@ export function seatsOf(table: number, out: SeatSpot[] = []): SeatSpot[] {
 /** Where a pier-head crowd stands: a loose arc round the head of the pier and a few on the pier itself. Each faces the water. */
 const CZ = LAYOUT.crowdZone;
 const cz = (fx: number, fz: number): Spot => ({ x: CZ.x0 + (CZ.x1 - CZ.x0) * fx, z: CZ.z0 + (CZ.z1 - CZ.z0) * fz });
-const pierX = LAYOUT.pierHalfWidth - 0.7;
+const pierX = 1.75;
 export const CROWD_SPOTS: Spot[] = [
-  cz(0.31, 0.1), cz(0.69, 0.1), cz(0.12, 0.3), cz(0.88, 0.3),
-  { x: -pierX, z: LAYOUT.quayZ - 0.7 }, { x: pierX, z: LAYOUT.quayZ - 0.7 }, cz(0.5, 0.3), cz(0.03, 0.02), cz(0.97, 0.02),
+  cz(0.04, 0.1), cz(0.96, 0.1), cz(0.14, 0.3), cz(0.86, 0.3),
+  { x: -pierX, z: LAYOUT.quayZ - 0.9 }, { x: pierX, z: LAYOUT.quayZ - 0.9 }, cz(0.2, 0.55), cz(0.8, 0.55), cz(0.08, 0.8),
 ];

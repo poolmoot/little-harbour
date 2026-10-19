@@ -11,9 +11,16 @@ import { acceptContract, buyBuilding, collectSmoked, repairBoat, sellToRestauran
 import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
+import { guideAdvice } from './sim/guideAdvice';
+import { guideDone, noteAway, noteBoardOpened, noteWalk, noteWelcomed } from './sim/sim';
 import { playIntro } from './ui/intro';
 import { Coach } from './ui/coach';
 import { Hud } from './ui/hud';
+import { GuideCards } from './ui/guideCards';
+import { loadGuideTips, saveGuideTips } from './ui/guideSetting';
+import { GUIDE } from './ui/guideText';
+import { guidePoint } from './guideTargets';
+import { GuideTrail } from './view/guideTrail';
 import { EventRouter } from './events';
 import { STATIONS, findTarget, interact, promptFor } from './interaction';
 import type { Target } from './interaction';
@@ -111,6 +118,10 @@ export class Game {
   private holdHour: number | null = null;
   private frameMs = 16;
   private quality: Quality;
+  private guideTips = loadGuideTips(localStorage);
+  private guideCards!: GuideCards;
+  private guideTrail!: GuideTrail;
+  private lastWalk = { x: 0, z: 0 };
 
   constructor(app: HTMLElement, uiRoot: HTMLElement) {
     const loaded = loadGame(localStorage, this.rng);
@@ -137,7 +148,11 @@ export class Game {
     this.marker = new TargetMarker(this.rig.scene);
     this.hud = new Hud(uiRoot, (kind) => { this.audio.click(); this.panels.toggle(kind); });
     this.coach = new Coach(uiRoot);
+    this.guideCards = new GuideCards(this.hud.left);
+    this.guideTrail = new GuideTrail(this.rig.scene, (x, z) => this.world.walkable(x, z, 0.4));
+    this.lastWalk = { x: this.player.pos.x, z: this.player.pos.z };
     this.events = new EventRouter({
+      guideUnlock: (id) => this.guideCards.push(id),
       audio: this.audio,
       hud: this.hud,
       showSummary: (day, stats) => this.panels.showSummary(day, stats),
@@ -189,6 +204,10 @@ export class Game {
         resume: () => this.resume(),
         toTitle: () => this.toTitle(),
         onClose: () => this.audio.click(),
+        onOpen: (kind) => { if (kind === 'board') noteBoardOpened(this.state); },
+        getGuideTips: () => this.guideTips,
+        setGuideTips: (on) => this.setGuideTips(on),
+        replayGuide: (key) => this.replayGuide(key),
       },
       () => this.state,
     );
@@ -281,7 +300,9 @@ export class Game {
     if (this.greeted) return;
     this.greeted = true;
     const shown = this.hasSave && this.creditAway();
-    if (!shown) this.hud.toast(this.hasSave ? say.welcomeBack : say.welcome, 'info');
+    const welcome = !shown && this.guideTips && !this.state.guide.welcomed && !guideDone(this.state);
+    if (welcome) { noteWelcomed(this.state); this.panels.open('welcome'); }
+    else if (!shown) this.hud.toast(this.hasSave ? say.welcomeBack : say.welcome, 'info');
     if (this.hasSave && this.state.boats.some((b) => b.status === 'returned')) this.hud.toast(say.catchWaiting, 'good');
   }
 
@@ -294,6 +315,7 @@ export class Game {
     const secs = this.state.savedAt > 0 ? (Date.now() - this.state.savedAt) / 1000 : 0;
     const { result, events } = applyAway(this.state, secs, this.rng);
     this.events.handle(events);
+    if (result && result.earned > 0) this.events.handle(noteAway(this.state));
     this.save();
     const plan = awayPlan(result, this.state, tipSeen());
     this.away = result;
@@ -301,6 +323,23 @@ export class Game {
     if (plan === 'tip') markTipSeen();
     this.panels.open('away', plan === 'tip' ? 1 : 0);
     return true;
+  }
+
+  private setGuideTips(on: boolean): void {
+    this.guideTips = on;
+    saveGuideTips(localStorage, on);
+    if (!on) this.hud.toast(GUIDE.skipToast);
+  }
+
+  /** Show a card (and its trail) again from the help list. The welcome opens its window. */
+  private replayGuide(key: string): void {
+    if (this.mode === 'title') this.beginPlay();
+    else if (this.mode === 'paused') this.resume();
+    else this.panels.close();
+    if (key === 'welcome') { this.panels.open('welcome'); return; }
+    this.guideTips = true;
+    saveGuideTips(localStorage, true);
+    this.guideCards.replay(key, performance.now());
   }
 
   private resume(): void {
@@ -401,6 +440,21 @@ export class Game {
 
     this.target = frozen ? null : findTarget(s, this.player.pos);
 
+    // guide: count steps walked, show the cards, and lead the way with the trail
+    if (!frozen) {
+      noteWalk(s, Math.hypot(this.player.pos.x - this.lastWalk.x, this.player.pos.z - this.lastWalk.z));
+    }
+    this.lastWalk.x = this.player.pos.x;
+    this.lastWalk.z = this.player.pos.z;
+    const guideOn = this.guideTips && this.mode === 'play';
+    const advice = guideOn ? guideAdvice(s) : null;
+    this.guideCards.update(s, guideOn, performance.now(), advice);
+    this.hud.hideGoal(this.guideCards.stepShown);
+    const gt = guideOn ? this.guideCards.trailTarget(s) : null;
+    const gp = gt ? guidePoint(gt, s, this.player.pos) : null;
+    this.guideTrail.update(this.now, dt, this.player.pos, gp, guideOn);
+    this.coach.update(s, this.panels.current, guideOn, gp ? { x: gp.x, y: 1.6, z: gp.z } : null, this.project, advice);
+
     if (!halted) this.saveTimer += dt;
     if (this.saveTimer >= SAVE_EVERY) {
       this.saveTimer = 0;
@@ -410,7 +464,7 @@ export class Game {
     // view
     this.cameraRig.showcase = this.mode === 'title';
     this.cameraRig.update(dt, this.player.pos);
-    this.tycoonView.sync(s, this.now, sdt);
+    this.tycoonView.sync(s, this.now, sdt, this.player.pos);
     this.unstickPlayer();
     this.rig.update(s.dayTime, this.cameraRig.focus, this.now);
     updateOcclusion(this.rig.camera, this.player.pos);
@@ -449,7 +503,6 @@ export class Game {
 
     // ui
     this.hud.update(s, promptFor(s, this.target));
-    this.coach.update(s, this.panels.current, this.player.pos.x, this.player.pos.z, this.project, this.mode === 'play');
     this.panels.update();
   }
 }
