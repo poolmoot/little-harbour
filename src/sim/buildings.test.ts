@@ -40,6 +40,7 @@ describe('buildings', () => {
   });
   it('cold store holds crates up to its size and keeps them fresh for 20 minutes', () => {
     const s = rich();
+    s.tally.sold = 1;
     buyBuilding(s, 'coldstore');
     for (let i = 0; i < 12; i++) storeInCold(s, addCrate(s, 'cod', 'hand').id);
     expect(s.crates.filter((c) => c.loc === 'cold')).toHaveLength(12);
@@ -85,6 +86,7 @@ describe('buildings', () => {
   });
   it('smoke list is a toggle list starting with herring and mackerel', () => {
     const s = initialState();
+    s.tally.sold = 1;
     expect(s.smokeList).toEqual(['herring', 'mackerel']);
     setSmokeList(s, 'cod', true);
     setSmokeList(s, 'herring', false);

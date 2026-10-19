@@ -10,6 +10,7 @@ describe('crates', () => {
   });
   it('decays over 150 s on the dock and in hand, 600 s in the ice box', () => {
     const s = initialState();
+    s.tally.sold = 1; // past the gentle start
     s.upgrades.icebox = true;
     const dock = addCrate(s, 'herring', 'dock');
     const hand = addCrate(s, 'herring', 'hand');
@@ -21,6 +22,7 @@ describe('crates', () => {
   });
   it('spoils at zero, counts it once, and discards at rollover', () => {
     const s = initialState();
+    s.tally.sold = 1;
     const c = addCrate(s, 'lobster', 'dock');
     const evs = decayCrates(s, 200);
     expect(evs.filter((e) => e.type === 'crateSpoiled')).toHaveLength(1);

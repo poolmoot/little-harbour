@@ -3,6 +3,7 @@ import { resetRestaurant, stepSmokehouse } from './buildings';
 import { stepContracts } from './contracts';
 import { stepBookRewards } from './fishbook';
 import { stepGoals } from './goals';
+import { stepGuide } from './guide';
 import { stepIncome } from './income';
 import { stepRepairs } from './storm';
 import { rollNewDay, startWeather } from './weather';
@@ -27,6 +28,7 @@ export { buyBoat, buyBoatUpgrade, bestZone } from './fleet';
 export { buyBuilding, canBuyBuilding, nextBuildingCost, buildingMaxLevel, storeInCold, takeFromCold, smokeCrate, collectSmoked, setSmokeList, sellToRestaurant, restaurantPrice } from './buildings';
 export { acceptContract } from './contracts';
 export { currentGoal, goalProgress } from './goals';
+export { stepGuide, noteWalk, noteBoardOpened, noteWelcomed, noteAway, isGentle, guideDone, GUIDE_STEPS, UNLOCKS } from './guide';
 export { repairBoat, canRepair, repairCost, setStayInStorms } from './storm';
 export { deliverKingFish, endingSummary } from './ending';
 export { applyAway, awayEarnings, measureAwayRate } from './away';
@@ -75,5 +77,6 @@ export function step(state: GameState, dt: number, rng: Rng): Ev[] {
   evs.push(...stepRank(state));
   evs.push(...stepBookRewards(state));
   evs.push(...stepGoals(state));
+  evs.push(...stepGuide(state));
   return evs;
 }

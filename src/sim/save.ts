@@ -4,6 +4,7 @@ import type { AwayResult } from './away';
 import { catchUpBookRewards, midSize } from './fishbook';
 import { checkName } from './names';
 import { catchUpGoals } from './goals';
+import { guideForOldSave, newGuide } from './guide';
 import { recordBoatCatch, rollBoatCatch } from './boats';
 import { rankIndex } from './rank';
 import { resetDockhands } from './staff';
@@ -92,6 +93,13 @@ function migrate(raw: unknown): GameState | null {
     ZONE_IDS.forEach((z, i) => { if (i <= hull) t.zoneSent[z] = Math.max(t.zoneSent[z], 1); });
     s.goal = 0;
     catchUpGoals(s);
+  }
+  // ---- starting guide (version 6): a save that is already past the opening never sees it; others carry on from where they are
+  if ((d.version ?? 0) < 6) s.guide = guideForOldSave(s);
+  else {
+    const g = { ...newGuide(), ...(d.guide ?? {}) };
+    g.seen = Array.isArray(g.seen) ? g.seen : [];
+    s.guide = g;
   }
   return s;
 }

@@ -5,6 +5,7 @@ import type { Species } from './config';
 import type { Crate, CrateLoc, Ev, GameState } from './state';
 import { nextId } from './state';
 import { midSize } from './fishbook';
+import { isGentle } from './guide';
 
 export function freshnessMultiplier(f: number): number {
   const c = Math.max(0, Math.min(100, f));
@@ -65,6 +66,7 @@ export function removeCrate(state: GameState, id: number): void {
 /** Freshness decay for every crate. Emits crateSpoiled the moment one hits zero. */
 export function decayCrates(state: GameState, dt: number): Ev[] {
   const evs: Ev[] = [];
+  if (isGentle(state)) return evs; // new game: fish stay fresh until the first sale
   for (const c of state.crates) {
     if (c.freshness <= 0 || c.smoked || c.king || c.loc === 'smoke') continue; // smoked fish and the King Fish never spoil; crates on the racks are being smoked
     const secs = c.loc === 'ice' ? ICE_DECAY_SECONDS : c.loc === 'cold' ? COLD_DECAY_SECONDS : DOCK_DECAY_SECONDS; // hauled crates spoil like dock crates

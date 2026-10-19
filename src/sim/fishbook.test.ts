@@ -128,7 +128,7 @@ describe('version 4 saves', () => {
     for (const sp of Object.keys(raw.book)) raw.book[sp] = { caught: raw.book[sp].caught, bestSale: raw.book[sp].bestSale };
     d.set('harbour-game-save', JSON.stringify(raw));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(5);
+    expect(l.version).toBe(6);
     expect(l.money).toBe(777);
     expect(l.crates[0].size).toBe(midSize('cod'));
     expect(l.crates[0].golden).toBeUndefined();

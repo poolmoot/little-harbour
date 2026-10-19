@@ -1,4 +1,6 @@
 import { DEFAULT_HARBOUR_NAME, DEFAULT_SMOKE_LIST, SPECIES, START_MONEY, ZONE_IDS } from './config';
+import { newGuide } from './guide';
+import type { GuideState, UnlockId } from './guide';
 import type { BuildingId, Phase, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from './config';
 
 export type CrateLoc = 'dock' | 'hand' | 'ice' | 'haul' | 'cold' | 'smoke';
@@ -176,6 +178,7 @@ export interface GameState {
   incomeLog: number[]; // lifetime earnings sampled every few seconds (for money per minute)
   incomeTimer: number;
   harbourName: string;
+  guide: GuideState; // the starting guide: step, cards shown, the gentle first minutes
   savedAt: number; // wall-clock milliseconds when last saved, given by the caller (0 = unknown)
 }
 
@@ -212,6 +215,8 @@ export type Ev =
   | { type: 'wagesPaid'; paid: number; unpaid: number }
   | { type: 'phaseChanged'; phase: Phase }
   | { type: 'dayEnded'; day: number; stats: DayStats; forecast?: Forecast }
+  | { type: 'guideStep'; index: number; done: boolean }
+  | { type: 'guideUnlock'; id: UnlockId }
   | { type: 'goalDone'; index: number; id: string; reward: number }
   | { type: 'buildingBuilt'; id: BuildingId; level: number }
   | { type: 'crateSmoking'; crateId: number }
@@ -242,7 +247,7 @@ export interface Check {
   cost?: number;
 }
 
-export const STATE_VERSION = 5;
+export const STATE_VERSION = 6;
 
 function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
@@ -303,6 +308,7 @@ export function initialState(): GameState {
     incomeLog: [],
     incomeTimer: 0,
     harbourName: DEFAULT_HARBOUR_NAME,
+    guide: newGuide(),
     savedAt: 0,
   };
 }

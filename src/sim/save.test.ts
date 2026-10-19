@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dispatchBoat } from './boats';
 import { addCrate } from './crates';
 import { Rng } from './rng';
-import { loadGame, saveGame, clearSave } from './save';
+import { SAVE_KEY, loadGame, saveGame, clearSave } from './save';
 import type { StorageLike } from './save';
 import { initialState } from './state';
 
@@ -72,7 +72,7 @@ describe('migration from the MVP save', () => {
     };
     st.setItem('harbour-game-save', JSON.stringify(old));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(5);
+    expect(l.version).toBe(6);
     expect(l.money).toBe(777);
     expect(l.boats).toHaveLength(2);
     for (const b of l.boats) {
@@ -127,7 +127,7 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     const st = memory();
     st.setItem('harbour-game-save', JSON.stringify(v3()));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(5);
+    expect(l.version).toBe(6);
     expect(l.money).toBe(4321);
     expect(l.day).toBe(12);
     expect(l.lifetime).toBe(9000);
@@ -176,5 +176,19 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     expect(l.tally.sold).toBe(55);
     expect(l.contracts.active!.filled).toBe(2);
     expect(l.king.found).toBe(true);
+  });
+});
+
+describe('migration to version 6 (starting guide)', () => {
+  it('an older save already past the opening loads with the guide done', () => {
+    const old = { ...initialState(), version: 5, lifetime: 900 } as Record<string, unknown>;
+    delete old.guide;
+    const store = new Map<string, string>();
+    store.set(SAVE_KEY, JSON.stringify(old));
+    const s = loadGame({ getItem: (k) => store.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
+    expect(s.version).toBe(6);
+    expect(s.guide.step).toBeGreaterThanOrEqual(8);
+    expect(s.guide.welcomed).toBe(true);
+    expect(s.guide.gentle).toBe(false);
   });
 });
