@@ -213,12 +213,13 @@ export class BuildingMarks {
         // hang the board from its rail by two short chains; the rail's top end sits at the board's top edge + 0.25
         const top = (BOARD_H * k) / 2;
         g.add(mesh);
-        for (const dx of [-1, 1]) bx(0.025, 0.28, 0.025, iron, dx * BOARD_W * k * 0.36, top + 0.14, 0, g).castShadow = false;   // thin chains: no shadow, to save draw calls
         live.add(g);
         const own = new THREE.Group();   // static bracket parts, baked with the rest of the signs' fittings
         own.position.set(sx, sy, sz);
         stat.add(own);
         bx(BOARD_W * k + 0.2, 0.06, 0.06, iron, 0, top + 0.28, 0, own);
+        // the two short chains hang from the rail (baked with it: the board's sway is far too small to show at their length)
+        for (const dx of [-1, 1]) bx(0.025, 0.28, 0.025, iron, dx * BOARD_W * k * 0.36, top + 0.14, 0, own).castShadow = false;
         if (!v.forSale && def.mount === 'wall') {
           if (def.pose.rot === 0) for (const dx of [-1, 1]) bx(0.05, 0.05, 0.5, iron, dx * BOARD_W * k * 0.46, top + 0.28, -0.25, own);
           else {

@@ -57,6 +57,6 @@ export function seatsOf(table: number, out: SeatSpot[] = []): SeatSpot[] {
 
 /** Where a pier-head crowd stands: a loose group west of the pier mouth on the rim of the square, and a few on the pier itself. */
 export const CROWD_SPOTS: Spot[] = [
-  { x: -2.7, z: 0.9 }, { x: -3.3, z: 2.0 }, { x: -2.5, z: 3.0 }, { x: -3.6, z: 3.4 },
+  { x: -2.7, z: 0.9 }, { x: -3.3, z: 2.0 }, { x: -2.5, z: 3.0 }, { x: -3.7, z: 2.5 },
   { x: -1.75, z: LAYOUT.quayZ - 0.9 }, { x: 1.75, z: LAYOUT.quayZ - 0.9 }, { x: -1.75, z: LAYOUT.quayZ - 3.2 }, { x: 1.75, z: LAYOUT.quayZ - 2.4 },
 ];

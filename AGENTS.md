@@ -159,7 +159,7 @@ stepping on each other:
 
 Measured by the graphics agent on High at the market: about 630–690 draw
 calls and 410k triangles, holding 60 fps with some dropped frames; shadows
-roughly double the draw calls.
+roughly double the draw calls. After the small-square layout: about 525–545 calls and 520k triangles standing in the middle of the square at midday on High with all four buildings built (default camera, distance 23). When adding things, keep flat-coloured parts on `flat()` (`bake` merges them into one vertex-coloured material), give signs and tiny props no shadow, and keep background people out of the shadow pass.
 
 ## Checking things without playing by hand
 
@@ -256,7 +256,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `fishbook.ts` — fish sizes, stars, golden fish, the fish book figures and zone rewards.
 - `names.ts` — harbour and boat names and their checks.
 - `guide.ts` — the starting guide: steps, unlock cards, the gentle first minutes (saved in `state.guide`). `guideAdvice.ts` — what to do instead while a step costs too much or it is night.
-- `layoutBoxes.ts` — every solid footprint in the harbour (turned buildings, plots, lamps, trees, terrace tables), the walkable ground (the round square and the pier, causeway and point) and the lanes that must stay clear (ring walkway, door approaches, the middle of the square). Buildings stand on one circle round the square, door to the centre (`LAYOUT.ring`, `ringPose` in `config.ts`). The view builds its collision from it and the layout tests walk it (`layout.test.ts`, `../layoutStations.test.ts`, `../view/townLayout.test.ts`).
+- `layoutBoxes.ts` — every solid footprint in the harbour (buildings turned exactly 0 or +-90 degrees, plots, lamps, trees, terrace tables), the walkable ground (the square, the pier and the lighthouse breakwater) and the lanes that must stay clear (three walking lanes making a U round the open middle, the approach to every door, the path from the pier). One small square: sea row on top (market, pier gap, ice box, notice board, clock tower), shipyard / cold store / smokehouse down the west side, inn / restaurant down the east side, camera side open (`LAYOUT.square` in `config.ts`). The view builds its collision from it and the layout tests walk it with hard size and walking-distance limits (`layout.test.ts`, `../layoutStations.test.ts`, `../view/townLayout.test.ts`).
 
 **src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
 - `text.ts` — all names and wording the player reads in the game.
@@ -296,12 +296,12 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `quality.ts` — quality levels and the slow-frame governor.
 - `cameraRig.ts` — the angled follow camera.
 - `world.ts` — the harbour: builds it from the area files, animates lamps and flags, walkable test and sliding movement (`resolve`).
-- `collide.ts` — walking collision maths: a circle against turned boxes and discs, kept on the ground (rectangles or a round patch); slides along walls and corners (tested).
+- `collide.ts` — walking collision maths: a circle against turned boxes and discs, kept on the ground (rectangles); slides along walls and corners (tested).
 - `occlusion.ts` — the see-through fade for anything between the camera and the player (shader patch, two shared uniforms, `updateOcclusion` called once a frame from `game.ts`).
-- `worldTown.ts` — the clock tower (landmark), the low decorative hillside houses and stairs, shore boulders and the lighthouse point.
-- `buildingMarks.ts` — signboards, doormats, lanterns, glow, name plate and status bubbles for usable buildings; `markIcons.ts` draws the sign icons on a canvas.
+- `worldTown.ts` — the clock tower (landmark), the low decorative hillside houses and stairs, shore boulders and the breakwater's stone lip.
+- `buildingMarks.ts` — signboards (always facing the camera, even on the side rows), doormats, lanterns, glow, name plate and status bubbles for usable buildings; `markIcons.ts` draws the sign icons on a canvas.
 - `worldParts.ts` — shared types for the area builders.
-- `worldGround.ts` — the round square's paving and low wall, the grass behind the buildings, the causeway, lawns, pier, quay details (`sectorSlab`, `backGround`).
+- `worldGround.ts` — the square's paving (flat boxes), the grass behind the side rows, the link and breakwater to the lighthouse, the low wall on the camera side, lawns, the pier, quay details.
 - `worldMarket.ts` — market stall, stall wings, weathervane.
 - `worldBuildings.ts` — shipyard, inn, notice board, ice box.
 - `worldLamps.ts` — lanterns.

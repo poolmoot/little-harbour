@@ -233,6 +233,7 @@ class Cat {
       this.group.add(leg);
       this.legs.push(leg);
     }
+    this.group.traverse((o) => { (o as THREE.Mesh).castShadow = false; });   // a cat is too small to need a shadow, and each part costs a draw call twice over
     scene.add(this.group);
   }
 

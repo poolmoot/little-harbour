@@ -135,7 +135,7 @@ export function bake(root: THREE.Object3D): void {
       const n = g.attributes.position.count, col = new Float32Array(n * 3), c = material.color;
       for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
       g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      material = vertexFlatFor(material.roughness);
+      material = vertexFlatFor(Math.round(material.roughness * 4) / 4);   // roughness in quarters: a handful of buckets, not one per value
     }
     const key = `${material.uuid}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}`;
     let b = buckets.get(key);
