@@ -4,7 +4,8 @@ import { buyBuilding, setSmokeList, smokeCrate, stepSmokehouse } from './buildin
 import { stepDockhands, walkPath } from './staff';
 import { initialState } from './state';
 import type { GameState } from './state';
-import { LAYOUT } from './config';
+import { BUILDING_IDS, LAYOUT } from './config';
+import { BOXES, overlap } from './layoutBoxes';
 
 function setup(): GameState {
   const s = initialState();
@@ -101,25 +102,14 @@ describe('worker routing', () => {
     for (const pt of p) expect(pt.z).toBeLessThanOrEqual(LAYOUT.quayMaxZ);
     expect(p.length).toBeGreaterThanOrEqual(3);
   });
-  it('plots do not overlap each other, the buildings, or the planted beds', () => {
-    const boxes: [string, number, number, number, number][] = [
-      ['market', -13, -3, 1, 7], ['shipyard', -21.2, -14.8, 0.8, 5.2], ['inn', 6.8, 14.2, 0.3, 5.7],
-      ['bedW', -9.4, -3.4, 9.6, 13.4], ['bedE', 3.4, 9.4, 9.6, 13.4],
-    ];
-    const half: Record<string, [number, number]> = { coldstore: [2, 1.8], smokehouse: [2, 1.8], restaurant: [2, 1.8], lighthouse: [1.5, 1.5] };
-    const plots = Object.entries(LAYOUT.plots);
-    for (const [id, p] of plots) {
-      const [hx, hz] = half[id];
-      const r = [p.x - hx, p.x + hx, p.z - hz, p.z + hz];
-      expect(r[0]).toBeGreaterThanOrEqual(LAYOUT.quayMinX);
-      expect(r[1]).toBeLessThanOrEqual(LAYOUT.quayMaxX);
-      expect(r[3]).toBeLessThanOrEqual(LAYOUT.quayMaxZ);
-      for (const [name, x0, x1, z0, z1] of boxes) expect(r[1] < x0 || r[0] > x1 || r[3] < z0 || r[2] > z1, `${id} overlaps ${name}`).toBe(true);
-      for (const [id2, q] of plots) {
-        if (id2 === id) continue;
-        const [qx, qz] = half[id2];
-        expect(Math.abs(p.x - q.x) > hx + qx || Math.abs(p.z - q.z) > hz + qz, `${id} overlaps ${id2}`).toBe(true);
-      }
+  it('plots stand inside the town and do not overlap each other or the other buildings', () => {
+    const plots = BUILDING_IDS.filter((id) => id !== 'lighthouse');
+    const mine = BOXES.filter((b) => (plots as string[]).includes(b.name));
+    expect(mine).toHaveLength(3);
+    for (const b of mine) {
+      expect(b.cx - b.hx).toBeGreaterThanOrEqual(LAYOUT.quayMinX);
+      expect(b.cx + b.hx).toBeLessThanOrEqual(LAYOUT.quayMaxX);
+      for (const o of BOXES) if (o !== b) expect(overlap(b, o), `${b.name} overlaps ${o.name}`).toBe(false);
     }
   });
 });

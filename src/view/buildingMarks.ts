@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BUILDINGS, INTERACT_RANGE, LAYOUT } from '../sim/config';
+import { BUILDINGS, FOOT, INTERACT_RANGE, LAYOUT, toWorld } from '../sim/config';
 import type { BuildingId } from '../sim/config';
 import { canBuyBuilding, readySmoked } from '../sim/buildings';
 import { rankOf } from '../sim/rank';
@@ -27,6 +27,10 @@ interface Def {
   /** Where the player stands to use it; the mat lies here and the glow and name plate are centred on it. */
   stationX: number; stationZ: number;
   bubbleY: number;
+  /** The building's pose (turned to face the centre of the square), the door's sideways spot and the front wall's depth, in the building's own frame. */
+  pose: { x: number; z: number; rot: number }; doorLx: number; frontLz: number;
+  /** Where the bubble floats, in world x and z. */
+  bx: number; bz: number;
   /** Doormat and lantern: the lantern's sideways offset, and (for posts) where the signboard's posts start from the ground. */
   lx?: number; postFrom?: number;
   /** A building that can be bought: the sign says "for sale" until it is built. */
@@ -35,18 +39,24 @@ interface Def {
   lotDepth?: number;
 }
 
-const L = LAYOUT, DL = L.doorLineZ;
+const L = LAYOUT;
 const P = L.plots;
+type Pose = { x: number; z: number; rot: number };
+/** One building's marks, worked out from its pose: the sign hangs `signLz` in front of its middle (plus `signLx` across), the door is at `doorLx`. */
+function mk(id: MarkId, icon: MarkIcon, pose: Pose, hz: number, o: { signLx?: number; signLz: number; sy: number; scale: number; mount: Def['mount']; doorLx: number; station: { x: number; z: number }; bubbleY: number; lx?: number; postFrom?: number; plot?: BuildingId; lotDepth?: number }): Def {
+  const sg = toWorld(pose, o.signLx ?? 0, o.signLz), bb = toWorld(pose, o.signLx ?? 0, o.plot ? 1.5 : o.signLz);
+  return { id, icon, sx: sg.x, sy: o.sy, sz: sg.z, scale: o.scale, mount: o.mount, stationX: o.station.x, stationZ: o.station.z, bubbleY: o.bubbleY, pose, doorLx: o.doorLx, frontLz: hz, bx: bb.x, bz: bb.z, lx: o.lx, postFrom: o.postFrom, plot: o.plot, lotDepth: o.lotDepth };
+}
 const DEFS: Def[] = [
-  { id: 'market', icon: 'fish', sx: L.market.x, sy: 2.0, sz: L.market.z + 1.55, scale: 0.85, mount: 'rail', stationX: L.stations.market.x, stationZ: L.stations.market.z, bubbleY: 3.7, lx: -0.55 },
-  { id: 'icebox', icon: 'ice', sx: L.iceBox.x, sy: 1.5, sz: L.iceBox.z + 1.0, scale: 0.7, mount: 'posts', stationX: L.stations.icebox.x, stationZ: L.stations.icebox.z, bubbleY: 2.5, lx: -0.8, postFrom: 0 },
-  { id: 'board', icon: 'paper', sx: L.noticeBoard.x, sy: 3.05, sz: L.noticeBoard.z + 0.3, scale: 0.8, mount: 'posts', stationX: L.stations.board.x, stationZ: L.stations.board.z, bubbleY: 4.2, lx: -1.0, postFrom: 2.55 },
-  { id: 'shipyard', icon: 'anchor', sx: L.stations.shipyard.x, sy: 3.4, sz: DL + 0.5, scale: 1, mount: 'wall', stationX: L.stations.shipyard.x, stationZ: L.stations.shipyard.z, bubbleY: 5.4, lx: 1.4 },
-  { id: 'inn', icon: 'mug', sx: L.stations.inn.x, sy: 3.05, sz: DL + 0.5, scale: 1, mount: 'wall', stationX: L.stations.inn.x, stationZ: L.stations.inn.z, bubbleY: 5.6, lx: 1.2 },
-  { id: 'coldstore', icon: 'snow', sx: P.coldstore.doorX, sy: 2.85, sz: DL + 0.5, scale: 0.95, mount: 'wall', stationX: P.coldstore.doorX, stationZ: P.coldstore.doorZ, bubbleY: 4.4, plot: 'coldstore', lotDepth: 3.8 },
-  { id: 'smokehouse', icon: 'smoke', sx: P.smokehouse.doorX, sy: 3.0, sz: DL + 0.5, scale: 0.95, mount: 'wall', stationX: P.smokehouse.doorX, stationZ: P.smokehouse.doorZ, bubbleY: 5.0, plot: 'smokehouse', lotDepth: 3.6 },
-  { id: 'restaurant', icon: 'plate', sx: P.restaurant.doorX, sy: 3.45, sz: DL + 0.35, scale: 0.95, mount: 'wall', stationX: P.restaurant.doorX, stationZ: P.restaurant.doorZ, bubbleY: 5.4, plot: 'restaurant', lotDepth: 3.6 },
-  { id: 'lighthouse', icon: 'light', sx: P.lighthouse.doorX, sy: 2.7, sz: P.lighthouse.z + 1.7, scale: 0.8, mount: 'wall', stationX: P.lighthouse.doorX, stationZ: P.lighthouse.doorZ, bubbleY: 4.4, plot: 'lighthouse', lotDepth: 2.6 },
+  mk('market', 'fish', L.market, FOOT.market[1], { signLz: 1.55, sy: 2.0, scale: 0.85, mount: 'rail', doorLx: -1.5, station: L.stations.market, bubbleY: 3.7, lx: -0.55 }),
+  mk('icebox', 'ice', L.iceBox, FOOT.iceBox[1], { signLz: 1.0, sy: 1.5, scale: 0.7, mount: 'posts', doorLx: 0, station: L.stations.icebox, bubbleY: 2.5, lx: -0.8, postFrom: 0 }),
+  mk('board', 'paper', L.noticeBoard, FOOT.noticeBoard[1], { signLz: 0.3, sy: 3.05, scale: 0.8, mount: 'posts', doorLx: 0, station: L.stations.board, bubbleY: 4.2, lx: -1.0, postFrom: 2.55 }),
+  mk('shipyard', 'anchor', L.shipyard, FOOT.shipyard[1], { signLx: -1.1, signLz: FOOT.shipyard[1] + 0.5, sy: 3.4, scale: 1, mount: 'wall', doorLx: -1.1, station: L.stations.shipyard, bubbleY: 5.4, lx: 1.4 }),
+  mk('inn', 'mug', L.inn, FOOT.inn[1], { signLx: -1.8, signLz: FOOT.inn[1] + 0.5, sy: 3.05, scale: 1, mount: 'wall', doorLx: -1.8, station: L.stations.inn, bubbleY: 5.6, lx: 1.2 }),
+  mk('coldstore', 'snow', P.coldstore, FOOT.coldstore[1], { signLz: FOOT.coldstore[1] + 0.5, sy: 2.85, scale: 0.95, mount: 'wall', doorLx: 0, station: { x: P.coldstore.doorX, z: P.coldstore.doorZ }, bubbleY: 4.4, plot: 'coldstore', lotDepth: 3.8 }),
+  mk('smokehouse', 'smoke', P.smokehouse, FOOT.smokehouse[1], { signLx: 1.2, signLz: FOOT.smokehouse[1] + 0.5, sy: 3.0, scale: 0.95, mount: 'wall', doorLx: 1.2, station: { x: P.smokehouse.doorX, z: P.smokehouse.doorZ }, bubbleY: 5.0, plot: 'smokehouse', lotDepth: 3.6 }),
+  mk('restaurant', 'plate', P.restaurant, FOOT.restaurant[1], { signLx: -1.5, signLz: FOOT.restaurant[1] + 0.35, sy: 3.45, scale: 0.95, mount: 'wall', doorLx: -1.5, station: { x: P.restaurant.doorX, z: P.restaurant.doorZ }, bubbleY: 5.4, plot: 'restaurant', lotDepth: 3.6 }),
+  mk('lighthouse', 'light', P.lighthouse, FOOT.lighthouse[1], { signLz: 1.7, sy: 2.7, scale: 0.8, mount: 'wall', doorLx: 0, station: { x: P.lighthouse.doorX, z: P.lighthouse.doorZ }, bubbleY: 4.4, plot: 'lighthouse', lotDepth: 2.6 }),
 ];
 
 // ---- pieces -------------------------------------------------------------------------------------------------
@@ -183,12 +193,14 @@ export class BuildingMarks {
         ? [{ forSale: true, label: `${MARK_TEXT.names[def.id]} ${MARK_TEXT.forSale.toLowerCase()}`, icon: 'forsale' }, { forSale: false, label: MARK_TEXT.names[def.id], icon: def.icon }]
         : [{ forSale: false, label: MARK_TEXT.names[def.id], icon: def.icon }];
       for (const v of variants) {
-        const sx = v.forSale ? P[def.plot!].x : def.sx;
+        const lot = v.forSale ? toWorld(def.pose, 0, def.lotDepth! / 2 + 0.12) : null;
+        const sx = lot ? lot.x : def.sx;
         const sy = v.forSale ? 1.75 : def.sy;
-        const sz = v.forSale ? P[def.plot!].z + def.lotDepth! / 2 + 0.12 : def.sz;
+        const sz = lot ? lot.z : def.sz;
         const k = v.forSale ? 0.85 : def.scale;
         const g = new THREE.Group();
         g.position.set(sx, sy, sz);
+        g.rotation.y = def.pose.rot;
         const mesh = signMesh('', BOARD_W * k, BOARD_H * k);
         const mat = toon(new THREE.MeshStandardMaterial({ map: boardTexture(v.icon, v.label), emissiveMap: null, emissive: 0xffb860, roughness: 0.9 }));
         mat.emissiveMap = mat.map;
@@ -201,6 +213,7 @@ export class BuildingMarks {
         live.add(g);
         const own = new THREE.Group();   // static bracket parts, baked with the rest of the signs' fittings
         own.position.set(sx, sy, sz);
+        own.rotation.y = def.pose.rot;
         stat.add(own);
         bx(BOARD_W * k + 0.2, 0.06, 0.06, iron, 0, top + 0.28, 0, own);
         if (!v.forSale && def.mount === 'wall') for (const dx of [-1, 1]) bx(0.05, 0.05, 0.5, iron, dx * BOARD_W * k * 0.46, top + 0.28, -0.25, own);
@@ -211,9 +224,15 @@ export class BuildingMarks {
         signs.push({ def, group: g, mat, forSale: v.forSale, phase: Math.random() * 6 });
       }
       // doormat and lantern at the door (a plot gets its own when the building goes up, see tycoonView.ts)
-      if (!def.plot) addDoorFurniture(stat, def.stationX, DL, def.lx ?? 1.2, iron);
+      if (!def.plot) {
+        const mat = new THREE.Group();
+        mat.position.set(def.pose.x, 0, def.pose.z);
+        mat.rotation.y = def.pose.rot;
+        stat.add(mat);
+        addDoorFurniture(mat, def.doorLx, def.frontLz, def.lx ?? 1.2, iron);
+      }
       const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.bubbleTex.new, transparent: true, depthWrite: false, fog: false }));
-      bubble.position.set(def.sx, def.bubbleY, def.plot ? P[def.plot].z + 1.5 : def.sz);
+      bubble.position.set(def.bx, def.bubbleY, def.bz);
       bubble.visible = false;
       bubble.center.set(0.5, 0);
       live.add(bubble);
@@ -291,7 +310,8 @@ export class BuildingMarks {
       const name = lbl ? (lbl.forSale ? `${MARK_TEXT.names[near.def.id]} ${MARK_TEXT.forSale.toLowerCase()}` : MARK_TEXT.names[near.def.id]) : MARK_TEXT.names[near.def.id];
       if (this.plateFor !== name) { this.plateFor = name; platePill(name, this.plateTex); }
       this.plate.position.set(near.def.sx, near.def.sy + 1.35 + Math.sin(now * 2.2) * 0.07, near.def.sz);
-      this.glow.position.set(near.def.stationX, 0.07, near.def.stationZ - 0.4);
+      this.glow.position.set(near.def.stationX, 0.07, near.def.stationZ);
+      this.glow.rotation.y = near.def.pose.rot;
     }
     this.plate.visible = this.plateScale > 0.02;
     this.plate.material.opacity = Math.min(1, this.plateScale * 1.2);

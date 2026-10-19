@@ -284,7 +284,7 @@ export class BoatsView {
   private pose(b: Boat, tier: number): { x: number; z: number; dx: number; dz: number } {
     const berth = LAYOUT.berths[b.berth];
     const side = b.berth % 2 === 0 ? -1 : 1;
-    const mx = side * (2.2 + halfBeam(tier) + 0.35);
+    const mx = side * (2.2 + halfBeam(tier) + 0.1);   // snug: the hull's side a hand from the pier's piles, for every size
     if (b.status !== 'out' || b.tripTime <= 0) return { x: mx, z: berth.boatZ, dx: 0, dz: 0 };
     const zi = Math.max(0, ZONE_IDS.indexOf(b.zone ?? 'shallows'));
     const f = (t: number) => {
@@ -315,7 +315,8 @@ export class BoatsView {
       if (moving) target = Math.atan2(-p.dx, -p.dz);
       let d = ((target - m.heading + Math.PI) % (Math.PI * 2)) - Math.PI;
       if (d < -Math.PI) d += Math.PI * 2;
-      m.heading += d * Math.min(1, dt * 3);
+      // a moored boat settles parallel to the pier quickly (and exactly), one under way turns gently
+      if (!moving && Math.abs(d) < 0.01) m.heading = target; else m.heading += d * Math.min(1, dt * (moving ? 3 : 8));
       // Ride the same wave field the water shader draws.
       const c = Math.cos(m.heading), s = Math.sin(m.heading);
       const at = (lx: number, lz: number, o: { h: number; sx: number; sz: number }) => waveAt(p.x + lx * c + lz * s, p.z - lx * s + lz * c, now, o);

@@ -1,5 +1,5 @@
 import {
-  CAPTAIN_NAMES, CAPTAIN_WAGE, CANDIDATE_COUNT, DOCKHAND_NAMES, DOCKHAND_SPEED, DOCKHAND_WAGE, ICE_CAPACITY, LAYOUT,
+  CAPTAIN_NAMES, CAPTAIN_WAGE, CANDIDATE_COUNT, DOCKHAND_NAMES, DOCKHAND_SPEED, DOCKHAND_WAGE, ICE_CAPACITY, LAYOUT, ringOf,
   MAX_DOCKHANDS, THRIFTY_MULT, TRAITS,
 } from './config';
 import type { ZoneId } from './config';
@@ -152,13 +152,21 @@ function mkJob(phase: Job['phase'], path: Pt[], crateIds: number[], dest: Job['d
 const BUILDING_DEST: Partial<Record<Job['dest'], keyof typeof LAYOUT.plots>> = { cold: 'coldstore', restaurant: 'restaurant', smoke: 'smokehouse' };
 const doorOf = (id: keyof typeof LAYOUT.plots): Pt => ({ x: LAYOUT.plots[id].doorX, z: LAYOUT.plots[id].doorZ });
 
-/** A walk between two places on the quay: out of the pier lane, along the east-west corridor, then to the spot. */
+/**
+ * A walk between two places in the harbour: out of the pier lane, in along the spoke to the free ring walkway, round the ring to the
+ * angle of the goal, then out along the spoke to the spot. Everything on the ring walkway is kept clear by the layout tests.
+ */
 export function walkPath(from: Pt, to: Pt): Pt[] {
   const raw: Pt[] = [from];
   if (from.z < 1.5) raw.push(laneEntry(from.x));
-  const cz = LAYOUT.corridorZ;
   const last = raw[raw.length - 1];
-  raw.push({ x: last.x, z: cz }, { x: to.x, z: cz }, to);
+  const R = LAYOUT.ring, a0 = ringOf(last.x, last.z).deg, a1 = to.x > LAYOUT.point.x0 ? (LAYOUT.gate.from + LAYOUT.gate.to) / 2 : ringOf(to.x, to.z).deg;
+  const onRing = (deg: number): Pt => ({ x: R.cx + R.pathR * Math.sin((deg * Math.PI) / 180), z: R.cz - R.pathR * Math.cos((deg * Math.PI) / 180) });
+  const steps = Math.ceil(Math.abs(a1 - a0) / 10);
+  for (let i = 0; i <= steps; i++) raw.push(onRing(a0 + ((a1 - a0) * i) / steps));
+  // the lighthouse: out through the gap in the low wall and along the causeway to the point
+  if (to.x > LAYOUT.point.x0) { const cz = (LAYOUT.causeway.z0 + LAYOUT.causeway.z1) / 2; raw.push({ x: R.front + 1, z: cz }, { x: to.x, z: cz }); }
+  raw.push(to);
   return raw.filter((p, i) => i === 0 || Math.hypot(p.x - raw[i - 1].x, p.z - raw[i - 1].z) > 0.01);
 }
 
@@ -190,12 +198,11 @@ function haulPath(from: Pt, dest: Job['dest']): Pt[] {
   if (bld) return walkPath(from, doorOf(bld));
   if (from.z > 4 && dest === 'market') return walkPath(from, LAYOUT.marketDrop); // collecting from a building on the quay
   if (dest === 'market') return walkPath(from, LAYOUT.marketDrop);
-  const e = laneEntry(from.x);
-  return [from, e, { x: e.x - 2, z: LAYOUT.iceDrop.z }, LAYOUT.iceDrop];
+  return walkPath(from, LAYOUT.iceDrop);
 }
 function backPath(from: Pt, home: Pt, dest: Job['dest']): Pt[] {
   if (BUILDING_DEST[dest] || dest === 'market') return walkPath(from, home);
-  if (dest === 'ice' && from.z > 3) return [from, { x: -3.5, z: LAYOUT.iceDrop.z }, home];
+  if (dest === 'ice') return walkPath(from, home);
   return [from, laneEntry(from.x), home];
 }
 

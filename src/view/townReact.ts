@@ -95,12 +95,12 @@ export class Particles {
 // ---- wet cobbles and puddles -------------------------------------------------------------
 
 interface Puddle { x: number; z: number; r: number; threshold: number; aspect: number; rot: number }
-/** Puddle places as shares of the quay's width and depth (kept off buildings by a walkable check), so they follow the layout. */
+/** Puddle places as shares of the square's width and depth (kept off buildings by a walkable check), so they follow the layout. */
 const PUDDLES: Puddle[] = [
   [0.36, 0.52, 0.95, 0.12, 0.7, 0.3], [0.46, 0.42, 0.8, 0.3, 0.65, -0.5], [0.52, 0.6, 1.15, 0.08, 0.75, 0.9], [0.65, 0.5, 0.85, 0.4, 0.6, 0.1],
   [0.22, 0.55, 0.9, 0.2, 0.7, 1.2], [0.8, 0.48, 0.8, 0.5, 0.65, -0.2], [0.49, 0.2, 0.7, 0.35, 0.7, 0.6], [0.58, 0.76, 1.0, 0.18, 0.7, -0.9],
 ].map(([fx, fz, r, threshold, aspect, rot]) => ({
-  x: LAYOUT.quayMinX + fx * (LAYOUT.quayMaxX - LAYOUT.quayMinX), z: fz * LAYOUT.quayMaxZ, r, threshold, aspect, rot,
+  x: LAYOUT.ring.cx + (fx - 0.5) * 2 * 20, z: LAYOUT.ring.cz + (fz - 0.5) * 2 * 20, r, threshold, aspect, rot,
 }));
 
 /** How wet the town is: darkens and glosses the stone, grows puddles in the rain and dries them out again. */

@@ -387,16 +387,7 @@ export class Game {
   /** Floating text at a world position (projected to the screen). */
   /** If something solid has just appeared around the player (a building bought while standing on its plot), step them out to the nearest free edge. */
   private unstickPlayer(): void {
-    const p = this.player.pos, m = 0.45;
-    for (const o of this.world.obstacles) {
-      if (p.x <= o.x0 || p.x >= o.x1 || p.z <= o.z0 || p.z >= o.z1) continue;
-      const toFront = o.z1 - p.z, toBack = p.z - o.z0, toLeft = p.x - o.x0, toRight = o.x1 - p.x;
-      // Prefer the front (towards the camera, where the doors are) unless a side is clearly closer.
-      const side = Math.min(toLeft, toRight);
-      if (toFront <= side + 1.5 || toFront <= toBack) p.z = o.z1 + m;
-      else if (toLeft <= toRight) p.x = o.x0 - m;
-      else p.x = o.x1 + m;
-    }
+    this.world.stepOut(this.player.pos);
   }
 
   private popAt(x: number, y: number, z: number, text: string): void {

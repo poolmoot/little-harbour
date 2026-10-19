@@ -1,4 +1,4 @@
-import { LAYOUT, toWorld } from '../sim/config';
+import { FOOT, LAYOUT, toWorld } from '../sim/config';
 import { TABLE_FRACTIONS } from '../sim/layoutBoxes';
 
 /** Fixed spots the town's people use. Everything is in world units (x east, z towards the camera). */
@@ -6,9 +6,9 @@ export interface Spot { x: number; z: number }
 
 /** Where people come out of town and go back into it: just in front of doors and at the edges of the square. They fade in and out here. */
 export const GATES: Spot[] = [
-  toWorld(LAYOUT.shipyard, 0, 3.4),
-  { x: LAYOUT.inn.x - 1.2, z: LAYOUT.inn.z + 3.6 },
-  { x: LAYOUT.bellTower.x + 2.4, z: LAYOUT.bellTower.z + 3.6 },
+  { x: LAYOUT.stations.shipyard.x, z: LAYOUT.stations.shipyard.z },
+  { x: LAYOUT.stations.inn.x, z: LAYOUT.stations.inn.z },
+  toWorld(LAYOUT.bellTower, 0.6, FOOT.bellTower[1] + 1.2),
   { x: LAYOUT.plots.smokehouse.doorX, z: LAYOUT.plots.smokehouse.doorZ },
   { x: LAYOUT.plots.coldstore.doorX, z: LAYOUT.plots.coldstore.doorZ },
 ];
@@ -26,14 +26,13 @@ export function nearestGate(x: number, z: number): Spot {
   return best;
 }
 
-/** Places in the market queue, front first. The line runs along the stall's front, a little unevenly, inside `LAYOUT.queueZone`. */
+/** Places in the market queue, front first. The line runs along the stall's front (a little unevenly), inside `LAYOUT.queueZone`, which is in the market's own frame. */
 const QZ = LAYOUT.queueZone;
-export const QUEUE_SLOTS: Spot[] = [0, 1, 2, 3, 4].map((i) => ({
-  x: Math.min(QZ.x1 - 0.3, Math.max(QZ.x0 + 0.3, LAYOUT.market.x + 0.5 + i * 0.85)),
-  z: QZ.z0 + (QZ.z1 - QZ.z0) * (i % 2 ? 0.7 : 0.1),
-}));
-/** A customer at the front of the queue faces the stall (towards -z). */
-export const FACE_STALL = Math.PI;
+export const QUEUE_SLOTS: Spot[] = [0, 1, 2, 3, 4].map((i) => toWorld(LAYOUT.market, 
+  Math.min(QZ.x1 - 0.3, Math.max(QZ.x0 + 0.3, 0.6 + i * 0.7)),
+  QZ.z0 + (QZ.z1 - QZ.z0) * (i % 2 ? 0.7 : 0.1)));
+/** A customer at the front of the queue faces the stall (the market's own -z, which is this heading in the world). */
+export const FACE_STALL = LAYOUT.market.rot + Math.PI;
 
 /** The tables on the restaurant terrace, in the restaurant's own frame, placed inside `LAYOUT.terrace` and filled in order as the restaurant grows. */
 const TZ = LAYOUT.terrace;
@@ -56,11 +55,8 @@ export function seatsOf(table: number, out: SeatSpot[] = []): SeatSpot[] {
   return out;
 }
 
-/** Where a pier-head crowd stands: a loose arc round the head of the pier and a few on the pier itself. Each faces the water. */
-const CZ = LAYOUT.crowdZone;
-const cz = (fx: number, fz: number): Spot => ({ x: CZ.x0 + (CZ.x1 - CZ.x0) * fx, z: CZ.z0 + (CZ.z1 - CZ.z0) * fz });
-const pierX = 1.75;
+/** Where a pier-head crowd stands: a loose group west of the pier mouth on the rim of the square, and a few on the pier itself. */
 export const CROWD_SPOTS: Spot[] = [
-  cz(0.04, 0.1), cz(0.96, 0.1), cz(0.14, 0.3), cz(0.86, 0.3),
-  { x: -pierX, z: LAYOUT.quayZ - 0.9 }, { x: pierX, z: LAYOUT.quayZ - 0.9 }, cz(0.2, 0.55), cz(0.8, 0.55), cz(0.08, 0.8),
+  { x: -2.7, z: 0.9 }, { x: -3.3, z: 2.0 }, { x: -2.5, z: 3.0 }, { x: -3.6, z: 3.4 },
+  { x: -1.75, z: LAYOUT.quayZ - 0.9 }, { x: 1.75, z: LAYOUT.quayZ - 0.9 }, { x: -1.75, z: LAYOUT.quayZ - 3.2 }, { x: 1.75, z: LAYOUT.quayZ - 2.4 },
 ];

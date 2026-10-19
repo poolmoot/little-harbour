@@ -30,14 +30,13 @@ export function lampHead(w: Build, x: number, y: number, z: number, withLight: b
 }
 
 export function buildLanterns(w: Build): void {
-  // Lamp posts along the camera side of the street and on the pier, from the layout data. Only a few cast real light.
-  const lit = (x: number, z: number) => z < 0 ? PIER_LAMPS.some(([px, pz, l]) => px === x && pz === z && l) : Math.abs(x) === 7 || Math.abs(x) === 21;
-  const spots: [number, number][] = [...PIER_LAMPS.map(([x, z]) => [x, z] as [number, number]), ...STREET_LAMPS];
-  for (const [x, z] of spots) {
-    const base = z < 0 ? 0.055 : 0;
+  // Lamp posts in the gaps between the buildings and along the low wall, and on the pier, from the layout data. Only a few cast real light.
+  const spots: [number, number, boolean][] = [...PIER_LAMPS, ...STREET_LAMPS.map(([x, z], i) => [x, z, i % 3 === 0] as [number, number, boolean])];
+  for (const [x, z, lit] of spots) {
+    const base = z < -2 ? 0.055 : 0;
     cy(0.14, 0.17, 0.3, w.M.iron, x, base + 0.15, z, w.stat, 8);
     cy(0.05, 0.07, 2.2, w.M.iron, x, base + 1.3, z, w.stat, 6);
     bx(0.06, 0.06, 0.4, w.M.iron, x, base + 2.3, z, w.stat);
-    lampHead(w, x, base + 2.55, z, lit(x, z));
+    lampHead(w, x, base + 2.55, z, lit);
   }
 }

@@ -1,53 +1,79 @@
-import { BUILDING_IDS, LAYOUT, PLOT_HALF, toWorld } from './config';
+import { BUILDING_IDS, FOOT, LAYOUT, PLOT_HALF, ringOf, toWorld } from './config';
 
 /**
- * Ground footprints of everything solid on the quay, and the lanes that must stay clear. Pure data (no Three.js):
- * the layout tests walk it, and the view builds its walking collision from the very same lists, so what the
- * tests check is what the player bumps into. Positions are world units, x east, z towards the camera.
+ * Ground footprints of everything solid in the harbour, the walkable ground, and the lanes that must stay clear. Pure data (no Three.js):
+ * the layout tests walk it, and the view builds its walking collision from the very same lists, so what the tests check is what the
+ * player bumps into. Positions are world units, x east, z towards the camera. Buildings stand on one circle round the square (see LAYOUT).
  */
 export interface Box { name: string; cx: number; cz: number; hx: number; hz: number; a: number }
 export interface Round { name: string; cx: number; cz: number; r: number }
 export const L = LAYOUT;
-const box = (name: string, cx: number, cz: number, hx: number, hz: number): Box => ({ name, cx, cz, hx, hz, a: 0 });
+type Pose = { x: number; z: number; rot?: number };
+const box = (name: string, cx: number, cz: number, hx: number, hz: number, a = 0): Box => ({ name, cx, cz, hx, hz, a });
 const round = (name: string, cx: number, cz: number, r: number): Round => ({ name, cx, cz, r });
-const at = (o: { x: number; z: number }, lx: number, lz: number) => toWorld(o, lx, lz);
+/** A box given in a building's own frame (x across, z towards its door), turned with it. */
+const local = (name: string, o: Pose, lx: number, lz: number, hx: number, hz: number): Box => {
+  const p = toWorld(o, lx, lz);
+  return box(name, p.x, p.z, hx, hz, o.rot ?? 0);
+};
+const at = (o: Pose, lx: number, lz: number) => toWorld(o, lx, lz);
 
 /** Market stall reach (half width) by stall level; the biggest is used for the tests. */
 export const STALL_REACH = [2.2, 3.2, 4.0];
-export const TABLE_FRACTIONS = [0.68, 0.92, 0.42];
+export const TABLE_FRACTIONS = [0.5, 1, 0];
 
 /** Tables on the restaurant terrace (a table with its two chairs), in world space. */
 export const TABLES: Box[] = TABLE_FRACTIONS.map((f, i) => {
-  const t = L.terrace, p = at(L.plots.restaurant, t.x0 + (t.x1 - t.x0) * f, (t.z0 + t.z1) / 2);
-  return box(`table ${i}`, p.x, p.z, 0.5, 0.9);
+  const t = L.terrace;
+  return local(`table ${i}`, L.plots.restaurant, t.x0 + (t.x1 - t.x0) * f, (t.z0 + t.z1) / 2, 0.5, 0.9);
 });
 
-/** Street lamps along the camera side of the street, and the lamps on the pier. */
-export const STREET_LAMPS: [number, number][] = [-49, -35, -21, -7, 7, 21, 35, 49].map((x) => [x, 15.8]);
+/** The round walkable square, cut off by a straight wall on the camera side. A walker's centre may be anywhere inside it, less its own radius. */
+export const WALK_DISC = { cx: L.ring.cx, cz: L.ring.cz, r: L.ring.front, zMax: L.ring.cz + L.ring.south };
+/** Walkable rectangles: x0, x1, z0, z1. The pier, the causeway through the east gate and the lighthouse point. */
+export const WALK_RECTS: [number, number, number, number][] = [
+  [-L.pierHalfWidth, L.pierHalfWidth, L.pierEndZ, 1.2],
+  [L.causeway.x0, L.causeway.x1, L.causeway.z0, L.causeway.z1],
+  [L.point.x0, L.point.x1, L.point.z0, L.point.z1],
+];
+
+/** A point on a circle round the square's centre, `deg` degrees from straight up (east is positive). */
+export const rimPoint = (deg: number, r: number): [number, number] => {
+  const p = (deg * Math.PI) / 180;
+  return [L.ring.cx + r * Math.sin(p), L.ring.cz - r * Math.cos(p)];
+};
+/** Lamp posts just outside the front ring, one in each gap between two buildings, and a row along the low wall on the camera side; and the lamps on the pier. */
+const GAP_DEGS = [-1, 1].flatMap((s) => [0, 1, 2].map((k) => s * (L.ring.first + L.ring.step * (k + 0.5))));
+const WALL_DEGS = [-1, 1].flatMap((sg) => [105, 115].map((d) => sg * d));
+const WALL_Z = L.ring.cz + L.ring.south + 0.6;
+export const STREET_LAMPS: [number, number][] = [
+  ...GAP_DEGS.map((d) => rimPoint(d, L.ring.front + 0.7)), ...WALL_DEGS.map((d) => rimPoint(d, L.ring.front + 0.9)),
+  ...[-14, -6, 6, 14].map((x) => [x, WALL_Z] as [number, number]),
+];
 export const PIER_LAMPS: [number, number, boolean][] = [[-1.85, -4, true], [1.85, -10.5, true], [-1.85, -16, true], [1.85, -4, false], [-1.85, -10.5, false], [1.85, -16, false]];
-/** A few benches and flower tubs on the camera side of the street (they face the street). */
-export const BENCHES: [number, number][] = [[-12, 17.4], [12, 17.4]];
-export const PLANTERS: [number, number][] = [[-40, 17.8], [-22, 17.8], [22, 17.8], [40, 17.8]];
-/** Lawns with a tree each on the camera side of the street: [x0, x1, z0, z1]. The trunk stands in the middle. */
-export const LAWNS: [number, number, number, number][] = [-44, -28, 28, 44].map((c) => [c - 3, c + 3, 16.4, 18.6] as [number, number, number, number]);
+/** No benches or tubs stand in the square. */
+export const BENCHES: [number, number][] = [];
+export const PLANTERS: [number, number][] = [];
+/** Lawns with a tree each outside the low wall on the camera side: [x0, x1, z0, z1]. The trunk stands in the middle. */
+export const LAWNS: [number, number, number, number][] = [-17, -9, 9, 17].map((x) => [x - 3, x + 3, WALL_Z + 2.4 - 1.1, WALL_Z + 2.4 + 1.1] as [number, number, number, number]);
 
 /** Where the three townspeople with something to say stand (each one is solid, so none stands in a lane). */
 export const NPC_POSTS = {
-  fishmonger: { x: L.market.x, z: L.market.z - 1.9 },
-  shipwright: { x: L.shipyard.x + 3.3, z: L.doorLineZ + 1.5 },
-  innkeeper: { x: L.inn.x + 2.0, z: L.doorLineZ + 1.4 },
+  fishmonger: at(L.market, 0, -1.9),
+  shipwright: at(L.shipyard, 3.3, FOOT.shipyard[1] + 1.4),
+  innkeeper: at(L.inn, 2.0, FOOT.inn[1] + 1.4),
 };
 
-/** Everything with a corner: buildings, plots, benches, tubs, tables. */
+/** Everything with a corner: buildings, plots, tubs, tables. */
 export const BOXES: Box[] = [
-  box('icebox', L.iceBox.x, L.iceBox.z, 0.9, 0.7),
-  box('market', L.market.x, L.market.z, STALL_REACH[2], 1.2),
-  box('shipyard', L.shipyard.x, L.shipyard.z, 3.1, 2.1),
-  box('shipyard hull', L.shipyard.x - 6.9, 4.0, 1.5, 0.8),
-  box('inn', L.inn.x, L.inn.z, 3.5, 2.6),
-  box('tower', L.bellTower.x, L.bellTower.z, 1.65, 1.65),
-  box('board', L.noticeBoard.x, L.noticeBoard.z, 1, 0.2),
-  ...BUILDING_IDS.filter((id) => id !== 'lighthouse').map((id) => box(id, L.plots[id].x, L.plots[id].z, PLOT_HALF[id][0], PLOT_HALF[id][1])),
+  local('icebox', L.iceBox, 0, 0, FOOT.iceBox[0], FOOT.iceBox[1]),
+  local('market', L.market, 0, 0, STALL_REACH[2], FOOT.market[1]),
+  local('shipyard', L.shipyard, 0, 0, FOOT.shipyard[0], FOOT.shipyard[1]),
+  local('shipyard hull', L.shipyard, 0, -(FOOT.shipyard[1] + 2.6), 1.5, 0.8),
+  local('inn', L.inn, 0, 0, FOOT.inn[0], FOOT.inn[1]),
+  local('tower', L.bellTower, 0, 0, FOOT.bellTower[0], FOOT.bellTower[1]),
+  local('board', L.noticeBoard, 0, 0, FOOT.noticeBoard[0], FOOT.noticeBoard[1]),
+  ...BUILDING_IDS.filter((id) => id !== 'lighthouse').map((id) => local(id, L.plots[id], 0, 0, PLOT_HALF[id][0], PLOT_HALF[id][1])),
   ...Object.entries(NPC_POSTS).filter(([k]) => k !== 'fishmonger').map(([k, p]) => box(`npc ${k}`, p.x, p.z, 0.4, 0.4)),
   ...BENCHES.map(([x, z], i) => box(`bench ${i}`, x, z, 0.85, 0.3)),
   ...PLANTERS.map(([x, z], i) => box(`planter ${i}`, x, z, 0.8, 0.35)),
@@ -63,24 +89,31 @@ export const ROUNDS: Round[] = [
 ];
 
 /** The market queue: people stand here, so nothing else may. Treated as solid by the tests. */
-export const QUEUE_BOX: Box = box('queue', (L.queueZone.x0 + L.queueZone.x1) / 2, (L.queueZone.z0 + L.queueZone.z1) / 2, (L.queueZone.x1 - L.queueZone.x0) / 2, (L.queueZone.z1 - L.queueZone.z0) / 2);
+const QZ = L.queueZone;
+export const QUEUE_BOX: Box = local('queue', L.market, (QZ.x0 + QZ.x1) / 2, (QZ.z0 + QZ.z1) / 2, (QZ.x1 - QZ.x0) / 2, (QZ.z1 - QZ.z0) / 2);
 
 /** Every door and interaction point on foot, with its name. */
 export const DOORS: [string, number, number][] = [
   ...BUILDING_IDS.map((id) => [id, L.plots[id].doorX, L.plots[id].doorZ] as [string, number, number]),
   ...Object.entries(L.stations).map(([k, v]) => [k, v.x, v.z] as [string, number, number]),
 ];
-/** A clear lane: x0, x1, z0, z1. */
-export interface Lane { name: string; x0: number; x1: number; z0: number; z1: number }
-export const STREET_LANE: Lane = { name: 'main street', x0: L.quayMinX + 0.5, x1: L.quayMaxX - 0.5, z0: L.street.z0, z1: L.street.z1 };
-/** The straight way from the street to a point: `approachWidth` wide, ending at the point. */
+
+/** A clear lane is a turned box too. */
+export type Lane = Box;
+/** The ring walkway: this band of the square (radii from its centre) stays free of every solid, all round the horseshoe. */
+export const RING_BAND = { r0: L.ring.freeInner, r1: L.ring.freeOuter };
+/** The open middle of the square: nothing at all stands inside this radius. */
+export const SQUARE_R = L.ring.freeInner;
+/** The straight way from a spot out to the free ring band: `width` wide, running straight in towards the square's centre. The lighthouse's runs south along the causeway. */
 export function approachLane(name: string, x: number, z: number, width = L.approachWidth): Lane {
-  const h = width / 2;
-  return { name: `approach to ${name}`, x0: x - h, x1: x + h, z0: Math.min(z, L.street.z0), z1: Math.max(z, L.street.z0) };
+  if (x > L.point.x0) return box(`approach to ${name}`, x, z + 2.5, width / 2, 2.5, 0);
+  const { deg, r } = ringOf(x, z), len = Math.max(1, r - SQUARE_R + 1);
+  const [cx, cz] = rimPoint(deg, r - len / 2 + 0.3);
+  return box(`approach to ${name}`, cx, cz, width / 2, len / 2 + 0.3, -(deg * Math.PI) / 180);
 }
 export const APPROACHES: Lane[] = [
   ...DOORS.map(([n, x, z]) => approachLane(n, x, z)),
-  approachLane('the pier head and fishing spot', L.fishingSpot.x, L.fishingSpot.z, 2.8),
+  box('approach to the pier head and fishing spot', 0, (L.fishingSpot.z + 8) / 2, 1.4, (8 - L.fishingSpot.z) / 2, 0),
 ];
 
 const axes = (b: Box) => [[Math.cos(b.a), -Math.sin(b.a)], [Math.sin(b.a), Math.cos(b.a)]];

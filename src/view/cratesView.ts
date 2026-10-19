@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LAYOUT } from '../sim/config';
+import { LAYOUT, toWorld } from '../sim/config';
 import { coldStorePos, smokeRackPos } from './tycoonView';
 import type { Species } from '../sim/config';
 import type { Crate, GameState } from '../sim/state';
@@ -73,7 +73,8 @@ export class CratesView {
   /** Positions of ice-box crates sit on top of the box, in a 3x2 grid. */
   private icePos(i: number): THREE.Vector3 {
     const ib = LAYOUT.iceBox;
-    return icePt.set(ib.x - 0.55 + (i % 3) * 0.55, 1.0, ib.z - 0.25 + Math.floor(i / 3) * 0.5);
+    const p = toWorld(ib, -0.55 + (i % 3) * 0.55, -0.25 + Math.floor(i / 3) * 0.5);
+    return icePt.set(p.x, 1.0, p.z);
   }
 
   sync(state: GameState, now: number, dt: number): void {

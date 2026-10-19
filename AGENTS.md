@@ -256,7 +256,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `fishbook.ts` — fish sizes, stars, golden fish, the fish book figures and zone rewards.
 - `names.ts` — harbour and boat names and their checks.
 - `guide.ts` — the starting guide: steps, unlock cards, the gentle first minutes (saved in `state.guide`). `guideAdvice.ts` — what to do instead while a step costs too much or it is night.
-- `layoutBoxes.ts` — every solid footprint on the quay (buildings, plots, tubs, benches, lamps, trees, terrace tables) and the lanes that must stay clear (main street, door approaches, the square). The view builds its collision from it and the layout tests walk it (`layout.test.ts`, `../layoutStations.test.ts`, `../view/townLayout.test.ts`).
+- `layoutBoxes.ts` — every solid footprint in the harbour (turned buildings, plots, lamps, trees, terrace tables), the walkable ground (the round square and the pier, causeway and point) and the lanes that must stay clear (ring walkway, door approaches, the middle of the square). Buildings stand on one circle round the square, door to the centre (`LAYOUT.ring`, `ringPose` in `config.ts`). The view builds its collision from it and the layout tests walk it (`layout.test.ts`, `../layoutStations.test.ts`, `../view/townLayout.test.ts`).
 
 **src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
 - `text.ts` — all names and wording the player reads in the game.
@@ -296,12 +296,12 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `quality.ts` — quality levels and the slow-frame governor.
 - `cameraRig.ts` — the angled follow camera.
 - `world.ts` — the harbour: builds it from the area files, animates lamps and flags, walkable test and sliding movement (`resolve`).
-- `collide.ts` — walking collision maths: a circle against turned boxes and discs, kept on the ground; slides along walls and corners (tested).
+- `collide.ts` — walking collision maths: a circle against turned boxes and discs, kept on the ground (rectangles or a round patch); slides along walls and corners (tested).
 - `occlusion.ts` — the see-through fade for anything between the camera and the player (shader patch, two shared uniforms, `updateOcclusion` called once a frame from `game.ts`).
-- `worldTown.ts` — the clock tower (landmark), the benches and tubs on the camera side of the street, the low decorative hillside houses and stairs, the breakwater boulders and the lighthouse point.
+- `worldTown.ts` — the clock tower (landmark), the low decorative hillside houses and stairs, shore boulders and the lighthouse point.
 - `buildingMarks.ts` — signboards, doormats, lanterns, glow, name plate and status bubbles for usable buildings; `markIcons.ts` draws the sign icons on a canvas.
 - `worldParts.ts` — shared types for the area builders.
-- `worldGround.ts` — quay, the main street and square paving, lawns, pier, quay details.
+- `worldGround.ts` — the round square's paving and low wall, the grass behind the buildings, the causeway, lawns, pier, quay details (`sectorSlab`, `backGround`).
 - `worldMarket.ts` — market stall, stall wings, weathervane.
 - `worldBuildings.ts` — shipyard, inn, notice board, ice box.
 - `worldLamps.ts` — lanterns.

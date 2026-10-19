@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
-import { BOXES, ROUNDS, STALL_REACH } from '../sim/layoutBoxes';
+import { BOXES, ROUNDS, STALL_REACH, WALK_DISC, WALK_RECTS } from '../sim/layoutBoxes';
 import type { SkyState } from './scene';
 import { Fireflies, windU } from './fx';
 import { bake, lampMat, mats, windowMat } from './kit';
@@ -13,7 +13,7 @@ import { buildMarket, buildVane } from './worldMarket';
 import { buildBoardAndIce, buildInn, buildShipyard } from './worldBuildings';
 import { buildLanterns } from './worldLamps';
 import { buildBreakwaters, buildHillside, buildSquare, buildTower } from './worldTown';
-import { inAreas, overlaps, resolveMove } from './collide';
+import { inAreas, overlaps, pushOut, resolveMove } from './collide';
 import type { Area, Disc, Obb, Solid } from './collide';
 
 export type { Rect };
@@ -23,14 +23,8 @@ export class World implements Build {
   readonly group = new THREE.Group();
   /** Everything the walkers collide with: turned boxes and discs (plain rectangles are turned into boxes). */
   readonly solids: Solid[] = [];
-  /** Plain rectangles of the same solid boxes, for stepping a player out of a building that has just gone up. */
-  readonly obstacles: Rect[] = [];
   /** The ground you can walk on: the quay, the pier and the lighthouse point. */
-  readonly areas: Area[] = [
-    [LAYOUT.quayMinX, LAYOUT.quayMaxX, 0, LAYOUT.quayMaxZ],
-    [-LAYOUT.pierHalfWidth, LAYOUT.pierHalfWidth, LAYOUT.pierEndZ, 1.2],
-    [LAYOUT.point.x0, LAYOUT.point.x1, LAYOUT.point.z0, 1.2],
-  ];
+  readonly areas: Area[] = [WALK_DISC, ...WALK_RECTS];
   private stallObb: Obb | null = null;
   readonly stat = new THREE.Group();
   readonly M = mats();
@@ -68,14 +62,14 @@ export class World implements Build {
       if (/^table /.test(b.name)) continue;   // the terrace adds its tables as they are put out
       const o: Obb = { cx: b.cx, cz: b.cz, hx: b.hx, hz: b.hz, a: b.a };
       this.solids.push(o);
-      this.obstacles.push({ x0: b.cx - b.hx, x1: b.cx + b.hx, z0: b.cz - b.hz, z1: b.cz + b.hz });
       if (b.name === 'market') { o.hx = STALL_REACH[0]; this.stallObb = o; }
     }
     for (const r of ROUNDS) this.solids.push({ cx: r.cx, cz: r.cz, r: r.r });
-    const hill = LAYOUT.quayMaxZ;
+    const hill = LAYOUT.quayMaxZ, R = LAYOUT.ring;
     const n = buildNature(this.group, (x, z) => {
-      if (z < -8) return false;
-      if (Math.abs(x) < LAYOUT.quayMaxX + 0.2 && z < LAYOUT.quayMaxZ + 0.2) return false;
+      if (z < R.cz - 1) return false;                                              // north of the middle of the square is the sea
+      if (Math.hypot(x - R.cx, z - R.cz) < R.front + 7) return false;               // the town's ground
+      if (x > LAYOUT.causeway.x0 && x < LAYOUT.point.x1 + 4 && z < LAYOUT.causeway.z1 + 3) return false;   // the causeway and the lighthouse point
       if (Math.abs(x) < LAYOUT.quayMaxX + 5 && z > hill + 1 && z < hill + 19) return false;   // the hillside terraces and houses
       return true;
     }, BEDS);
@@ -123,6 +117,11 @@ export class World implements Build {
     }
     p.needsUpdate = true;
     if (this.vane.visible) this.vaneArrow.rotation.y = Math.sin(t * 0.35) * 1.2 + Math.sin(t * 0.9) * 0.2;
+  }
+
+  /** If a building has just gone up round the player, step them out to the nearest free spot. */
+  stepOut(p: { x: number; z: number }, r = 0.45): void {
+    for (const o of this.solids) if (!('r' in o)) pushOut(o, p, r);
   }
 
   /** Is the point (with a small radius) standing on the quay, the pier or the point, clear of every solid? */

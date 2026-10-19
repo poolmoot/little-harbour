@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LAYOUT } from '../sim/config';
+import { LAYOUT, toWorld } from '../sim/config';
 import { SPECIES_COLOUR } from '../palette';
 
 import { bake, barrel, bx, crateBox, cy, fishGeo, flat, put, tBox } from './kit';
@@ -7,7 +7,7 @@ import { lampHead } from './worldLamps';
 import type { Build } from './worldParts';
 
 export function buildMarket(w: Build): void {
-  const { x, z } = LAYOUT.market, M = w.M, s = w.stat;
+  const P0 = LAYOUT.market, M = w.M, { s } = w.place(P0.x, P0.z, P0.rot), x = 0, z = 0;
   tBox(4.2, 1.0, 2.0, M.wood, 1.6, x, 0.5, z, s);
   tBox(4.5, 0.1, 2.3, M.crate, 1.4, x, 1.05, z, s);
   for (const dx of [-2.05, 2.05]) for (const dz of [-0.95, 0.95]) cy(0.07, 0.08, 2.9, M.dark, x + dx, 1.45, z + dz, s, 6);
@@ -39,7 +39,8 @@ export function buildMarket(w: Build): void {
     f.scale.setScalar(0.5);
     f.rotation.set(0, 0, Math.PI / 2);
   }
-  lampHead(w, x + 1.7, 2.5, z + 0.6, false, true);
+  const lp = toWorld(P0, 1.7, 0.6);
+  lampHead(w, lp.x, 2.5, lp.z, false, true);
   // scale + baskets on the counter
   cy(0.2, 0.2, 0.04, flat(0xb89a5a, 0.4), x + 1.2, 1.14, z - 0.5, s, 10);
   for (const dx of [-0.6, 0, 0.6]) put(new THREE.CylinderGeometry(0.2, 0.15, 0.2, 8), flat(0xb08a4a, 0.95), x + dx, 1.2, z - 0.55, s);
@@ -49,12 +50,14 @@ export function buildMarket(w: Build): void {
 /** Market stall upgrades: a wing on each side per level, shown by setStall(). */
 function buildStallWings(w: Build): void {
   const build = w;
-  const { x, z } = LAYOUT.market, M = w.M;
+  const P0 = LAYOUT.market, M = w.M, x = 0, z = 0;
   const stripe = [0xd24a3a, 0xf6efe0];
   const species = ['cod', 'tuna', 'seabass', 'snapper'] as const;
   for (let lvl = 1; lvl <= 2; lvl++) {
     const g = new THREE.Group();
     g.visible = false;
+    g.position.set(P0.x, 0, P0.z);
+    g.rotation.y = P0.rot;
     const w = lvl === 1 ? 1.0 : 0.8;
     const off = lvl === 1 ? 2.1 + w / 2 : 2.1 + 1.0 + w / 2;
     for (const side of [-1, 1]) {
@@ -90,9 +93,9 @@ function buildStallWings(w: Build): void {
 }
 
 export function buildVane(w: Build): void {
-  const { x, z } = LAYOUT.inn;
+  const inn = LAYOUT.inn, ip = toWorld(inn, -2.9, 0), x = ip.x, z = ip.z;
   const gold = new THREE.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.28, metalness: 0.85, emissive: 0x6a4a00, emissiveIntensity: 0.35 });
-  w.vane.position.set(x - 2.9, 7.1, z);
+  w.vane.position.set(x, 7.1, z);
   w.vane.visible = false;
   put(new THREE.CylinderGeometry(0.03, 0.04, 1.5, 6), gold, 0, 0.75, 0, w.vane);
   put(new THREE.SphereGeometry(0.1, 10, 8), gold, 0, 1.5, 0, w.vane);

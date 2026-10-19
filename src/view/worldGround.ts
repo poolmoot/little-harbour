@@ -1,55 +1,122 @@
 import * as THREE from 'three';
-import { BUILDING_IDS, LAYOUT } from '../sim/config';
-
+import { LAYOUT } from '../sim/config';
 import { barrel, bollard, bx, crateBox, cy, flat, net, put, ropeCoil, tBox } from './kit';
 import { landPatch } from './nature';
 import { lampHead } from './worldLamps';
 import type { Build } from './worldParts';
 import { BEDS } from './worldParts';
 
-export function buildGround(w: Build): void {
-  const L = LAYOUT, M = w.M, s = w.stat;
-  tBox(L.quayMaxX - L.quayMinX, 1.4, L.quayMaxZ, M.cobble, 2.4, 0, -0.7, L.quayMaxZ / 2, s).castShadow = false;
-  tBox(L.quayMaxX - L.quayMinX + 0.2, 0.16, 0.6, M.lip, 2, 0, 0.0, 0.3, s).castShadow = false;
-  // the main street: a long paved band along the fronts of the buildings, and the square at the head of the pier
-  const street = L.street, bandZ0 = L.doorLineZ, bandZ1 = street.z1;
-  const band = tBox(L.quayMaxX - L.quayMinX - 0.4, 0.03, bandZ1 - bandZ0, M.lip, 2, 0, 0.012, (bandZ0 + bandZ1) / 2, s);
-  band.castShadow = false;
-  const SQ = { x0: -7, x1: 7, z0: 0.3, z1: bandZ1 };
-  const sq = tBox(SQ.x1 - SQ.x0, 0.03, SQ.z1 - SQ.z0, flat(0xd8ccb2, 0.95), 2.4, 0, 0.022, (SQ.z0 + SQ.z1) / 2, s);
-  sq.castShadow = false;
-  // the compass rose in the middle of the square is in worldPaving.ts
-  // a worn forecourt in front of each building, running into the street
-  const yard = (cx: number, bw: number) => {
-    const m = tBox(bw, 0.02, 3.4, flat(0xcfc3a8, 0.95), 2.4, cx, 0.03, L.doorLineZ + 1.7, s);
-    m.castShadow = false;
-  };
-  yard(L.market.x, 9);
-  yard(L.shipyard.x, 7);
-  yard(L.inn.x, 8);
-  yard(L.bellTower.x, 4.4);
-  for (const id of BUILDING_IDS) {
-    if (id === 'lighthouse') continue;
-    yard(L.plots[id].x, 6);
+const DEG = Math.PI / 180;
+/** The half-angle of the water that comes up to the square at the top, between the first building on each side. */
+export const NOTCH_DEG = 6;
+
+/**
+ * A slab shaped like a ring sector (or a whole disc when the angles run all the way round) round the square's centre: from radius r0 to r1,
+ * between two angles measured from straight up (east positive), with its top at `topY` and `depth` below it. Texture tiles `tile` units wide.
+ * `mats` is [top, side].
+ */
+export function sectorSlab(r0: number, r1: number, a0: number, a1: number, depth: number, topY: number, tile: number, mats: THREE.Material[]): THREE.Mesh {
+  const shape = new THREE.Shape();
+  const full = a1 - a0 >= 359.9, n = Math.max(2, Math.ceil(Math.abs(a1 - a0) / 3));
+  const pt = (deg: number, r: number): [number, number] => [r * Math.sin(deg * DEG), r * Math.cos(deg * DEG)];   // shape y is minus world z; the centre is added below
+  if (full) {
+    shape.absarc(0, 0, r1, 0, Math.PI * 2, false);
+    if (r0 > 0) { const hole = new THREE.Path(); hole.absarc(0, 0, r0, 0, Math.PI * 2, true); shape.holes.push(hole); }
+  } else {
+    // shape y = -world z, so "up the page" (towards the sea, -z) is +y: a point at angle a is (r sin a, r cos a) in shape space
+    if (r0 > 0) {
+      const [sx, sy] = pt(a0, r0);
+      shape.moveTo(sx, sy);
+      for (let i = 1; i <= n; i++) { const [x, y] = pt(a0 + ((a1 - a0) * i) / n, r0); shape.lineTo(x, y); }
+    } else { const [sx, sy] = pt(a1, r1); shape.moveTo(sx, sy); }
+    for (let i = n; i >= 0; i--) { const [x, y] = pt(a0 + ((a1 - a0) * i) / n, r1); shape.lineTo(x, y); }
+    shape.closePath();
   }
-  // planted beds on the camera side of the street: a stone surround and a lawn, with a tree trunk (solid, from the layout data)
+  return extrude(shape, depth, topY, tile, mats);
+}
+
+/** Extrude a shape drawn round the square's centre (x east, y = minus world z) into a slab. */
+function extrude(shape: THREE.Shape, depth: number, topY: number, tile: number, mats: THREE.Material[]): THREE.Mesh {
+  const L = LAYOUT.ring;
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 72 });
+  g.rotateX(-Math.PI / 2);                       // shape (x, y, depth) -> world (x, depth, -y)
+  g.translate(L.cx, topY - depth, L.cz);          // the centre of the square sits at world z = L.cz
+  const uv = g.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / tile, uv.getY(i) / tile);
+  const m = new THREE.Mesh(g, mats);
+  m.receiveShadow = true;
+  return m;
+}
+
+/**
+ * The ground behind the buildings on one side (sg = -1 west, 1 east): from the rim of the square to the water's edge at radius `rOut`,
+ * and from the east or west end round to the pier. Its edge towards the pier is a slanting line, so the water beside the pier stays open for the boats.
+ */
+export function backGround(sg: number, rOut: number, depth: number, topY: number, tile: number, mats: THREE.Material[]): THREE.Mesh {
+  const L = LAYOUT.ring, rIn = L.front - 0.05, pts: [number, number][] = [];
+  const at = (deg: number, r: number): [number, number] => [sg * r * Math.sin(deg * DEG), r * Math.cos(deg * DEG)];
+  for (let d = 90; d >= NOTCH_DEG; d -= 3) pts.push(at(d, rIn));
+  pts.push(at(NOTCH_DEG, rIn));
+  // the slanting edge: from the rim beside the pier out to the first corner and then the outer arc
+  const c1 = [sg * 3.0, -(-3.2 - L.cz)] as [number, number];
+  const outDeg = 12.7;
+  pts.push(c1, at(outDeg, rOut));
+  for (let d = outDeg; d <= 90; d += 3) pts.push(at(d, rOut));
+  pts.push(at(90, rOut));
+  const shape = new THREE.Shape();
+  pts.forEach(([x, y], i) => (i ? shape.lineTo(x, y) : shape.moveTo(x, y)));
+  shape.closePath();
+  return extrude(shape, depth, topY, tile, mats);
+}
+
+export function buildGround(w: Build): void {
+  const L = LAYOUT, M = w.M, s = w.stat, Rf = L.ring.front, Rb = L.quayMaxX;
+  const slab = (r0: number, r1: number, a0: number, a1: number, depth: number, topY: number, tile: number, top: THREE.Material, side: THREE.Material, shadow = false) => {
+    const m = sectorSlab(r0, r1, a0, a1, depth, topY, tile, [top, side]);
+    m.castShadow = shadow;
+    s.add(m);
+    return m;
+  };
+  // the round square: paved to the edge of the water, with a stone lip round its rim
+  const C = L.ring.south, ca = 180 - Math.acos(C / Rf) / DEG;    // the angle where the straight front wall meets the circle
+  slab(0, Rf, -ca, ca, 1.4, 0, 2.4, M.cobble, M.wall);
+  slab(Rf - 0.6, Rf, -ca, ca, 0.2, 0.012, 2, M.lip, M.lip);
+  const wz = L.ring.cz + C;
+  tBox(2 * Rf * Math.sin(ca * DEG), 0.2, 0.6, M.lip, 2, 0, 0.012, wz - 0.3, s).castShadow = false;
+  // the ground behind the buildings, on each side, from the water's notch round to the east and west ends
+  for (const sg of [-1, 1]) {
+    const m = backGround(sg, Rb, 1.4, 0, 3, [M.grass, M.wall]);
+    m.castShadow = false;
+    s.add(m);
+  }
+  // planted beds outside the low wall on the camera side: a stone surround and a lawn, with a tree trunk (solid, from the layout data)
   for (const [x0, x1, z0, z1] of BEDS) {
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     tBox(x1 - x0 + 0.5, 0.05, z1 - z0 + 0.5, M.lip, 2, cx, 0.02, cz, s).castShadow = false;
     tBox(x1 - x0, 0.05, z1 - z0, M.grass, 3, cx, 0.045, cz, s).castShadow = false;
   }
-  // retaining wall between quay and the green verge
-  tBox(L.quayMaxX - L.quayMinX, 0.5, 0.35, M.wall, 1.6, 0, 0.1, L.quayMaxZ + 0.15, s);
-  tBox(L.quayMaxX - L.quayMinX + 0.3, 0.1, 0.55, M.lip, 2, 0, 0.38, L.quayMaxZ + 0.15, s);
+  // the low wall on the camera side of the square, with a stair-gap in the middle and a gate at the east end
+  const g = L.gate, stair = 3;
+  const wall = (a0: number, a1: number) => {
+    slab(Rf + 0.05, Rf + 0.55, a0, a1, 0.7, 0.45, 1.6, M.wall, M.wall, true);
+    slab(Rf, Rf + 0.65, a0, a1, 0.12, 0.55, 2, M.lip, M.lip);
+  };
+  wall(90, g.from);
+  wall(g.to, ca);
+  wall(-ca, -90);
+  // and the straight front: a long low wall with a gap for the steps up to the hillside in the middle
+  for (const [x0, x1] of [[-Rf * Math.sin(ca * DEG), -stair], [stair, Rf * Math.sin(ca * DEG)]]) {
+    tBox(x1 - x0, 0.7, 0.5, M.wall, 1.6, (x0 + x1) / 2, 0.1, wz + 0.25, s);
+    tBox(x1 - x0 + 0.1, 0.12, 0.65, M.lip, 2, (x0 + x1) / 2, 0.49, wz + 0.25, s);
+  }
+  // the land behind the town: grass round the whole camera side, rising into hills (the ground height is shaped in nature.ts)
   const gtex = M.grass.map as THREE.Texture;
-  w.group.add(landPatch(gtex, -100, L.quayMinX, -8, 110), landPatch(gtex, L.quayMaxX, 100, -8, 110), landPatch(gtex, L.quayMinX, L.quayMaxX, L.quayMaxZ + 0.6, 110));
-  // stone skirts where the land meets the water
-  tBox(78, 1.5, 0.4, M.wall, 1.8, L.quayMaxX + 39, -0.78, -8.2, s);
-  tBox(78, 1.5, 0.4, M.wall, 1.8, L.quayMinX - 39, -0.78, -8.2, s);
-  tBox(0.4, 1.5, 8.2, M.wall, 1.8, L.quayMaxX + 0.2, -0.78, -4, s);
-  tBox(0.4, 1.5, 8.2, M.wall, 1.8, L.quayMinX - 0.2, -0.78, -4, s);
-  // quay end steps down to the rocks
-  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) tBox(1.6, 0.18, 6 - i, M.lip, 2, sx * (L.quayMaxX - 0.8 - i * 0.2), -0.1 - i * 0.18, 3.5, s).castShadow = false;
+  w.group.add(landPatch(gtex, -100, 100, L.ring.cz, 110));
+  // the causeway to the lighthouse point, through the gate in the wall
+  const cw = L.causeway;
+  tBox(cw.x1 - cw.x0, 1.4, cw.z1 - cw.z0, M.cobble, 2.4, (cw.x0 + cw.x1) / 2, -0.7, (cw.z0 + cw.z1) / 2, s).castShadow = false;
+  tBox(cw.x1 - cw.x0, 0.1, 0.3, M.lip, 2, (cw.x0 + cw.x1) / 2, 0.0, cw.z0 + 0.15, s).castShadow = false;
+  tBox(cw.x1 - cw.x0, 0.1, 0.3, M.lip, 2, (cw.x0 + cw.x1) / 2, 0.0, cw.z1 - 0.15, s).castShadow = false;
 }
 
 export function buildPier(w: Build): void {
@@ -98,10 +165,6 @@ export function buildPier(w: Build): void {
 }
 
 export function buildQuayDetail(w: Build): void {
-  const s = w.stat;
-  // a few bollards on the quay edge beside the pier mouth and at the two ends, and a rope coil each side of the pier
-  for (const x of [-6, -4.5, 4.5, 6, LAYOUT.quayMinX + 1.5, LAYOUT.quayMaxX - 1.5]) bollard(s, x, 0.08, 0.45);
-  ropeCoil(s, -3.2, 0, 0.9, 1.1);
-  ropeCoil(s, 3.2, 0, 0.9, 1);
-  w.signs.push({ m: net(w.group, 1.4, 0.8, -2.5, 0.5, 0.9, 0.1), phase: 2.1 });
+  // a fishing net drying by the pier mouth
+  w.signs.push({ m: net(w.group, 1.4, 0.8, -2.9, 0.5, 1.6, 0.1), phase: 2.1 });
 }

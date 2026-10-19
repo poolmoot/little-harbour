@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LAYOUT } from '../sim/config';
+import { LAYOUT, toWorld } from '../sim/config';
 import { NPC_POSTS } from '../sim/layoutBoxes';
 import type { Crate } from '../sim/state';
 import { Figure, mat } from './figures';
@@ -53,8 +53,9 @@ const WALKERS: { look: FigureLook; pace: number }[] = [
 ];
 /** Places people like to walk to: stalls, doors, the board, the pier head. */
 const HAUNTS: [number, number][] = [
-  [LAYOUT.market.x, 11], [LAYOUT.noticeBoard.x, 10], [LAYOUT.inn.x, 11], [LAYOUT.shipyard.x, 11], [LAYOUT.plots.coldstore.x, 11], [LAYOUT.plots.smokehouse.x, 11],
-  [LAYOUT.plots.restaurant.x, 11], [LAYOUT.bellTower.x, 10.5], [0, 4], [0, 2], [0, -3], [-1, -10], [1, -6], [-5, 6.5], [5, 6.5], [0, 12],
+  ...[LAYOUT.market, LAYOUT.noticeBoard, LAYOUT.inn, LAYOUT.shipyard, LAYOUT.plots.coldstore, LAYOUT.plots.smokehouse, LAYOUT.plots.restaurant, LAYOUT.bellTower]
+    .map((o) => { const p = toWorld(o, 0, 5.5); return [p.x, p.z] as [number, number]; }),
+  [0, 4], [0, 2], [0, -3], [-1, -10], [1, -6], [-5, 8], [5, 8], [0, 24], [-8, 20], [8, 20], [0, 14],
 ];
 const WALKER_RADIUS = 0.32;
 
@@ -116,8 +117,8 @@ class Walker {
     for (let i = 0; i < 16; i++) {
       const haunt = HAUNTS[Math.floor(Math.random() * HAUNTS.length)];
       const anywhere = Math.random() < 0.35;
-      const x = anywhere ? LAYOUT.quayMinX + 2 + Math.random() * (LAYOUT.quayMaxX - LAYOUT.quayMinX - 4) : haunt[0] + (Math.random() - 0.5) * 2.4;
-      const z = anywhere ? 5.5 + Math.random() * (LAYOUT.quayMaxZ - 7) : haunt[1] + (Math.random() - 0.5) * 2;
+      const x = anywhere ? LAYOUT.ring.cx + (Math.random() - 0.5) * 2 * 22 : haunt[0] + (Math.random() - 0.5) * 2.4;
+      const z = anywhere ? LAYOUT.ring.cz + (Math.random() - 0.5) * 2 * 22 : haunt[1] + (Math.random() - 0.5) * 2;
       if (this.world.walkable(x, z, WALKER_RADIUS + 0.1) && Math.hypot(x - this.x, z - this.z) > 3) {
         this.tx = x;
         this.tz = z;
@@ -179,8 +180,8 @@ class Cat {
   private head = new THREE.Group();
   private tail: THREE.Group[] = [];
   private legs: THREE.Group[] = [];
-  x = LAYOUT.market.x + 2.6;
-  z = LAYOUT.market.z + 3;
+  x = toWorld(LAYOUT.market, 1.6, 4.0).x;
+  z = toWorld(LAYOUT.market, 1.6, 4.0).z;
   private mode: 'sit' | 'wander' | 'home' | 'greet' | 'rub' = 'sit';
   private sinceGreet = 20;
   private rubT = 0;
@@ -235,7 +236,7 @@ class Cat {
 
   private pickWander(): void {
     for (let i = 0; i < 12; i++) {
-      const x = LAYOUT.quayMinX + 3 + Math.random() * (LAYOUT.quayMaxX - LAYOUT.quayMinX - 6), z = 6 + Math.random() * 6;
+      const home = toWorld(LAYOUT.market, 1.6, 4.0), x = home.x + (Math.random() - 0.5) * 12, z = home.z + (Math.random() - 0.5) * 8;
       if (this.world.walkable(x, z, 0.3)) {
         this.tx = x;
         this.tz = z;
@@ -246,7 +247,7 @@ class Cat {
 
   update(dt: number, px: number, pz: number, carrying: boolean, facing = 0): void {
     this.t += dt;
-    const home = { x: LAYOUT.market.x + 2.6, z: LAYOUT.market.z + 3 };
+    const home = toWorld(LAYOUT.market, 1.6, 4.0);
     const toPlayer = Math.hypot(px - this.x, pz - this.z);
     let speed = 0;
     this.sinceGreet += dt;
@@ -492,7 +493,7 @@ class Gull {
 }
 
 /** Where the three ground gulls stand until someone walks into them. */
-const GULL_HOMES: [number, number][] = [[0.38, 0.58], [0.62, 0.6], [0.2, 0.48]].map(([fx, fz]) => [LAYOUT.quayMinX + fx * (LAYOUT.quayMaxX - LAYOUT.quayMinX), fz * LAYOUT.quayMaxZ]);
+const GULL_HOMES: [number, number][] = [[-4, 17], [4, 18], [-8, 22]];
 /** The most extra strollers there ever are (on top of the four who always walk). */
 export const MAX_EXTRA_STROLLERS = 4;
 

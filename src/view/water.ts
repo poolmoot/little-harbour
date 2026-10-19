@@ -6,6 +6,9 @@ import { LAYOUT } from '../sim/config';
 
 /** Half-width of the quay as a GLSL number, so the shoreline foam follows the real quay edge. */
 const QUAY_SIDE = LAYOUT.quayMaxX.toFixed(1);
+/** The round town: the centre of the square and the radius of the ground behind the buildings, and the water's notch at the top. */
+const TOWN_C = `${LAYOUT.ring.cx.toFixed(2)}, ${LAYOUT.ring.cz.toFixed(2)}`;
+const SOUTH_Z = LAYOUT.ring.cz.toFixed(1);
 /** The lighthouse point, as a box for the shoreline foam. */
 const POINT_C = `${((LAYOUT.point.x0 + LAYOUT.point.x1) / 2).toFixed(2)}, ${((LAYOUT.point.z0 + LAYOUT.point.z1) / 2).toFixed(2)}`;
 const POINT_H = `${((LAYOUT.point.x1 - LAYOUT.point.x0) / 2).toFixed(2)}, ${((LAYOUT.point.z1 - LAYOUT.point.z0) / 2).toFixed(2)}`;
@@ -57,7 +60,7 @@ const float CREST_W = 0.008;
 const vec3 LANTERN_COL = vec3(1.0, 0.45, 0.1);
 const float SHALLOW_RICH = 1.35;      // extra colour strength for the shallows, which tone mapping would otherwise wash out
 const vec2 LANTERN_SHIFT = vec2(0.9, 0.7);    // pool centre, measured out from the lamp (m)
-const vec2 LANTERN_SIZE = vec2(1.05, 1.55);   // pool radius across and along the pier (m)
+const vec2 LANTERN_SIZE = vec2(0.8, 1.2);    // pool radius across and along the pier (m)
 
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float noise(vec2 p) {
@@ -67,10 +70,10 @@ float noise(vec2 p) {
 float sdBox(vec2 p, vec2 c, vec2 hb) { vec2 q = abs(p - c) - hb; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0); }
 // Distance to the solid land: quay and side shores.
 float landDist(vec2 p) {
-  float d = sdBox(p, vec2(0.0, 10.0), vec2(${QUAY_SIDE}, 10.0));
+  float d = length(p - vec2(${TOWN_C})) - ${QUAY_SIDE};                        // the round town
+  d = max(d, -sdBox(p, vec2(0.0, -20.5), vec2(3.4, 20.0)));                       // the water's notch at the top of the square
   d = min(d, sdBox(p, vec2(${POINT_C}), vec2(${POINT_H})));
-  d = min(d, sdBox(p, vec2(${QUAY_SIDE} + 34.0, 41.0), vec2(34.0, 49.0)));
-  return min(d, sdBox(p, vec2(-${QUAY_SIDE} - 34.0, 41.0), vec2(34.0, 49.0)));
+  return min(d, sdBox(p, vec2(0.0, ${SOUTH_Z} + 43.0), vec2(100.0, 43.0)));       // the land on the camera side and the meadows to each side
 }
 // Distance to the nearest post along the pier edges (the pier stands on posts; water runs under it).
 float postDist(vec2 p) {
@@ -183,7 +186,7 @@ void main() {
   }
   float bars = smoothstep(0.4, 0.55, abs(fract(p.y * 1.8 + 0.25 * sin(p.x * 3.0 + t * 1.4) - t * 0.25) - 0.5) * 2.0);
   float pool = max(smoothstep(0.7, 0.76, lamp), 0.85 * bars * smoothstep(0.22, 0.3, lamp));
-  col = mix(col, LANTERN_COL * 0.45, pool * uLantern * 0.7);
+  col = mix(col, LANTERN_COL * 0.4, pool * uLantern * 0.3);
 
   col = mix(col, uFog, smoothstep(uFogNear, uFogFar, camDist));
   gl_FragColor = vec4(col, 1.0);

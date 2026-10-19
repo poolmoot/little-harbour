@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { LAYOUT } from '../sim/config';
 import { bx, cy, doorAt, flat, gableRoof, put, tBox, windowAt } from './kit';
-import { BENCHES, PLANTERS } from '../sim/layoutBoxes';
+import { BENCHES, PLANTERS, rimPoint } from '../sim/layoutBoxes';
 import type { Build } from './worldParts';
 
 /** The landmark clock tower, the small square with its fountain and well, the hillside behind the town, and the rocky ends of the quay. */
@@ -39,6 +39,7 @@ export function buildTower(w: Build): void {
   const T = LAYOUT.bellTower, M = w.M;
   const g = new THREE.Group();
   g.position.set(T.x, 0, T.z);
+  g.rotation.y = T.rot;
   w.stat.add(g);
   bx(3.3, 0.3, 3.3, M.lip, 0, 0.15, 0, g);
   tBox(2.8, 4.0, 2.8, M.wall, 1.8, 0, 2.3, 0, g);
@@ -141,6 +142,7 @@ export function buildBreakwaters(w: Build): void {
   const P = L.point, pw = P.x1 - P.x0, pd = P.z1 - P.z0;
   tBox(pw, 1.4, pd, M.cobble, 2.4, (P.x0 + P.x1) / 2, -0.7, (P.z0 + P.z1) / 2, s).castShadow = false;
   tBox(pw + 0.2, 0.16, 0.6, M.lip, 2, (P.x0 + P.x1) / 2, 0, P.z0 + 0.1, s).castShadow = false;
+  // the point's rim rocks only on the sea side
   const rockG = new THREE.IcosahedronGeometry(1, 1);
   {
     const p = rockG.attributes.position as THREE.BufferAttribute;
@@ -158,10 +160,11 @@ export function buildBreakwaters(w: Build): void {
     m.rotation.set(r() * 0.5, r() * 6, r() * 0.4);
     m.userData.noInk = true;
   };
-  // west breakwater: a curved line of boulders running out from the quay end
-  for (let i = 0; i < 13; i++) {
-    const t = i / 12;
-    rock(L.quayMinX - 0.5 - Math.sin(t * 1.4) * 3.2 - r() * 0.8, -0.6 - t * 7.5 + (r() - 0.5) * 0.8, 1.5 - t * 0.5 + r() * 0.5);
+  // a scatter of boulders along the water's edge behind the buildings
+  for (let i = 0; i < 26; i++) {
+    const side = i % 2 ? 1 : -1, deg = side * (16 + ((i >> 1) / 12.5) * 74 + (r() - 0.5) * 4), rr = L.quayMaxX + 0.2 + r() * 1.0;
+    const [rx, rz] = rimPoint(deg, rr);
+    rock(rx, rz, 0.8 + r() * 0.8);
   }
   // and round the lighthouse point
   for (let i = 0; i < 9; i++) rock(P.x0 - 0.4 - r() * 0.6, P.z0 + 0.4 + i * 0.55, 0.9 + r() * 0.5);

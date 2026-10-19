@@ -14,8 +14,7 @@ describe('interaction spots', () => {
       for (const b of BOXES) expect(inside(b, x, z, 0), `${name} is inside ${b.name}`).toBe(false);
       for (const r of ROUNDS) expect(insideRound(r, x, z, 0), `${name} is inside ${r.name}`).toBe(false);
       const onPoint = x >= L.point.x0 && x <= L.point.x1 && z >= L.point.z0;
-      expect(z >= 0 || onPoint, name).toBe(true);
-      expect(Math.abs(x) <= L.quayMaxX, name).toBe(true);
+      expect(Math.hypot(x - L.ring.cx, z - L.ring.cz) <= L.ring.front || onPoint, name).toBe(true);
     }
   });
 });

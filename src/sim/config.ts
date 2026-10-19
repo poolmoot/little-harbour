@@ -106,7 +106,7 @@ export const CAPTAIN_WAGE = 40;
 export const DOCKHAND_WAGE = 25;
 export const MAX_DOCKHANDS = 4;
 export const CANDIDATE_COUNT = 3;
-export const DOCKHAND_SPEED = 3.36;
+export const DOCKHAND_SPEED = 2.8;
 export const SWIFT_MULT = 0.85;
 export const LUCKY_MULT = 1.25;
 export const THRIFTY_MULT = 0.7;
@@ -119,81 +119,115 @@ export function toWorld(o: { x: number; z: number; rot?: number }, lx: number, l
   const a = o.rot ?? 0, c = Math.cos(a), s = Math.sin(a);
   return { x: o.x + lx * c + lz * s, z: o.z - lx * s + lz * c };
 }
-const plot = (x: number, z: number, rot: number, doorLx: number, doorLz: number) => {
-  const d = toWorld({ x, z, rot }, doorLx, doorLz);
-  return { x, z, rot, doorX: Math.round(d.x * 100) / 100, doorZ: Math.round(d.z * 100) / 100 };
+/** The round harbour square: its centre, and the radius of the circle the building fronts (their doors) stand on. */
+const RING = { cx: 0, cz: 24, front: 24, /** the camera-side edge of the square is a straight low wall this far south of its centre (the south of the circle is cut off) */ south: 12 };
+/** Half sizes (across, deep) of each building's ground footprint; the building stands with its front wall on the ring. */
+export const FOOT = {
+  market: [4.0, 1.5], coldstore: [2.4, 2.0], smokehouse: [2.0, 1.9], restaurant: [2.6, 1.9], shipyard: [3.1, 2.1],
+  inn: [3.5, 2.6], bellTower: [1.65, 1.65], noticeBoard: [1.0, 0.3], iceBox: [0.9, 0.7], lighthouse: [1.6, 1.6],
+} as const;
+/** Angle round the square (degrees from straight up, which is the sea; east is positive) of each building. Equal steps on each side, from the pier outwards. */
+const RING_FIRST = 18, RING_STEP = 20;
+export const RING_ANGLE = {
+  market: -RING_FIRST, coldstore: -(RING_FIRST + RING_STEP), smokehouse: -(RING_FIRST + 2 * RING_STEP), shipyard: -(RING_FIRST + 3 * RING_STEP),
+  noticeBoard: RING_FIRST, bellTower: RING_FIRST + RING_STEP, inn: RING_FIRST + 2 * RING_STEP, restaurant: RING_FIRST + 3 * RING_STEP,
+} as const;
+/** A spot on the circle for a building of depth `hz` (front wall on the ring), turned so its door faces the centre. rot is exactly minus the angle. */
+export function ringPose(phiDeg: number, hz: number, front = RING.front): { x: number; z: number; rot: number } {
+  const p = (phiDeg * Math.PI) / 180, r = front + hz;
+  return { x: RING.cx + r * Math.sin(p), z: RING.cz - r * Math.cos(p), rot: -p };
+}
+/** Angle (degrees from straight up) of a point as seen from the square's centre, and its distance from it. */
+export function ringOf(x: number, z: number): { deg: number; r: number } {
+  return { deg: (Math.atan2(x - RING.cx, -(z - RING.cz)) * 180) / Math.PI, r: Math.hypot(x - RING.cx, z - RING.cz) };
+}
+const at = (n: keyof typeof RING_ANGLE) => ringPose(RING_ANGLE[n], FOOT[n][1]);
+const plot = (n: 'coldstore' | 'smokehouse' | 'restaurant', doorLx: number) => {
+  const o = at(n), d = toWorld(o, doorLx, FOOT[n][1] + 1.0);
+  return { ...o, doorX: Math.round(d.x * 100) / 100, doorZ: Math.round(d.z * 100) / 100 };
 };
+const spot = (o: { x: number; z: number; rot: number }, lx: number, lz: number) => {
+  const d = toWorld(o, lx, lz);
+  return { x: Math.round(d.x * 100) / 100, z: Math.round(d.z * 100) / 100 };
+};
+const MARKET = at('market'), YARD = at('shipyard'), INN = at('inn'), BOARD = at('noticeBoard'), TOWER = at('bellTower');
+const ICE = { ...ringPose(9, FOOT.iceBox[1], RING.front - 1.4), };
+const ICE_STATION = spot(ICE, 0, FOOT.iceBox[1] + 1.0);
+const POINT_TOP = { x0: 31.6, x1: 38.4, z0: 14.5, z1: 29 };
+const LIGHT = { x: 35, z: 17.6, rot: 0 };
+const LIGHT_D = spot(LIGHT, 0, FOOT.lighthouse[1] + 1.0);
 /**
- * The town is one wide street. The sea is at -z, the pier runs out from x = 0, and every usable building stands in one
- * row on the sea side of the main street with its door towards the camera (+z), all at the same angle and all
- * with their fronts on one door line (`doorLineZ`). West of the pier is the work quarter, in the order fish
- * travels: ice box, market, cold store, smokehouse, shipyard. East of the pier is the town quarter: notice board,
- * clock tower, inn, restaurant. The lighthouse stands on its own point at the east end. On the camera side of
- * the street is a low wall with decoration (see `layoutBoxes.ts` for every solid thing and the lanes that stay clear).
+ * The town is a horseshoe round one round, open square. The sea is at -z (the pier leaves the top of the square at x = 0); the camera looks
+ * from +z. Every usable building stands on one circle (its front wall on the ring of radius `ring.front` round the square's centre),
+ * with equal angular steps on each side and its door facing the centre (rotation = minus its angle). West of the pier, from the pier outwards: market,
+ * cold store, smokehouse, shipyard. East: notice board, clock tower, inn, restaurant. The ice box is a small item at the pier head. The
+ * lighthouse stands on its own rocky point past a gate at the east end. A ring walkway runs just inside the doors; the square inside is open.
+ * Decoration stays outside the horseshoe (see `layoutBoxes.ts` for every solid thing and the lanes that stay clear).
  */
 export const LAYOUT = {
   quayZ: 0,
   pierHalfWidth: 2,
   pierEndZ: -18,
   berths: [
-    { boatX: -3.4, boatZ: -8, edgeX: -1.9, edgeZ: -8.2, slotX: [-1.6, -1.0, -0.4], slotZ0: -3.0 },
-    { boatX: 3.4, boatZ: -8, edgeX: 1.9, edgeZ: -8.2, slotX: [1.6, 1.0, 0.4], slotZ0: -3.0 },
-    { boatX: -3.4, boatZ: -15.4, edgeX: -1.9, edgeZ: -15.6, slotX: [-1.6, -1.0, -0.4], slotZ0: -9.5 },
-    { boatX: 3.4, boatZ: -15.4, edgeX: 1.9, edgeZ: -15.6, slotX: [1.6, 1.0, 0.4], slotZ0: -9.5 },
+    // A moored boat lies along the pier with its side about a hand from the pier's edge (boatX is for the smallest boat; bigger boats sit further out by their extra beam, see boatsView.ts). The longest boat is 7 long, so the two berths on a side are 7.8 apart.
+    { boatX: -3.1, boatZ: -9, edgeX: -1.9, edgeZ: -9, slotX: [-1.6, -1.0, -0.4], slotZ0: -3.0 },
+    { boatX: 3.1, boatZ: -9, edgeX: 1.9, edgeZ: -9, slotX: [1.6, 1.0, 0.4], slotZ0: -3.0 },
+    { boatX: -3.1, boatZ: -16.8, edgeX: -1.9, edgeZ: -16.8, slotX: [-1.6, -1.0, -0.4], slotZ0: -9.5 },
+    { boatX: 3.1, boatZ: -16.8, edgeX: 1.9, edgeZ: -16.8, slotX: [1.6, 1.0, 0.4], slotZ0: -9.5 },
   ],
   slotRows: 4,
   slotDZ: -0.75,
   fishingSpot: { x: 0, z: -17.2 },
-  /** The fronts of the whole row of buildings (z of the front wall). */
-  doorLineZ: 5.6,
-  /** The main street: a clear lane, 6 wide, along the whole quay. Nothing solid stands in it. */
-  street: { z0: 9.0, z1: 15.0 },
+  /** The round square: centre, the radius of the building fronts, the angles in use, and the free ring walkway (radii) just inside the doors. */
+  ring: { ...RING, first: RING_FIRST, step: RING_STEP, walkOuter: RING.front - 0.4, walkInner: RING.front - 9, freeInner: RING.front - 9, freeOuter: RING.front - 3.5, pathR: 18 },
   /** Width kept clear in front of every door, interaction point and the pier head. */
   approachWidth: 3.5,
-  market: { x: -16.8, z: 4.4 },
-  shipyard: { x: -44.7, z: 3.5, rot: 0 },
-  inn: { x: 23.8, z: 3.0 },
+  market: MARKET,
+  shipyard: YARD,
+  inn: INN,
   /** The clock and bell tower, the landmark. The harbour bell rings from here. */
-  bellTower: { x: 14.65, z: 3.95 },
+  bellTower: TOWER,
   dockhandHome: { x: 1.2, z: 1.6 },
-  marketDrop: { x: -18.3, z: 6.7 },
-  iceDrop: { x: -7.9, z: 6.7 },
-  noticeBoard: { x: 8.0, z: 5.4 },
-  iceBox: { x: -7.9, z: 4.9 },
+  marketDrop: spot(MARKET, -1.5, FOOT.market[1] + 1.0),
+  iceDrop: ICE_STATION,
+  noticeBoard: BOARD,
+  iceBox: ICE,
   /** Where the player stands to use the market, shipyard, board, ice box and inn (in front of each door, on the approach). */
   stations: {
-    market: { x: -18.3, z: 6.7 },
-    shipyard: { x: -45.8, z: 6.5 },
-    board: { x: 8.0, z: 6.6 },
-    icebox: { x: -7.9, z: 6.7 },
-    inn: { x: 22.0, z: 6.6 },
+    market: spot(MARKET, -1.5, FOOT.market[1] + 1.0),
+    shipyard: spot(YARD, -1.1, FOOT.shipyard[1] + 1.0),
+    board: spot(BOARD, 0, FOOT.noticeBoard[1] + 1.0),
+    icebox: ICE_STATION,
+    inn: spot(INN, -1.8, FOOT.inn[1] + 1.0),
   },
-  /** Four building plots, all unturned. The door is where workers stop (in front, towards the camera). The lighthouse stands on its own rocky point at the east end. */
+  /** Four building plots, turned like the rest. The door is where workers stop (in front, towards the centre). The lighthouse stands on its own rocky point past the east gate. */
   plots: {
-    coldstore: plot(-27.2, 3.6, 0, 0, 3.0),
-    smokehouse: plot(-35.6, 3.7, 0, 1.2, 2.9),
-    restaurant: plot(33.9, 3.7, 0, -1.5, 3.0),
-    lighthouse: plot(46, -2.8, 0, 0, 2.6),
+    coldstore: plot('coldstore', 0),
+    smokehouse: plot('smokehouse', 1.2),
+    restaurant: plot('restaurant', -1.5),
+    lighthouse: { ...LIGHT, doorX: LIGHT_D.x, doorZ: LIGHT_D.z },
   },
-  /** The rocky point the lighthouse stands on (walkable): x0, x1, z0, z1. */
-  point: { x0: 42.6, x1: 49.4, z0: -5.2, z1: 0 },
-  /** Workers walk east-west along this line (inside the main street, next to the buildings) when going between buildings. */
-  corridorZ: 10.2,
+  /** The rocky point the lighthouse stands on and the causeway to it from the east gate (both walkable): x0, x1, z0, z1. */
+  point: POINT_TOP,
+  causeway: { x0: 22.6, x1: 33, z0: 25.8, z1: 29 },
+  /** The gap in the low wall at the east end of the square, in degrees round the square. */
+  gate: { from: 94, to: 102 },
   playerStart: { x: 0, z: 8 },
-  quayMinX: -55,
-  quayMaxX: 55,
-  quayMaxZ: 19,
-  /** Open space kept for the town-life code: the market queue in front of the stall's east half (it never covers the market's door), restaurant tables, a pier-head crowd (x0, x1, z0, z1). */
-  queueZone: { x0: -16.5, x1: -12.6, z0: 6.0, z1: 7.2 },
+  /** The bounding box of the town, for things that need a size (land, hills, trees, the guide trail). */
+  quayMinX: -29.5,
+  quayMaxX: 29.5,
+  quayMaxZ: 37.6,
+  /** Open space kept for the town-life code, in the market's own frame (x across, z towards its door): the queue in front of the stall's east half. */
+  queueZone: { x0: 0.3, x1: 3.5, z0: 1.9, z1: 3.1 },
   /** The restaurant terrace, in the restaurant's own frame (x across, z towards its door): room for up to three tables, east of the door's clear approach. Use toWorld(plots.restaurant, ...) to place things. */
-  terrace: { x0: 0.4, x1: 5.4, z0: 2.7, z1: 4.0 },
-  /** The crowd that gathers at the pier head. The middle (|x| below `crowdGap`) stays clear so the way to the pier is open. */
-  crowdZone: { x0: -5.0, x1: 5.0, z0: 1.0, z1: 6.0 },
+  terrace: { x0: 1.2, x1: 4.0, z0: 2.7, z1: 4.0 },
+  /** The crowd that gathers at the pier head (world x0, x1, z0, z1). The middle (|x| below `crowdGap`) stays clear so the way to the pier is open. */
+  crowdZone: { x0: -5.0, x1: 5.0, z0: 0.6, z1: 3.2 },
   crowdGap: 2.2,
 };
 /** Half sizes (across, deep) of what each plot's building takes up on the ground. */
 export const PLOT_HALF: Record<'coldstore' | 'smokehouse' | 'restaurant' | 'lighthouse', [number, number]> = {
-  coldstore: [2.4, 2.0], smokehouse: [2.0, 1.9], restaurant: [2.6, 1.9], lighthouse: [1.6, 1.6],
+  coldstore: [...FOOT.coldstore], smokehouse: [...FOOT.smokehouse], restaurant: [...FOOT.restaurant], lighthouse: [...FOOT.lighthouse],
 };
 export const INTERACT_RANGE = 2.8;
 export const CRATE_RANGE = 1.3;

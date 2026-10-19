@@ -66,7 +66,7 @@ export class Terrace {
       t.visible = false;
       this.group.add(t);
       this.tables.push(t);
-      this.discs.push({ cx: TABLES[i].cx, cz: TABLES[i].cz, hx: TABLES[i].hx, hz: TABLES[i].hz, a: 0 });
+      this.discs.push({ cx: TABLES[i].cx, cz: TABLES[i].cz, hx: TABLES[i].hx, hz: TABLES[i].hz, a: TABLES[i].a });
       const h = haloSprite(0xffc060, 1.5);
       h.position.set(TABLE_SPOTS[i].x + 0.18, 0.95, TABLE_SPOTS[i].z + 0.05);
       h.visible = false;
