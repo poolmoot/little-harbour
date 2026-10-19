@@ -16,6 +16,3 @@
 .coach-ring { position: fixed; z-index: 60; pointer-events: none; border: 4px solid var(--gold-hi); border-radius: 14px; box-shadow: 0 0 0 3px var(--ink), 0 0 18px 4px rgba(255, 216, 58, 0.7);
   animation: coach-ring 0.8s ease-in-out infinite alternate; }
 @keyframes coach-ring { from { transform: scale(1); } to { transform: scale(1.06); } }
-.coach-point { position: fixed; z-index: 61; translate: -50% -100%; pointer-events: none; }
-.coach-need { flex-basis: 100%; margin-top: 4px; }
-.coach-bar { flex-wrap: wrap; max-width: min(520px, 90vw); }
