@@ -113,7 +113,10 @@ See "Code map" at the bottom for a file-by-file list.
    `view/textures.ts`, the panel code) before writing new ones.
 5. Changing the saved-state shape needs a version bump and a migration in
    `src/sim/save.ts`, with a test that an old save still loads. (Now at
-   version 4: version 3 added the day report's trip-cost line; version 4 added the tycoon stage: buildings, weather, contracts, goals, King Fish.)
+   version 6: version 3 added the day report's trip-cost line; version 4 the
+   tycoon stage (buildings, weather, contracts, goals, King Fish); version 5
+   fish sizes, golden fish, names and earnings while away; version 6 the
+   starting guide.)
 5b. `src/sim/` must not import from `view`, `ui`, Three.js or the DOM; a test
    (`src/sim/purity.test.ts`) scans the import lines and fails if it does.
 6. When prices, costs or timings change, run the pacing test. It drives the
@@ -124,11 +127,11 @@ See "Code map" at the bottom for a file-by-file list.
 
 ## Several agents work in this folder at once
 
-(Update 2026-10-18: the separate graphics session has ended. The gameplay
-chat now coordinates all work, including `src/view/`, through sub-agents
-that often run in parallel. The ownership split below still describes which
-files belong together; parallel sub-agents must still commit only their own
-paths.)
+(The gameplay chat coordinates rules, text, sound and large layout changes,
+often through parallel sub-agents; a graphics chat works on looks and the
+interface styling. Either may run sub-agents. Everyone commits only their own
+paths, and announces large changes to shared files such as `LAYOUT` before
+starting.)
 
 
 The owner runs more than one agent session on this project. To avoid
@@ -180,6 +183,16 @@ In `docs/superpowers/specs/`, oldest first:
    per-boat upgrades, four boats, four sea zones, captains, workers, wages,
    trip costs, ranks, the day report, and the tuned cost tables. (Some words
    in that spec are the old jargon; the in-game words are in `src/ui/text.ts`.)
+3. `2026-10-13-harbour-tycoon-stage-design.md` — goals, the four buildings
+   (cold store, smokehouse, restaurant, lighthouse), weather and special days,
+   contracts, money per minute, the King Fish ending.
+4. `2026-10-13-harbour-return-features-design.md` — earnings while away, fish
+   sizes, stars and golden fish, zone rewards, harbour and boat names.
+5. `2026-10-18-living-town-design.md` — the town: the small-square layout and
+   its limits, the market queue, restaurant terrace and crowds, reactions to
+   the player, town sounds, the walk and movement feel.
+6. `2026-10-19-starting-guide-design.md` — the welcome, step cards, ground
+   trail, unlock cards and the gentle first minutes.
 
 Where they disagree, the newer one wins. Write a short spec like these
 before building any large new feature, and keep the cost tables in the spec
@@ -203,10 +216,10 @@ in step with `config.ts`.
 
 ## Ideas not built yet
 
-Processing buildings (a smokehouse and a warehouse), bigger contracts with a
-reputation score, storms and a weather forecast, captains who get better
-with experience, a lighthouse that allows night trips, surprise finds in the
-catch, a legendary fish as the end goal, music.
+Captains who get better with experience, a reputation score for contracts,
+surprise finds in the catch (bottles, chests), seasons, decorating the
+harbour, named regulars with small stories, and a town that starts run-down
+and is restored as the player grows (the suggested selling hook).
 
 ## Code map
 
