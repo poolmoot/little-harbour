@@ -16,10 +16,10 @@ Steps that are already true are skipped over.
 Until the first sale of a new game, crates do not lose freshness (`isGentle`). Nothing else changes.
 
 ## Never point at what cannot be done
-`guideAdvice` (sim) checks the step: if the trip (step 2) or crate space (step 7) costs more than the player has, or it is night, the card shows "$have / $cost" and the next way to earn: unload a waiting boat, carry crates to the market, pick up crates, send the boat again if affordable, otherwise fish from the pier. The first crate-space level costs $110 (was $300) so it is reachable after two or three trips.
+`guideAdvice` (sim) checks the step: if the trip (step 2) or crate space (step 7) costs more than the player has, the card shows "$have / $cost" and the next way to earn: unload a waiting boat, carry crates to the market, pick up crates, send the boat again if affordable, otherwise fish from the pier. The first crate-space level costs $110 (was $300) so it is reachable after two or three trips.
 
 ## Unlock cards
-Workers (rank 1), captains (rank 2), the four buildings (their rank), contracts, weather (first non-calm day today or tomorrow), fish book (3 fish caught), and earnings while away. They wait until after the first sale, come one at a time at least 45 game seconds apart, show the trail once, and are remembered in `guide.seen`.
+Workers (rank 1), captains (rank 1), the smokehouse, restaurant and lighthouse (their rank), contracts, weather (first non-calm day today or tomorrow), fish book (3 fish caught), and earnings while away. They wait until after the first sale, come one at a time at least 45 game seconds apart, show the trail once, and are remembered in `guide.seen`.
 
 ## Help any time
 A "?" tile in the HUD opens the list of every guide and card seen so far, each with Show me (card and trail again). The same list is in the title and pause menus ("Guide tips"). Settings has "Show guide tips" (saved apart from the game save); when off, no cards, trail, rings or welcome appear.

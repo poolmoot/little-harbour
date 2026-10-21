@@ -113,10 +113,11 @@ See "Code map" at the bottom for a file-by-file list.
    `view/textures.ts`, the panel code) before writing new ones.
 5. Changing the saved-state shape needs a version bump and a migration in
    `src/sim/save.ts`, with a test that an old save still loads. (Now at
-   version 6: version 3 added the day report's trip-cost line; version 4 the
+   version 7: version 3 added the day report's trip-cost line; version 4 the
    tycoon stage (buildings, weather, contracts, goals, King Fish); version 5
    fish sizes, golden fish, names and earnings while away; version 6 the
-   starting guide.)
+   starting guide; version 7 removed the ice box and the cold store: stored crates go back
+   on the dock, the money spent is refunded.)
 5b. `src/sim/` must not import from `view`, `ui`, Three.js or the DOM; a test
    (`src/sim/purity.test.ts`) scans the import lines and fails if it does.
 6. When prices, costs or timings change, run the pacing test. It drives the
@@ -184,7 +185,7 @@ In `docs/superpowers/specs/`, oldest first:
    trip costs, ranks, the day report, and the tuned cost tables. (Some words
    in that spec are the old jargon; the in-game words are in `src/ui/text.ts`.)
 3. `2026-10-13-harbour-tycoon-stage-design.md` — goals, the four buildings
-   (cold store, smokehouse, restaurant, lighthouse), weather and special days,
+   (smokehouse, restaurant, lighthouse; the cold store was removed later), weather and special days,
    contracts, money per minute, the King Fish ending.
 4. `2026-10-13-harbour-return-features-design.md` — earnings while away, fish
    sizes, stars and golden fish, zone rewards, harbour and boat names.
@@ -233,7 +234,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `main.ts` — start-up: finds the page elements and starts the game.
 - `game.ts` — the Game class: owns state, builds the view/UI, runs the frame loop, saves.
 - `events.ts` — turns sim events into sounds, toasts, pop-ups and saves; also sets the rain, storm-wind and fog sound layers from the weather.
-- `interaction.ts` — what is near the player, the prompt text, and what E does (including the four plot doors and delivering the King Fish at the inn).
+- `interaction.ts` — what is near the player, the prompt text, and what E does (including the three plot doors and the empty boat spots on the pier, which open the `berth` window, and delivering the King Fish at the inn).
 - `debug.ts` — dev-only `window.__debug` helpers (never in production builds).
 - `input.ts` — keyboard state (a text field owns every key; sliders keep their own arrow keys; `keyBelongsToField` is tested).
 - `palette.ts` — fish colours shared by view and UI.
@@ -242,7 +243,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `config.ts` — every tunable number and table, plus the layout of the harbour.
 - `state.ts` — the saved-state shape, events, start state.
 - `sim.ts` — `step()` that advances everything, plus the public exports.
-- `time.ts` — day clock and phases (morning, day, evening, night).
+- `time.ts` — day clock and phases (morning, day, evening, night). The night runs 2.5 times faster (`NIGHT_SPEED`), so a day is 270 real seconds; `realSecondsFor` and `gameSecondsFor` convert between in-game and real seconds.
 - `rng.ts` — seeded random numbers.
 - `catch.ts` — which fish a trip or the pier catches.
 - `boats.ts` — send a boat out (pays the trip cost), trips, unloading.
@@ -253,13 +254,13 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `orders.ts` — notice-board orders and bonuses.
 - `rank.ts` — rank from lifetime earnings and what each rank allows.
 - `ledger.ts` — money in and out, kept for the day report.
-- `upgrades.ts` — harbour-wide purchases (ice box, handcart, stalls).
+- `upgrades.ts` — harbour-wide purchases (handcart, stalls).
 - `staff.ts` — captains, workers, wages, and the workers' carrying jobs.
 - `save.ts` — save/load and migrations between save versions.
 - `bot.ts` — the scripted player used by the pacing test and `npm run tune`.
 - `goals.ts` — the goal chain (rules in `config.ts` GOALS), progress, rewards, old-save catch-up.
-- `buildings.ts` — the four buildings: build/upgrade, cold store, smokehouse, restaurant.
-- `routing.ts` — where an idle worker takes crates (restaurant, smoked pickup, smokehouse, storage, market).
+- `buildings.ts` — the three buildings: build/upgrade, smokehouse, restaurant (and the lighthouse).
+- `routing.ts` — where an idle worker takes crates (restaurant, smoked pickup, smokehouse, market).
 - `weather.ts` — weather and special days, the forecast, their effects on trips and prices.
 - `storm.ts` — broken boats, repair, the "stay home in storms" choice.
 - `contracts.ts` — contract offers, accepting, counting sales, reward and failure.
@@ -268,7 +269,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `away.ts` — earnings while the player is away (measures a rate on a copy, credits half of it).
 - `fishbook.ts` — fish sizes, stars, golden fish, the fish book figures and zone rewards.
 - `names.ts` — harbour and boat names and their checks.
-- `guide.ts` — the starting guide: steps, unlock cards, the gentle first minutes (saved in `state.guide`). `guideAdvice.ts` — what to do instead while a step costs too much or it is night.
+- `guide.ts` — the starting guide: steps, unlock cards, the gentle first minutes (saved in `state.guide`). `guideAdvice.ts` — what to do instead while a step costs too much (boats sail at night too).
 - `layoutBoxes.ts` — every solid footprint in the harbour (buildings turned exactly 0 or +-90 degrees, plots, lamps, trees, terrace tables), the walkable ground (the square, the pier and the lighthouse breakwater) and the lanes that must stay clear (three walking lanes making a U round the open middle, the approach to every door, the path from the pier). One small square: sea row on top (market, pier gap, ice box, notice board, clock tower), shipyard / cold store / smokehouse down the west side, inn / restaurant down the east side, camera side open (`LAYOUT.square` in `config.ts`). The view builds its collision from it and the layout tests walk it with hard size and walking-distance limits (`layout.test.ts`, `../layoutStations.test.ts`, `../view/townLayout.test.ts`).
 
 **src/ui/** (HTML over the canvas; windows are pure functions `ScreenCtx -> ScreenView`)
@@ -284,8 +285,8 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `icons.ts` — the chunky SVG icon set and fish icons.
 - `screens/types.ts` — `ScreenCtx` and `ScreenView`.
 - `boatOffer.ts` — the boat you would get from "Buy a new boat" (price, what it can do, padlock note), shared by `screens/shipyard.ts` (one page: your boats, buy a boat, harbour upgrades) and `screens/berth.ts` (the empty boat spot window). `components.ts` also holds `lockNote` / `lockInfo` (padlock, price, one plain line on what is missing, money bar), `buyLabel` and `levelDots`; use them for anything locked. Tests: `screens/yard.test.ts`.
-- `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts`, `icebox.ts` — the in-game windows. `notices.ts` has the Orders and Contracts tabs; `crew.ts` holds the "Smoke these" ticks and the spare-crates choice; `boat.ts` has the "Stay home in storms" tick and the broken state; `shipyard.ts` has the Fix buttons.
-- `screens/plot.ts` — the window for a plot (For sale, or the right building window); `coldstore.ts`, `smokehouse.ts`, `restaurant.ts`, `lighthouse.ts` — the four building windows. `screens/ending.ts` — the King Fish ending.
+- `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts` — the in-game windows. `notices.ts` has the Orders and Contracts tabs; `crew.ts` holds the "Smoke these" ticks; `boat.ts` has the "Stay home in storms" tick and the broken state; `shipyard.ts` has the Fix buttons.
+- `screens/plot.ts` — the window for a plot (For sale, or the right building window); `smokehouse.ts`, `restaurant.ts`, `lighthouse.ts` — the building windows. `screens/ending.ts` — the King Fish ending.
 - `screens/logbook.ts` — the fish book (completion meters, sea zones with their rewards, one card per fish). `screens/ledger.ts` — the day report (with the away-earnings line).
 - `screens/title.ts` — the title screen (shows the harbour name). `screens/pause.ts` — the pause menu. `screens/away.ts` — the welcome-back window (money counting up) and the one-time captain tip.
 - `guideText.ts` — wording for the welcome, step cards, unlock cards and advice. `guideParts.ts` (card and help-list builders), `guideCards.ts` (the sliding cards), `guideSetting.ts` (the Show guide tips switch), `coach.ts` (button ring and edge arrow), `screens/guide.ts` (welcome, "?" help list, menu tips list). `src/guideTargets.ts` turns guide targets into world positions.
@@ -317,7 +318,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `worldParts.ts` — shared types for the area builders.
 - `worldGround.ts` — the square's paving (flat boxes), the grass behind the side rows, the link and breakwater to the lighthouse, the low wall on the camera side, lawns, the pier, quay details.
 - `worldMarket.ts` — market stall, stall wings, weathervane.
-- `worldBuildings.ts` — shipyard, inn, notice board, ice box.
+- `worldBuildings.ts` — shipyard, inn, notice board. `berthMarks.ts` — the "boat for sale" signs on posts at empty boat spots on the pier.
 - `worldLamps.ts` — lanterns.
 - `nature.ts` — hills, trees, grass, flowers.
 - `water.ts` — water shader, wakes.

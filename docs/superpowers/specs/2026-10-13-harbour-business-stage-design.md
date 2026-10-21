@@ -89,8 +89,8 @@ bar. A rank-up shows a banner.
 | Rank | Lifetime earnings | Unlocks |
 |---|---|---|
 | Beginner | 0 | MVP content |
-| Boat Owner | 500 | Dockhands, second boat, Sloop hull |
-| Small Company | 3,000 | Captains, third berth, Cutter hull, market stall I |
+| Boat Owner | 500 | Dockhands, captains (since 2026-10-21; they used to wait for Small Company), second boat, Sloop hull |
+| Small Company | 3,000 | Third berth, Cutter hull, market stall I |
 | Fleet Boss | 15,000 | Fourth berth, Trawler hull, market stall II |
 | Harbour Boss | 60,000 | Title and a golden weathervane on the inn |
 
@@ -129,7 +129,7 @@ scripted player never bought one before the top rank; now it buys three.
 | Sails I / II (rowboat prices) | 350 / 800 |
 | Hold, Gear, Sails multiplier by hull: Rowboat / Sloop / Cutter / Trawler | ×1 / ×1.6 / ×2.6 / ×4 |
 | Boat 2 / 3 / 4 (bought as a rowboat) | 700 / 2,200 / 6,000 |
-| Ice box / Handcart | 120 / 200 |
+| Handcart (the ice box was removed on 2026-10-21) | 200 |
 | Market stall I / II | 2,000 / 9,000 |
 | Captain wage (Thrifty) / dockhand wage, per day | 40 (28) / 25 |
 | Hiring fee | none |
@@ -161,3 +161,11 @@ storms, captain levelling, sailing the boat by hand, music.
 - The save format gets a version bump with a migration from the MVP save.
 - `window.__debug` gains `skip(seconds)`, which steps the simulation
   forward, because a hidden browser tab pauses animation frames.
+
+## Changes on 2026-10-21 (the newer words win over anything above)
+
+- **Night.** Boats can sail at night, for the player and for captains. The night (20:00 to 06:00) passes 2.5 times faster: a day is 270 real seconds (210 for dawn, day and dusk, 60 for the night), not 360. Crate freshness, trips, timers and wages per day are still in real seconds or per day, so wages per real minute are a third higher. Order deadlines are in in-game hours (`realSecondsFor` in `time.ts` works out the real seconds); contract days and cool-downs are 270 real seconds each.
+- **Workers sleep.** From the start of night to morning workers start no new job. One walking to a crate lets go and walks home; one already carrying delivers first, then walks home. `workersSleep` and `workersWake` events say so. Captains keep sailing.
+- **No ice box, no cold store.** Both are gone: no `icebox` upgrade, no cold store building or plot, no crate places `ice` and `cold`, no storage choice for workers (spare crates always go to the market or the other buildings).
+- **Boats are bought at the pier.** Each empty boat spot (`LAYOUT.berths`) is an interaction point (panel `berth`, argument = the spot's number from 0) that shows the boat for sale, its price and why it cannot be bought yet.
+- **Retuned:** trip times Shallows / Reef / Open Sea / Deep Sea are 32 / 65 / 105 / 155 seconds (were 25 / 50 / 80 / 120); captain wage 60 (was 40); lighthouse 24,000 (was 12,000); King Fish chance 2.5% (was 2%). The scripted player now shops before hauling when it can pay for something, and waits for two Trawlers before the lighthouse. Median minutes to rank 1 to 4 on eight seeds: 2.5 / 9.5 / 25.6 / 47.3; King Fish at the inn about 100.

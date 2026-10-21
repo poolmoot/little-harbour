@@ -32,6 +32,7 @@ import './ui/styles/index.css';
 import type { AwayInfo } from './ui/screens/types';
 import { say } from './ui/text';
 import { BoatsView } from './view/boatsView';
+import { BerthMarks } from './view/berthMarks';
 import { StaffView } from './view/staffView';
 import { CameraRig } from './view/cameraRig';
 import { CratesView } from './view/cratesView';
@@ -80,6 +81,7 @@ export class Game {
   private player: Player;
   private cameraRig: CameraRig;
   private boatsView: BoatsView;
+  private berthMarks: BerthMarks;
   private cratesView: CratesView;
   private tycoonView: TycoonView;
   private staffView: StaffView;
@@ -137,6 +139,7 @@ export class Game {
     this.player = new Player(this.rig.scene, this.world);
     this.cameraRig = new CameraRig(this.rig.camera, this.player.pos);
     this.boatsView = new BoatsView(this.rig.scene, this.wake);
+    this.berthMarks = new BerthMarks(this.rig.scene);
     this.cratesView = new CratesView(this.rig.scene, this.player);
     this.tycoonView = new TycoonView(this.rig, this.world);
     this.staffView = new StaffView(this.rig.scene, this.cratesView.haul);
@@ -461,6 +464,7 @@ export class Game {
     this.water.update(this.now, this.rig.skyState, this.rig.fog.near, this.rig.fog.far, this.boatsView.foam, this.fishView.ripples);
     this.wake.update(sdt, this.now, this.rig.skyState.foam);
     this.boatsView.sync(s, this.now, sdt);
+    this.berthMarks.sync(s, this.now);
     this.staffView.sync(s, sdt);
     this.cratesView.sync(s, this.now, sdt);
     const stall = s.upgrades.stall2 ? 2 : s.upgrades.stall1 ? 1 : 0;
