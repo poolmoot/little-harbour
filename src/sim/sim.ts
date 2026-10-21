@@ -20,7 +20,7 @@ import { advanceClock } from './time';
 export { initialState } from './state';
 export type { GameState, Ev } from './state';
 export { dispatchBoat, unloadBoat } from './boats';
-export { pickUp, storeInIce, takeFromIce, handCrates, dockCrates, carryCapacity } from './crates';
+export { pickUp, pickUpBin, binCrates, storeInIce, takeFromIce, handCrates, dockCrates, carryCapacity } from './crates';
 export { sellAll, sellCrate } from './market';
 export { castLine, hook, cancelCast } from './fishing';
 export { buyUpgrade } from './upgrades';

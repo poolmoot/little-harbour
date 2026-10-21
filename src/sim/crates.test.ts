@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addCrate, carryCapacity, decayCrates, discardSpoiled, freshnessMultiplier, handCrates, pickUp, storeInIce, takeFromIce, iceCrates } from './crates';
+import { DOCK_BIN_SIZE } from './config';
+import { addCrate, binCrates, carryCapacity, pickUpBin, decayCrates, discardSpoiled, freshnessMultiplier, handCrates, pickUp, storeInIce, takeFromIce, iceCrates } from './crates';
 import { initialState } from './state';
 
 describe('crates', () => {
@@ -62,10 +63,22 @@ describe('crates', () => {
     expect(iceCrates(s)).toHaveLength(6);
     expect(takeFromIce(s, c.id)[0].type).toBe('crateTaken');
   });
-  it('dock crates get distinct slots', () => {
+  it('dock crates share a spot up to the bin size, then start the next spot', () => {
     const s = initialState();
-    const a = addCrate(s, 'herring', 'dock', 0);
-    const b = addCrate(s, 'herring', 'dock', 0);
-    expect(a.x === b.x && a.z === b.z).toBe(false);
+    const first = Array.from({ length: DOCK_BIN_SIZE }, () => addCrate(s, 'herring', 'dock', 0));
+    expect(first.every((c) => c.x === first[0].x && c.z === first[0].z)).toBe(true);
+    expect(binCrates(s, first[0].x, first[0].z)).toHaveLength(DOCK_BIN_SIZE);
+    const next = addCrate(s, 'herring', 'dock', 0);
+    expect(next.x === first[0].x && next.z === first[0].z).toBe(false);
+  });
+  it('E on a spot picks up as many crates as the hands hold, freshest first, and a gap is filled again', () => {
+    const s = initialState();
+    const cs = Array.from({ length: 4 }, () => addCrate(s, 'herring', 'dock', 0));
+    cs[2].freshness = 50;
+    const evs = pickUpBin(s, cs[0].id);
+    expect(evs.filter((e) => e.type === 'cratePicked')).toHaveLength(carryCapacity(s));
+    expect(handCrates(s).some((c) => c.id === cs[2].id)).toBe(false); // the stale one stays
+    const again = addCrate(s, 'mackerel', 'dock', 0);
+    expect(again.x === cs[2].x && again.z === cs[2].z).toBe(true);
   });
 });

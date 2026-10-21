@@ -42,6 +42,8 @@ export const MIN_PRICE_MULT = 0.3;
 export const CARRY_BASE = 2;
 export const CARRY_HANDCART = 4;
 export const ICE_CAPACITY = 6;
+/** Crates on the dock share a spot, up to this many: 1 is a crate, 2 a double crate, 3-4 a big metal crate. */
+export const DOCK_BIN_SIZE = 4;
 
 // Market
 /** Demand drop per crate sold, by market stall level. */

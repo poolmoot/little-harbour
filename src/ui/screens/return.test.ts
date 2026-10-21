@@ -1,6 +1,7 @@
+import { MARKET_TEXT } from '../screenText';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../audio/settings';
-import { BOOK_REWARD_CAUGHT, BOOK_REWARD_STARS, FISH_SIZE, GOLDEN_MULT, SPECIES, ZONE_IDS } from '../../sim/config';
+import { BOOK_REWARD_CAUGHT, BOOK_REWARD_STARS, FISH_SIZE, SPECIES, ZONE_IDS } from '../../sim/config';
 import { addCrate } from '../../sim/crates';
 import { zoneFish } from '../../sim/fishbook';
 import { initialState } from '../../sim/sim';
@@ -82,7 +83,7 @@ describe('sizes, stars and golden fish in crate windows', () => {
     const c = addCrate(s, 'cod', 'hand', 0, { size: FISH_SIZE.cod[1] });
     const v = marketScreen(ctx(s));
     expect(v.body).toContain('120 cm');
-    expect(v.body).toContain('20% more for its size');
+    expect(v.body).toContain(MARKET_TEXT.part.sizeUp);
     expect(crateFacts(c)).toContain('120 cm');
     const small = addCrate(s, 'cod', 'hand', 0, { size: FISH_SIZE.cod[0] });
     expect(priceEffect(small)).toContain('10% less');
@@ -94,7 +95,7 @@ describe('sizes, stars and golden fish in crate windows', () => {
     const body = marketScreen(ctx(s)).body;
     expect(body).toContain('mk-row gold');
     expect(body).toContain('Golden Tuna');
-    expect(body).toContain(`pays ${GOLDEN_MULT} times as much`);
+    expect(body).toContain(MARKET_TEXT.part.golden);
     expect(body).toContain('gold-tag');
   });
 

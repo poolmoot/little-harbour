@@ -1,5 +1,5 @@
 import { BOAT_RANGE, BUILDING_IDS, CRATE_RANGE, INTERACT_RANGE, LAYOUT } from './sim/config';
-import { carryCapacity, castLine, deliverKingFish, dockCrates, handCrates, hook, pickUp, unloadBoat } from './sim/sim';
+import { binCrates, carryCapacity, castLine, deliverKingFish, dockCrates, handCrates, hook, pickUpBin, unloadBoat } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import type { Rng } from './sim/rng';
 import type { Prompt } from './ui/hud';
@@ -32,7 +32,7 @@ export type Interaction = { evs: Ev[] } | { open: PanelKind; arg?: number } | nu
 export function interact(t: Target | null, s: GameState, rng: Rng): Interaction {
   if (!t) return null;
   switch (t.kind) {
-    case 'crate': return { evs: pickUp(s, t.id) };
+    case 'crate': return { evs: pickUpBin(s, t.id) };
     case 'boat': {
       const b = s.boats.find((x) => x.id === t.id);
       if (!b) return null;
@@ -83,7 +83,8 @@ if (!t) return null;
       if (!c) return null;
       if (c.freshness <= 0) return { text: say.throwAway(c.species), key: true };
       if (handCrates(s).length >= carryCapacity(s)) return { text: say.handsFull, key: false, dim: true };
-      return { text: say.pickUp(c.species, Math.round(c.freshness)), key: true };
+      const take = Math.min(binCrates(s, c.x, c.z).length, carryCapacity(s) - handCrates(s).length);
+      return { text: take > 1 ? say.pickUpMany(take) : say.pickUp(c.species, Math.round(c.freshness)), key: true };
     }
     case 'boat': {
       const b = s.boats.find((x) => x.id === t.id);

@@ -93,3 +93,36 @@ multiplier). Lifetime earnings at the ending fell by about half, so costs now bi
 The first late numbers were far too low: the late game earns much more than a
 simple per-trip sum suggests, because captains sail all night once the lighthouse
 is lit.
+
+## Second round (same day): more upgrades, plain money, easier start, bigger crates
+
+**More boat upgrades.** Crate space goes to 25 crates (levels 4, 6, 8, 12, 16, 20, 25),
+Nets to 4 levels (1.5×, 2.2×, 3×, 4× expensive fish), Speed to 4 levels (trips 85%,
+70%, 60%, 50% of the time). The new levels need a bigger boat (`TRACK_LEVEL_HULL`:
+Crate space 16 needs the Cutter, 20 and 25 the Trawler; Nets and Speed level 3 need
+the Cutter, level 4 the Trawler). Prices in `TRACK_COST`, times the usual boat-size
+multiplier. A greyed-out level says which Boat size it needs.
+
+**Prices in money, not percentages.** The market writes each crate's price as lines:
+normal price, then each plus or minus in dollars (not fully fresh, big or small fish,
+golden, "you sold a lot of it today", market day, statue, order), then "You get". The
+lines always add up to the real price (`priceParts` in `sim/market.ts`). Today's prices
+show the normal price and how many dollars it is down. The stall upgrades say how many
+dollars a $100 fish drops per crate ($6, $4, $2.50) instead of percentages. Upgrade rows
+say what you get in plain words: crates brought home, seconds a trip takes, how many
+times as many expensive fish.
+
+**Easier start.** Before the first sale, as soon as a fish is in the player's hands
+(from the pier or a crate) the guide shows "Sell your fish" and leads to the market
+(`shownStep` in `sim/guide.ts`). After that sale it carries on (unload the boat, and
+so on). Until the first sale the market window opens with a big gold message, "Here
+you sell your fish!".
+
+**Bigger crates on the dock.** Crates share a dock spot, up to 4 (`DOCK_BIN_SIZE`).
+Spots use the two outer columns so big crates have room. One crate is drawn a little
+bigger than before, 2 as a long double crate, 3 or 4 as one big metal crate. E on a spot
+picks up as many as the hands hold, freshest first. Each fish still keeps its own
+freshness and price.
+
+Pacing after this round (8 seeds, medians): ranks at 2.7, 13.4, 33.1 and 68.3 minutes;
+King Fish at the inn at about 90 minutes.

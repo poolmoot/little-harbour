@@ -35,8 +35,9 @@ export function upgradeRow(s: GameState, boat: Boat, t: Track): string {
   const look = TRACK_LOOK[t];
   const max = TRACK_MAX[t];
   const maxed = cost === null;
-  const rankLocked = !chk.ok && chk.needRank !== undefined;
-  const lock = maxed || chk.ok ? '' : lockNote({ cost, money: s.money, rank: rankOf(s), needRank: chk.needRank, reason: chk.reason });
+  const rankLocked = !chk.ok && (chk.needRank !== undefined || chk.needHull !== undefined);
+  const reason = chk.needHull !== undefined ? LOCK_TEXT.needBoat(boatType(chk.needHull)) : chk.reason;
+  const lock = maxed || chk.ok ? '' : lockNote({ cost, money: s.money, rank: rankOf(s), needRank: chk.needRank, reason });
   const act = maxed
     ? button({ label: LABEL.maxed, tone: 'gold', off: true })
     : button({ label: rankLocked ? `${icon('lock', 20)}${LOCK_TEXT.locked}` : buyLabel(UPGRADE_ROW_TEXT.upgrade, cost), act: 'up', a: boat.id, b: t, off: !chk.ok });

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BOAT_UPKEEP, CAPTAIN_LEVEL_TRIPS, CAPTAIN_WAGE_BY_HULL, DEMAND_RECOVER, PROJECTS, PROJECT_IDS, ROAD_SPEED_MULT,
+  BOAT_UPKEEP, CAPTAIN_LEVEL_TRIPS, TRACK_MAX, CAPTAIN_WAGE_BY_HULL, DEMAND_RECOVER, PROJECTS, PROJECT_IDS, ROAD_SPEED_MULT,
 } from './config';
 import { captainLevel, captainWage, noteCaptainTrip, tripsToNextLevel } from './captains';
-import { rareMult, tripTimeFor } from './fleet';
+import { canUpgradeBoat, rareMult, tripTimeFor } from './fleet';
 import { recoverDemand, unitPrice } from './market';
 import { netProfit } from './ledger';
 import { Rng } from './rng';
@@ -155,3 +155,19 @@ describe('version 7 save', () => {
     expect(l.candidates[0]).toEqual({ id: 5, name: 'Brigid', trait: 'swift', trips: 0 });
   });
 });
+
+describe('more boat upgrades', () => {
+  it('the later levels need a bigger boat, then cost money as usual', () => {
+    const s = initialState();
+    s.money = 1e7;
+    const b = s.boats[0];
+    b.hold = 3;
+    expect(canUpgradeBoat(s, b.id, 'hold')).toMatchObject({ ok: false, needHull: 2 });
+    b.hull = 2;
+    expect(canUpgradeBoat(s, b.id, 'hold').ok).toBe(true);
+    expect(TRACK_MAX.hold).toBeGreaterThan(3);
+    expect(TRACK_MAX.gear).toBeGreaterThan(2);
+    expect(TRACK_MAX.sails).toBeGreaterThan(2);
+  });
+});
+

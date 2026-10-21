@@ -52,8 +52,8 @@ export const TRAIT: Record<Trait, { name: string; desc: string }> = {
 export const UPGRADE: Record<UpgradeId, { name: string; desc: string }> = {
   icebox: { name: 'Ice box', desc: `Keeps up to ${ICE_CAPACITY} crates fresh 4 times longer.` },
   handcart: { name: 'Handcart', desc: 'You and your workers carry 4 crates, not 2.' },
-  stall1: { name: 'Bigger stall', desc: `Selling lowers the price by ${pct(DEMAND_DROPS[1])}% a crate, not ${pct(DEMAND_DROPS[0])}%.` },
-  stall2: { name: 'Big stall', desc: `Selling lowers the price by only ${DEMAND_DROPS[2] * 100}% a crate.` },
+  stall1: { name: 'Bigger stall', desc: `Each crate you sell makes that fish cheaper for a while. With this stall it drops less: ${dollars(DEMAND_DROPS[1])} on a $100 fish, not ${dollars(DEMAND_DROPS[0])}.` },
+  stall2: { name: 'Big stall', desc: `The price drops even less: only ${dollars(DEMAND_DROPS[2])} on a $100 fish for each crate you sell.` },
 };
 
 export const NPC_TITLE = { fishmonger: 'Greta, fish seller', shipwright: 'Osric, boat builder', innkeeper: 'Bram, inn owner' };
@@ -61,13 +61,22 @@ export const NPC_TITLE = { fishmonger: 'Greta, fish seller', shipwright: 'Osric,
 // ---- boat upgrade texts -----------------------------------------------------
 
 /** What a boat has now on a track. */
+/** Seconds a trip to the boat's chosen place takes at a Speed level (before captains and weather). */
+const tripSecs = (b: Boat, sails: number): number => Math.round(ZONES[b.target].trip * SAILS_MULT[sails]);
+
+/** A share of a $100 price as money: 0.04 -> "$4", 0.025 -> "$2.50". */
+function dollars(share: number): string {
+  const v = share * 100;
+  return `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
+}
+
 export function trackNow(b: Boat, t: Track): string {
   const l = b[t];
   switch (t) {
-    case 'hull': return boatType(l);
-    case 'hold': return `${crates(HOLD_SIZES[l])}`;
-    case 'gear': return l === 0 ? 'Plain nets' : `Rare fish ×${GEAR_MULT[l]}`;
-    case 'sails': return l === 0 ? 'Normal speed' : `Trips ${pct(1 - SAILS_MULT[l])}% shorter`;
+    case 'hull': return `${boatType(l)}, fishes as far as ${ZONE_NAME[ZONE_IDS[l]]}`;
+    case 'hold': return `Brings home ${crates(HOLD_SIZES[l])}`;
+    case 'gear': return l === 0 ? 'Normal nets' : `Catches ${GEAR_MULT[l]}× as many expensive fish`;
+    case 'sails': return `A trip takes ${tripSecs(b, l)} seconds`;
   }
 }
 
@@ -75,10 +84,10 @@ export function trackNow(b: Boat, t: Track): string {
 export function trackNext(b: Boat, t: Track): string {
   const l = b[t];
   switch (t) {
-    case 'hull': return `${boatType(l + 1)}. It can go to ${ZONE_NAME[ZONE_IDS[l + 1]]}.`;
-    case 'hold': return `Carries ${HOLD_SIZES[l + 1]} crates, not ${HOLD_SIZES[l]}.`;
-    case 'gear': return `Finds rare fish ${GEAR_MULT[l + 1]} times as often.`;
-    case 'sails': return `Trips take ${pct(1 - SAILS_MULT[l + 1])}% less time.`;
+    case 'hull': return `${boatType(l + 1)}: can go to ${ZONE_NAME[ZONE_IDS[l + 1]]}, where fish are worth more`;
+    case 'hold': return `Brings home ${HOLD_SIZES[l + 1]} crates (${HOLD_SIZES[l + 1] - HOLD_SIZES[l]} more each trip)`;
+    case 'gear': return `Catches ${GEAR_MULT[l + 1]}× as many expensive fish`;
+    case 'sails': return `A trip takes ${tripSecs(b, l + 1)} seconds (${tripSecs(b, l) - tripSecs(b, l + 1)} seconds faster)`;
   }
 }
 
@@ -146,6 +155,7 @@ export const say = {
   throwAway: (s: Species) => `Throw away bad ${FISH_NAME[s]}`,
   handsFull: 'Hands full',
   pickUp: (s: Species, fresh: number) => `Pick up ${FISH_NAME[s]} crate (${fresh}% fresh)`,
+  pickUpMany: (n: number) => `Pick up ${n} crates`,
   unload: (name: string, n: number) => `Unload ${name} (${crates(n)})`,
   openBoat: (name: string, secsLeft: number | null) => `${name}: open boat menu${secsLeft === null ? '' : ` (at sea, ${secsLeft}s left)`}`,
   market: 'Sell fish at the market',

@@ -164,6 +164,9 @@ stepping on each other:
   rebuilt sea wall, a sailing school sign, a bandstand, a statue. Rules work
   without it.
 - A small level badge for experienced captains (`captainLevel` in `sim/captains.ts`).
+- Dock crates in bins (`DOCK_BIN_SIZE` in `config.ts`): the gameplay agent drew a plain version in
+  `view/cratesView.ts` (one crate per dock spot, stretched for 2, a grey steel box for 3-4). A nicer
+  double crate and metal crate are welcome.
 
 Measured by the graphics agent on High at the market: about 630–690 draw
 calls and 410k triangles, holding 60 fps with some dropped frames; shadows
@@ -199,7 +202,8 @@ In `docs/superpowers/specs/`, oldest first:
 6. `2026-10-19-starting-guide-design.md` — the welcome, step cards, ground
    trail, unlock cards and the gentle first minutes.
 7. `2026-10-21-money-depth-design.md` — trip costs that grow with the hold,
-   captains who level up and ask more pay, boat care, and the town projects.
+   captains who level up and ask more pay, boat care, and the town projects; then more boat
+   upgrade levels, prices shown in money, the easier start and the bigger dock crates.
 
 Where they disagree, the newer one wins. Write a short spec like these
 before building any large new feature, and keep the cost tables in the spec

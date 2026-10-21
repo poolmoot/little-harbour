@@ -28,3 +28,16 @@
 .mk-empty li { display: flex; align-items: center; gap: 10px; font-size: 15px; }
 .mk-step { flex: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--info-lo); border: var(--line); font-size: 15px; }
 .mk-row.king { background: linear-gradient(#7a4ad6, #4f2a9a); }
+
+/* The first-time message at the top of the market, and the price written out as money lines. */
+.mk-hello { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; padding: 14px 18px; border-radius: var(--r-lg); background: linear-gradient(#ffe27a, #f6b73c); color: #3a2400; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25); animation: mk-hello-pop 0.5s ease-out; }
+.mk-hello-title { font-size: 30px; color: #5a2e00; }
+.mk-hello-line { font-size: 18px; font-weight: 800; margin-top: 2px; }
+@keyframes mk-hello-pop { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+.mk-receipt { margin-top: 6px; padding: 6px 10px; border-radius: var(--r-sm, 8px); background: rgba(0, 0, 0, 0.18); font-size: 15px; font-weight: 800; }
+.mk-line { display: flex; justify-content: space-between; gap: 10px; }
+.mk-line.up > span:last-child { color: #8ef05a; }
+.mk-line.down > span:last-child { color: #ff8a6a; }
+.mk-line.total { margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.25); font-size: 17px; }
+.mk-sub.down { color: #ffc9a8; }
+.mk-today { font-size: 13px; font-weight: 800; opacity: 0.8; text-align: right; }
