@@ -46,11 +46,12 @@ export const crateStars = (c: Crate): 1 | 2 | 3 => starsFor(c.species, crateSize
 export const crateWorth = (c: Crate): number => sizeMult(c.species, crateSize(c)) * (c.golden ? GOLDEN_MULT : 1);
 
 /** Chance a crate is golden. rareMult is the Nets / Lucky captain multiplier used for rare fish. */
-export const goldenChance = (rareMult = 1): number => Math.min(GOLDEN_CHANCE_MAX, GOLDEN_CHANCE * rareMult);
+export const goldenChance = (rareMult = 1, townMult = 1): number => Math.min(GOLDEN_CHANCE_MAX, GOLDEN_CHANCE * rareMult * townMult);
 
-export function rollFish(species: Species, rng: Rng, rareMult = 1): { size: number; golden: boolean } {
+/** townMult is the bandstand's bonus to golden fish. */
+export function rollFish(species: Species, rng: Rng, rareMult = 1, townMult = 1): { size: number; golden: boolean } {
   const size = rollSize(species, rng);
-  return { size, golden: rng.next() < goldenChance(rareMult) };
+  return { size, golden: rng.next() < goldenChance(rareMult, townMult) };
 }
 
 /** Write a catch into the fish book. */

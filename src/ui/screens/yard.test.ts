@@ -145,7 +145,7 @@ describe('boat spot window', () => {
 describe('captains are easy to find', () => {
   it('shows a Get a captain card with candidates and Hire buttons on the first page of the boat window', () => {
     const s = rich();
-    s.candidates = [{ id: 7, name: 'Ansel', trait: 'swift', wage: 40 }] as GameState['candidates'];
+    s.candidates = [{ id: 7, name: 'Ansel', trait: 'swift' }] as GameState['candidates'];
     const v = boatScreen(ctx(s, { arg: s.boats[0].id }));
     expect(v.tabs?.map((t) => t.id)).toEqual(['upgrades', 'grounds']);
     expect(v.body).toContain('Get a captain');
@@ -162,7 +162,7 @@ describe('captains are easy to find', () => {
 
   it('shows the captain, the place they fish and End job when hired', () => {
     const s = rich();
-    s.boats[0].captain = { id: 7, name: 'Ansel', trait: 'swift', wage: 40, unpaid: false } as never;
+    s.boats[0].captain = { id: 7, name: 'Ansel', trait: 'swift', unpaid: false } as never;
     const body = boatScreen(ctx(s, { arg: s.boats[0].id })).body;
     expect(body).toContain('Your captain');
     expect(body).toContain('Fishes:');
@@ -175,7 +175,7 @@ describe('captains are easy to find', () => {
     const body = shipyardScreen(ctx(s)).body;
     expect(body).toContain('You send it');
     expect(body).toContain('Get a captain');
-    s.boats[0].captain = { id: 7, name: 'Ansel', trait: 'swift', wage: 40, unpaid: false } as never;
+    s.boats[0].captain = { id: 7, name: 'Ansel', trait: 'swift', unpaid: false } as never;
     const b2 = shipyardScreen(ctx(s)).body;
     expect(b2).toContain('Sails by itself');
     expect(b2).not.toContain('Get a captain');

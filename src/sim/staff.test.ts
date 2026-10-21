@@ -8,6 +8,7 @@ import { canHireCaptain, fireCaptain, fireDockhand, hireCaptain, hireDockhand, p
 import { holdSize, rareMult, tripTimeFor } from './fleet';
 import { CAPTAIN_WAGE, DOCKHAND_WAGE } from './config';
 import { dispatchBoat, stepBoats } from './boats';
+import { captainWage } from './captains';
 import { rollCatch } from './catch';
 
 const rng = () => new Rng(7);
@@ -51,7 +52,7 @@ describe('captains', () => {
   it('traits change trip time, rare weights, hold size and wage', () => {
     const s = initialState();
     const b = s.boats[0];
-    const cap = (trait: 'swift' | 'lucky' | 'careful' | 'thrifty') => ({ id: 1, name: 'X', trait, wage: 40 });
+    const cap = (trait: 'swift' | 'lucky' | 'careful' | 'thrifty') => ({ id: 1, name: 'X', trait });
     b.captain = cap('swift');
     expect(tripTimeFor(b, 'shallows')).toBeCloseTo(25 * 0.85);
     b.captain = cap('lucky');
@@ -60,16 +61,16 @@ describe('captains', () => {
     expect(holdSize(b)).toBe(5);
     s.lifetime = 3300;
     b.captain = null;
-    s.candidates = [{ id: 50, name: 'Thr', trait: 'thrifty', wage: 28 }];
+    s.candidates = [{ id: 50, name: 'Thr', trait: 'thrifty' }];
     hireCaptain(s, 50, 1);
-    expect(s.boats[0].captain?.wage).toBe(28);
+    expect(captainWage(s.boats[0].captain!, 0)).toBe(28);
     s.boats[0].captain!.unpaid = true; // an absent captain gives no bonus
     expect(holdSize(b)).toBe(4);
   });
   it('sails by itself: unloads, re-sends, and only in daylight', () => {
     const s = ranked(3300);
     const r = rng();
-    s.boats[0].captain = { id: 5, name: 'Ansel', trait: 'swift', wage: 40 };
+    s.boats[0].captain = { id: 5, name: 'Ansel', trait: 'swift' };
     s.money = 1000;
     run(s, 20, r);
     expect(s.boats[0].status).toBe('out');
@@ -91,7 +92,8 @@ describe('captains', () => {
     s.boats[0].hull = 1;
     expect(setBoatTarget(s, 1, 'opensea')[0].type).toBe('denied');
     setBoatTarget(s, 1, 'reef');
-    s.boats[0].captain = { id: 5, name: 'Ansel', trait: 'swift', wage: 40 };
+    s.boats[0].captain = { id: 5, name: 'Ansel', trait: 'swift' };
+    s.money = 100;
     stepCaptains(s);
     expect(s.boats[0].zone).toBe('reef');
   });
@@ -100,7 +102,7 @@ describe('captains', () => {
 describe('wages', () => {
   it('are paid at 06:00 and counted in the ledger', () => {
     const s = ranked(3300);
-    s.boats[0].captain = { id: 5, name: 'A', trait: 'swift', wage: CAPTAIN_WAGE };
+    s.boats[0].captain = { id: 5, name: 'A', trait: 'swift' };
     s.dockhands = [{ id: 6, name: 'Pip', slot: 0, job: null }];
     s.money = 500;
     s.boats[0].status = 'out'; // stays at sea, so no trip cost is paid at dawn
@@ -114,7 +116,7 @@ describe('wages', () => {
   });
   it('unpaid staff do not work that day, there is no debt, and they work again once paid', () => {
     const s = ranked(3300);
-    s.boats[0].captain = { id: 5, name: 'A', trait: 'swift', wage: CAPTAIN_WAGE };
+    s.boats[0].captain = { id: 5, name: 'A', trait: 'swift' };
     s.dockhands = [{ id: 6, name: 'Pip', slot: 0, job: null }];
     s.money = 50; // enough for the captain only
     payWages(s, s.stats);
@@ -239,6 +241,7 @@ describe('new zones', () => {
     expect(s.boats[0].tripTime).toBe(80);
     s.boats[0].status = 'docked';
     s.boats[0].hull = 3;
+    s.money = 1000;
     dispatchBoat(s, 1, 'deep');
     expect(s.boats[0].tripTime).toBe(120);
     stepBoats(s, 121, rng());

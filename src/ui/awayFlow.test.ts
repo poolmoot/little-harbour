@@ -26,7 +26,7 @@ describe('time away in plain words', () => {
 });
 
 describe('what happens when the player comes back', () => {
-  const captained = () => { const s = initialState(); s.boats[0].captain = { id: 99, name: 'Ann', trait: 'swift', wage: 20 }; return s; };
+  const captained = () => { const s = initialState(); s.boats[0].captain = { id: 99, name: 'Ann', trait: 'swift' }; return s; };
   const ranked = () => { const s = initialState(); s.lifetime = 1_000_000; return s; };
 
   it('shows the welcome window when money was earned', () => {

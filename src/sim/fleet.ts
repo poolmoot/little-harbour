@@ -3,6 +3,7 @@ import {
   TRACK_COST, TRACK_MAX, ZONES, ZONE_IDS,
 } from './config';
 import type { Track, ZoneId } from './config';
+import { levelCatchMult, levelSpeedMult } from './captains';
 import { spend } from './ledger';
 import { maxBoats, maxHullTier, rankOf } from './rank';
 import { newBoat, nextId } from './state';
@@ -11,11 +12,17 @@ import type { Boat, Captain, Check, Ev, GameState } from './state';
 /** The captain, if one is aboard and was paid today. */
 export const activeCaptain = (b: Boat): Captain | null => (b.captain && !b.captain.unpaid ? b.captain : null);
 export const holdSize = (b: Boat): number => HOLD_SIZES[b.hold] + (activeCaptain(b)?.trait === 'careful' ? 1 : 0);
-export const rareMult = (b: Boat): number => GEAR_MULT[b.gear] * (activeCaptain(b)?.trait === 'lucky' ? LUCKY_MULT : 1);
-export const tripTimeFor = (b: Boat, zone: ZoneId): number =>
-  ZONES[zone].trip * SAILS_MULT[b.sails] * (activeCaptain(b)?.trait === 'swift' ? SWIFT_MULT : 1);
-/** Food and supplies paid when a boat leaves for this zone. */
-export const tripCostFor = (zone: ZoneId): number => ZONES[zone].tripCost;
+export const rareMult = (b: Boat): number => {
+  const c = activeCaptain(b);
+  return GEAR_MULT[b.gear] * (c?.trait === 'lucky' ? LUCKY_MULT : 1) * (c ? levelCatchMult(c) : 1);
+};
+export const tripTimeFor = (b: Boat, zone: ZoneId): number => {
+  const c = activeCaptain(b);
+  return ZONES[zone].trip * SAILS_MULT[b.sails] * (c?.trait === 'swift' ? SWIFT_MULT : 1) * (c ? levelSpeedMult(c) : 1);
+};
+/** Food, supplies and ice paid when a boat leaves for this zone: a fixed part plus a part for each crate it can carry. */
+export const tripCostFor = (zone: ZoneId, b?: Boat): number =>
+  Math.round(ZONES[zone].tripCost + ZONES[zone].crateCost * (b ? holdSize(b) : HOLD_SIZES[0]));
 export const zoneUnlockedFor = (b: Boat, zone: ZoneId): boolean => b.hull >= ZONES[zone].needsHull;
 
 /** Zones this boat's hull can reach, best last. */

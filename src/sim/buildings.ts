@@ -2,6 +2,7 @@ import {
   BUILDINGS, COLD_CAPACITY, FISH_PRICE, RESTAURANT_CAPACITY, RESTAURANT_MIN_FRESH, RESTAURANT_MULT, RESTAURANT_VARIETY_BONUS,
   SMOKE_RACKS, SMOKE_SECONDS, SPECIES,
 } from './config';
+import { restaurantTownMult, saleTownMult } from './town';
 import type { BuildingId, Species } from './config';
 import { coldCrates, handCrates, isSpoiled, removeCrate, smokeCrates } from './crates';
 import { earnSale, spend } from './ledger';
@@ -129,7 +130,7 @@ export const restaurantRoom = (state: GameState): number => restaurantCapacity(s
 /** What the restaurant pays for this crate right now (ignores the market price level). */
 export function restaurantPrice(state: GameState, c: Crate): number {
   const kindsBefore = state.restaurant.kinds.filter((k) => k !== c.species).length;
-  return Math.round(FISH_PRICE[c.species] * RESTAURANT_MULT * (1 + RESTAURANT_VARIETY_BONUS * kindsBefore));
+  return Math.round(FISH_PRICE[c.species] * RESTAURANT_MULT * (1 + RESTAURANT_VARIETY_BONUS * kindsBefore) * restaurantTownMult(state) * saleTownMult(state));
 }
 
 /** Would the restaurant buy this crate today? */

@@ -10,12 +10,14 @@ import { cancelCast, castLine, hook } from './fishing';
 import { bestZone, buyBoat, buyBoatUpgrade, canBuyBoat, canUpgradeBoat, reachableZones, tripCostFor } from './fleet';
 import { carryCapacity, dockCrates, handCrates, pickUp } from './crates';
 import { crateValue, sellAll } from './market';
-import { canHireCaptain, canHireDockhand, hireCaptain, hireDockhand, setBoatTarget } from './staff';
+import { canHireCaptain, canHireDockhand, dailyUpkeep, dailyWages, hireCaptain, hireDockhand, setBoatTarget } from './staff';
+import { captainWage } from './captains';
+import { buyProject, canBuyProject } from './town';
 import { initialState } from './state';
 import type { GameState } from './state';
 import { startGame, step } from './sim';
 import { buyUpgrade, canBuy } from './upgrades';
-import { BUILDINGS, BUILDING_IDS, GOALS, SPECIES, UPGRADES, UPGRADE_IDS } from './config';
+import { BUILDINGS, BUILDING_IDS, GOALS, PROJECT_IDS, PROJECTS, SPECIES, UPGRADES, UPGRADE_IDS } from './config';
 import type { BuildingId } from './config';
 import { isNight } from './time';
 
@@ -57,10 +59,10 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
   const logbook: string[] = [];
 
   /** Money kept back so every boat can afford its next trip. */
-  const reserve = () => s.boats.reduce((a, b) => a + tripCostFor(bestZone(b)), 0);
+  const reserve = () => s.boats.reduce((a, b) => a + tripCostFor(bestZone(b), b), 0);
 
   const shop = (): boolean => {
-    type Opt = { cost: number; go: () => void; pay?: boolean };
+    type Opt = { cost: number; go: () => void; pay?: boolean; later?: boolean };
     const opts: Opt[] = [];
     for (const id of UPGRADE_IDS) {
       if (id === 'icebox') continue;
@@ -79,6 +81,11 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
       const c = canBuyBuilding(s, id);
       if (c.ok) opts.push({ cost: c.cost!, pay: id === 'smokehouse' || id === 'restaurant' || id === 'lighthouse', go: () => { buyBuilding(s, id as BuildingId); if (id === 'smokehouse') for (const sp of SPECIES) setSmokeList(s, sp, true); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}${s.buildings[id]}`); } });
     }
+    // Town projects: only once nothing else is left to buy, so they fill the late game.
+    for (const id of PROJECT_IDS) {
+      if (canBuyProject(s, id).reason === 'Done' || canBuyProject(s, id).needRank) continue;
+      opts.push({ cost: PROJECTS[id].cost, later: true, go: () => { buyProject(s, id); logbook.push(`${(s.clock / 60).toFixed(1)}m town ${id}`); } });
+    }
     const bb = canBuyBoat(s);
     if (bb.ok) opts.push({ cost: bb.cost!, go: () => { buyBoat(s); logbook.push(`${(s.clock / 60).toFixed(1)}m boat`); } });
     // Save up for the first restaurant once it is open, as a player with that goal would.
@@ -86,7 +93,7 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
     if (target && s.money < BUILDINGS[target].cost[1]) return false;
     const spare = s.money - reserve();
     // Buildings that earn money are bought as soon as they can be paid for; everything else cheapest first.
-    opts.sort((a, b) => Number(!!b.pay) - Number(!!a.pay) || a.cost - b.cost);
+    opts.sort((a, b) => Number(!!a.later) - Number(!!b.later) || Number(!!b.pay) - Number(!!a.pay) || a.cost - b.cost);
     if (opts.length === 0 || opts[0].cost > spare) return false;
     // Greedy: the cheapest thing that raises income. Wait for it if it is not yet affordable? No: only buy what we can afford.
     opts[0].go();
@@ -96,12 +103,12 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
 
   const hires = () => {
     // Staff only once there is a cash cushion, so wages never starve the upgrade fund.
-    const wageBill = s.dockhands.length * 25 + s.boats.reduce((a, b) => a + (b.captain?.wage ?? 0), 0);
+    const wageBill = dailyWages(s) + dailyUpkeep(s);
     const cushion = 150 + wageBill * 3;
     if (s.money < cushion) return;
     if (canHireCaptain(s, s.boats.find((b) => !b.captain)?.id ?? 0).ok && s.boats.some((b) => !b.captain) && s.candidates.length) {
       const boat = s.boats.filter((b) => !b.captain).sort((a, b) => b.hold + b.hull - (a.hold + a.hull))[0];
-      const pick = [...s.candidates].sort((a, b) => a.wage - b.wage)[0];
+      const pick = [...s.candidates].sort((a, b) => captainWage(a, boat.hull) - captainWage(b, boat.hull))[0];
       hireCaptain(s, pick.id, boat.id);
       bought();
       logbook.push(`${(s.clock / 60).toFixed(1)}m captain ${boat.name}`);
@@ -155,7 +162,7 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
       if (b.status === 'returned') { cancelCast(s); unloadBoat(s, b.id); acted = true; busy = 1.5; }
       else if (b.status === 'docked' && !b.damaged && (!isNight(s) || s.buildings.lighthouse > 0)) {
         // The best zone this boat can reach and the player can pay for.
-        const zone = reachableZones(b).filter((z) => tripCostFor(z) <= s.money).pop();
+        const zone = reachableZones(b).filter((z) => tripCostFor(z, b) <= s.money).pop();
         if (zone === undefined) continue;
         setBoatTarget(s, b.id, zone);
         if (dispatchBoat(s, b.id, zone)[0].type === 'boatDispatched') { cancelCast(s); acted = true; busy = 1.5; }

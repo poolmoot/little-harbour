@@ -1,12 +1,14 @@
-import { HOUR_SECONDS, ORDER_BONUS, ORDER_REFILL_DELAY } from '../../sim/config';
+import { HOUR_SECONDS, ORDER_BONUS, ORDER_REFILL_DELAY, PROJECTS, PROJECT_IDS } from '../../sim/config';
+import { rankOf } from '../../sim/rank';
+import { canBuyProject, projectDone } from '../../sim/town';
 import { contractsUnlocked } from '../../sim/contracts';
 import { formatClock } from '../../sim/time';
 import type { Contract, GameState } from '../../sim/state';
 import { hex, SPECIES_COLOUR } from '../../palette';
-import { button, empty, item, meter, money, price, section } from '../components';
+import { button, buyLabel, empty, item, lockNote, meter, money, price, section } from '../components';
 import { fishIcon, icon } from '../icons';
-import { CONTRACT_TEXT, ORDER_TEXT } from '../screenText';
-import { CONTRACT_LABEL, FISH_NAME, contractProgress, contractTimeLeft, crates } from '../text';
+import { CONTRACT_TEXT, ORDER_TEXT, TOWN_TEXT } from '../screenText';
+import { CONTRACT_LABEL, FISH_NAME, LABEL, contractProgress, contractTimeLeft, crates } from '../text';
 import { pickTab } from './types';
 import type { Screen, ScreenCtx, TabDef } from './types';
 
@@ -14,7 +16,7 @@ import type { Screen, ScreenCtx, TabDef } from './types';
 const FULL_METER_SECONDS = 60;
 const DAY_SECONDS = HOUR_SECONDS * 24;
 
-const TABS: TabDef[] = [{ id: 'orders', label: CONTRACT_LABEL.orders }, { id: 'contracts', label: CONTRACT_LABEL.tab }];
+const TABS: TabDef[] = [{ id: 'orders', label: CONTRACT_LABEL.orders }, { id: 'contracts', label: CONTRACT_LABEL.tab }, { id: 'town', label: TOWN_TEXT.tab }];
 
 function orders(s: GameState): string {
   let body = s.orders.length ? '' : empty('No orders right now.');
@@ -59,6 +61,25 @@ export function contracts(s: GameState): string {
   })).join('') + `<p class="dim">${CONTRACT_LABEL.note}</p>`;
 }
 
+/** The town tab: every project, its bonus, and a button to pay for it. */
+export function town(s: GameState): string {
+  return PROJECT_IDS.map((id) => {
+    const t = TOWN_TEXT.project[id];
+    const chk = canBuyProject(s, id);
+    const done = projectDone(s, id);
+    const lock = done || chk.ok ? '' : lockNote({ cost: PROJECTS[id].cost, money: s.money, rank: rankOf(s), needRank: chk.needRank, reason: chk.reason });
+    return item({
+      state: done ? 'gold' : undefined,
+      art: icon(done ? 'check' : 'note', 30),
+      title: t.name,
+      sub: t.desc + lock,
+      right: done
+        ? `<span class="good ol">${TOWN_TEXT.done}</span>`
+        : button({ label: chk.needRank ? `${icon('lock', 18)}${LABEL.locked}` : buyLabel(TOWN_TEXT.pay, PROJECTS[id].cost), act: 'project', a: id, size: 'sm', off: !chk.ok }),
+    });
+  }).join('');
+}
+
 export const noticesScreen: Screen = (ctx: ScreenCtx) => {
   const s = ctx.state;
   const tab = pickTab(ctx, TABS);
@@ -67,8 +88,8 @@ export const noticesScreen: Screen = (ctx: ScreenCtx) => {
     icon: icon('note', 28),
     tabs: TABS,
     tab,
-    note: tab === 'orders' ? ORDER_TEXT.note : CONTRACT_TEXT.only1,
-    body: tab === 'orders' ? orders(s) : contracts(s),
+    note: tab === 'orders' ? ORDER_TEXT.note : tab === 'town' ? TOWN_TEXT.note : CONTRACT_TEXT.only1,
+    body: tab === 'orders' ? orders(s) : tab === 'town' ? town(s) : contracts(s),
     foot: tab === 'orders' && s.orderCooldowns.length
       ? `<span class="dim">A new order comes in about ${Math.ceil(Math.min(...s.orderCooldowns))}s (${ORDER_REFILL_DELAY}s after one ends).</span>`
       : undefined,

@@ -1,6 +1,6 @@
 import {
-  CAPTAIN_NAMES, CAPTAIN_WAGE, CANDIDATE_COUNT, DOCKHAND_NAMES, DOCKHAND_SPEED, DOCKHAND_WAGE, ICE_CAPACITY, LAYOUT,
-  MAX_DOCKHANDS, THRIFTY_MULT, TRAITS,
+  BOAT_UPKEEP, CAPTAIN_LEVEL_TRIPS, CAPTAIN_NAMES, CANDIDATE_COUNT, DOCKHAND_NAMES, DOCKHAND_SPEED, DOCKHAND_WAGE, ICE_CAPACITY,
+  LAYOUT, MAX_DOCKHANDS, TRAITS, VETERAN_CHANCE, VETERAN_RANK,
 } from './config';
 import type { ZoneId } from './config';
 import { dispatchBoat, unloadBoat } from './boats';
@@ -14,6 +14,9 @@ import type { Rng } from './rng';
 import type { Check, Crate, Dockhand, Ev, GameState, HaulPolicy, Job, Pt } from './state';
 import { nextId } from './state';
 import { isNight } from './time';
+import { captainWage } from './captains';
+import { workerSpeedMult } from './town';
+import { spendOnUpkeep } from './ledger';
 
 // ---- candidates & hiring -------------------------------------------------
 
@@ -24,7 +27,14 @@ export function refreshCandidates(state: GameState, rng: Rng): void {
     const names = CAPTAIN_NAMES.filter((n) => !taken.has(n) && !state.candidates.some((c) => c.name === n));
     const trait = rng.pick(TRAITS);
     const name = rng.pick(names.length ? names : CAPTAIN_NAMES);
-    state.candidates.push({ id: nextId(state), name, trait, wage: Math.round(CAPTAIN_WAGE * (trait === 'thrifty' ? THRIFTY_MULT : 1)) });
+    // From VETERAN_RANK some arrive with experience (level 2 or 3) and ask for more pay.
+    let trips = 0;
+    if (rankOf(state) >= VETERAN_RANK) {
+      const r = rng.next();
+      if (r < VETERAN_CHANCE[1]) trips = CAPTAIN_LEVEL_TRIPS[2];
+      else if (r < VETERAN_CHANCE[0] + VETERAN_CHANCE[1]) trips = CAPTAIN_LEVEL_TRIPS[1];
+    }
+    state.candidates.push({ id: nextId(state), name, trait, trips });
   }
 }
 
@@ -97,9 +107,12 @@ export function setBoatTarget(state: GameState, boatId: number, zone: ZoneId): E
 // ---- wages ----------------------------------------------------------------
 
 export const dailyWages = (state: GameState): number =>
-  state.boats.reduce((a, b) => a + (b.captain?.wage ?? 0), 0) + state.dockhands.length * DOCKHAND_WAGE;
+  state.boats.reduce((a, b) => a + (b.captain ? captainWage(b.captain, b.hull) : 0), 0) + state.dockhands.length * DOCKHAND_WAGE;
 
-/** Pay everyone at 06:00. Staff who cannot be paid sit the day out; there is no debt. */
+/** Care for all boats a day. */
+export const dailyUpkeep = (state: GameState): number => state.boats.reduce((a, b) => a + BOAT_UPKEEP[b.hull], 0);
+
+/** Pay everyone at 06:00, then the boats' care. Staff who cannot be paid sit the day out; care takes what there is. There is no debt. */
 export function payWages(state: GameState, stats: { wages: number }): Ev[] {
   let paid = 0, unpaid = 0;
   const pay = (wage: number, set: (u: boolean) => void) => {
@@ -113,9 +126,11 @@ export function payWages(state: GameState, stats: { wages: number }): Ev[] {
       unpaid++;
     }
   };
-  for (const b of state.boats) if (b.captain) pay(b.captain.wage, (u) => { b.captain!.unpaid = u; });
+  for (const b of state.boats) if (b.captain) pay(captainWage(b.captain, b.hull), (u) => { b.captain!.unpaid = u; });
   for (const d of state.dockhands) pay(DOCKHAND_WAGE, (u) => { d.unpaid = u; });
-  return paid + unpaid > 0 ? [{ type: 'wagesPaid', paid, unpaid }] : [];
+  const upkeep = Math.min(Math.max(0, state.money), dailyUpkeep(state));
+  if (upkeep > 0) spendOnUpkeep(state, upkeep);
+  return paid + unpaid > 0 || upkeep > 0 ? [{ type: 'wagesPaid', paid, unpaid, upkeep }] : [];
 }
 
 // ---- captains at work -------------------------------------------------------
@@ -312,7 +327,7 @@ export function stepDockhands(state: GameState, dt: number): Ev[] {
       if (!d.unpaid) startJob(state, d);
       continue;
     }
-    d.job.d += DOCKHAND_SPEED * dt;
+    d.job.d += DOCKHAND_SPEED * workerSpeedMult(state) * dt;
     if (d.job.d >= d.job.len) finishPhase(state, d, evs);
   }
   return evs;

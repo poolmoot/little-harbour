@@ -64,6 +64,7 @@ describe('weather', () => {
     expect(bigCatchExtra(s, 'reef')).toBe(2);
     expect(bigCatchExtra(s, 'shallows')).toBe(0);
     s.boats[0].hull = 1;
+    s.money = 100;
     dispatchBoat(s, 1, 'reef');
     stepBoats(s, 999, new Rng(1));
     expect(s.boats[0].catch).toHaveLength(6); // 4 + 2

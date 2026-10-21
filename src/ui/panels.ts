@@ -1,4 +1,4 @@
-import type { BuildingId, Species, Track, UpgradeId, ZoneId } from '../sim/config';
+import type { BuildingId, ProjectId, Species, Track, UpgradeId, ZoneId } from '../sim/config';
 import type { DayStats, GameState, HaulPolicy } from '../sim/state';
 import type { AudioSettings, VolumeKey } from '../audio/settings';
 import type { QualityMode } from '../view/quality';
@@ -66,6 +66,7 @@ export interface PanelActions {
   take(id: number): void;
   /** Build a building, or upgrade it. */
   build(id: BuildingId): void;
+  buildProject(id: ProjectId): void;
   coldIn(crateId: number): void;
   coldOut(crateId: number): void;
   smokeIn(crateId: number): void;
@@ -312,6 +313,7 @@ export class Panels {
       case 'store': this.actions.store(Number(a)); break;
       case 'take': this.actions.take(Number(a)); break;
       case 'build': this.actions.build(a as BuildingId); break;
+      case 'project': this.actions.buildProject(a as ProjectId); break;
       case 'coldin': this.actions.coldIn(Number(a)); break;
       case 'coldout': this.actions.coldOut(Number(a)); break;
       case 'smokein': this.actions.smokeIn(Number(a)); break;

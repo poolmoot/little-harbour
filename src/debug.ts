@@ -68,7 +68,7 @@ export function installDebug(g: DebugHost): void {
     captain: (boat = 0, trait: Trait = 'swift') => {
       const b = g.state.boats[boat];
       if (!b) return;
-      b.captain = { id: g.state.nextId++, name: 'Debug', trait, wage: 40 };
+      b.captain = { id: g.state.nextId++, name: 'Debug', trait };
       b.target = bestZone(b);
     },
     /** Open a window. For boat windows the second argument is the boat's place in the fleet; for 'plot' it is the building ('smokehouse') or its place in the list (0-3). */

@@ -34,6 +34,7 @@ describe('boat lifecycle', () => {
     const s = initialState();
     expect(dispatchBoat(s, 1, 'reef')[0].type).toBe('denied');
     s.boats[0].hull = 1;
+    s.money = 100;
     dispatchBoat(s, 1, 'reef');
     expect(s.boats[0].tripTime).toBe(50);
   });

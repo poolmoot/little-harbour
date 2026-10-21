@@ -2,6 +2,7 @@
 // workers' rules, repairs, day report, ending). Same rule as text.ts: short, common words, no jargon.
 // Names that already exist in text.ts (building names, weather names, goal lines, contract lines) are used from there.
 import { ORDER_BONUS, ORDER_CRATE_MULT, RESTAURANT_MIN_FRESH, SMOKED_MULT } from '../sim/config';
+import type { ProjectId } from '../sim/config';
 import type { BuildingId, WeatherId } from '../sim/config';
 import type { Special } from '../sim/state';
 import type { IconName } from './icons';
@@ -161,6 +162,7 @@ export const SHIPYARD_TEXT = {
 
 export const REPORT_TEXT = {
   rewards: 'Goal rewards',
+  upkeep: 'Care for the boats',
   tomorrow: 'Tomorrow',
   today: 'Today',
   weather: 'Weather',
@@ -301,4 +303,29 @@ export const CAPTAIN_TEXT = {
   youSend: 'You send it',
   getButton: 'Get a captain',
   helpGoing: 'Sails, unloads and sails again by itself.',
+  level: (n: number): string => `Level ${n}`,
+  toNext: (trips: number, next: number): string => `${trips} more ${trips === 1 ? 'trip' : 'trips'} to level ${next}`,
+  topLevel: 'Best there is',
+  levelHelp: 'Captains get better with every trip: better fish and shorter trips. Better captains ask for more pay, and pay is higher on bigger boats.',
+  payOn: (boat: string, n: number): string => `$${n} a day on ${boat}`,
+  levelUp: (name: string, level: number): string => `${name} is now a level ${level} captain. Better fish, shorter trips, and a little more pay.`,
+};
+
+/** Town projects on the notice board. Ids and numbers are in sim/config.ts (PROJECTS). */
+export const TOWN_TEXT = {
+  tab: 'Town',
+  note: 'The town is a little worn. Pay for a project once and it helps you for good.',
+  pay: 'Pay for it',
+  done: 'Done',
+  doneToast: (name: string): string => `${name}: done! The town thanks you.`,
+  project: {
+    road: { name: 'Fix the harbour road', desc: 'Workers walk 20% faster.' },
+    hall: { name: 'New roof for the fish hall', desc: 'Market prices go back up twice as fast after you sell.' },
+    houses: { name: 'Paint the old houses', desc: 'More visitors come. The restaurant pays 25% more.' },
+    fair: { name: 'Clear the fair ground', desc: 'Market days come twice as often.' },
+    wall: { name: 'Rebuild the sea wall', desc: 'Storms break boats half as often.' },
+    school: { name: 'Open the sailing school', desc: 'Captains learn twice as fast.' },
+    bandstand: { name: 'Build a bandstand', desc: 'Golden fish are twice as common.' },
+    statue: { name: 'Raise the harbour statue', desc: 'Every sale pays 5% more.' },
+  } as Record<ProjectId, { name: string; desc: string }>,
 };

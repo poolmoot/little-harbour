@@ -12,7 +12,7 @@ function captained(): GameState {
   s.money = 200;
   s.lifetime = 600;
   s.rank = 1;
-  s.boats[0].captain = { id: 90, name: 'Ansel', trait: 'swift', wage: 40 };
+  s.boats[0].captain = { id: 90, name: 'Ansel', trait: 'swift' };
   s.dockhands.push({ id: 91, name: 'Pip', slot: 0, job: null });
   return s;
 }

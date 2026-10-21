@@ -3,7 +3,7 @@ import type { Trait } from '../../sim/config';
 import { coldCapacity } from '../../sim/buildings';
 import { carryCapacity, coldCrates, iceCrates } from '../../sim/crates';
 import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
-import { canHireCaptain, canHireDockhand, dailyWages } from '../../sim/staff';
+import { canHireCaptain, canHireDockhand, dailyUpkeep, dailyWages } from '../../sim/staff';
 import type { Dockhand, GameState } from '../../sim/state';
 import { button, card, cards, empty, esc, face, item, lockNote, money, section, tick } from '../components';
 import { captainLook, dockhandLook, NPC_LOOK } from '../../view/people';
@@ -11,7 +11,8 @@ import { portrait } from '../../view/portraits';
 import type { CardTone } from '../components';
 import { fishIcon, icon } from '../icons';
 import { hex, SPECIES_COLOUR } from '../../palette';
-import { WORKER_TEXT } from '../screenText';
+import { CAPTAIN_TEXT, WORKER_TEXT } from '../screenText';
+import { captainLevel, captainWage } from '../../sim/captains';
 import { FISH_NAME, LABEL, TRAIT, crates } from '../text';
 import { pickTab } from './types';
 import type { Screen } from './types';
@@ -40,12 +41,12 @@ function hire(s: GameState): string {
       tone: TRAIT_TONE[c.trait],
       tag: 'Captain',
       art: face(portrait(captainLook(c.id, c.trait)), 84) || icon(c.trait, 56),
-      lines: [info.name, info.desc],
+      lines: [`${info.name} · ${CAPTAIN_TEXT.level(captainLevel(c))}`, info.desc],
       name: c.name,
-      foot: `<span class="dim">$${c.wage} a day</span>${actions}`,
+      foot: `<span class="dim">${free.length ? free.map((b) => CAPTAIN_TEXT.payOn(esc(b.name), captainWage(c, b.hull))).join('<br>') : CAPTAIN_TEXT.wage(captainWage(c, 0))}</span>${actions}`,
     }));
   }
-  return cards(list);
+  return cards(list) + (captainsOpen ? `<p class="dim">${CAPTAIN_TEXT.levelHelp}</p>` : '');
 }
 
 function dockhandTask(d: Dockhand): string {
@@ -89,7 +90,7 @@ function roster(s: GameState): string {
   if (!captains.length) h += empty('No captains yet.');
   for (const b of captains) {
     const c = b.captain!;
-    h += item({ art: face(portrait(captainLook(c.id, c.trait)), 48) || icon(c.trait, 36), title: `${c.name} · ${TRAIT[c.trait].name}`, sub: `${b.name} · $${c.wage} a day`, right: button({ label: LABEL.endJob, act: 'firecap', a: b.id, tone: 'danger', size: 'sm' }) });
+    h += item({ art: face(portrait(captainLook(c.id, c.trait)), 48) || icon(c.trait, 36), title: `${c.name} · ${TRAIT[c.trait].name} · ${CAPTAIN_TEXT.level(captainLevel(c))}`, sub: `${esc(b.name)} · ${CAPTAIN_TEXT.wage(captainWage(c, b.hull))}`, right: button({ label: LABEL.endJob, act: 'firecap', a: b.id, tone: 'danger', size: 'sm' }) });
   }
   h += workerRules(s);
   return h;
@@ -107,6 +108,6 @@ export const crewScreen: Screen = (ctx) => {
     tabs,
     tab,
     body: tab === 'hire' ? hire(s) : roster(s),
-    foot: `<span class="dim">Pay is taken at 06:00 each day. People you cannot pay do not work that day.</span><span class="ol">Pay each day · $${money(dailyWages(s))}</span>`,
+    foot: `<span class="dim">Pay is taken at 06:00 each day. People you cannot pay do not work that day.</span><span class="ol">Pay each day · $${money(dailyWages(s))}${dailyUpkeep(s) ? ` · Boat care $${money(dailyUpkeep(s))}` : ''}</span>`,
   };
 };

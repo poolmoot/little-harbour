@@ -7,7 +7,7 @@ import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
 import { applyAway, buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy } from './sim/sim';
 import { renameBoat, setHarbourName } from './sim/sim';
-import { acceptContract, buyBuilding, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate, storeInCold, takeFromCold } from './sim/sim';
+import { acceptContract, buyBuilding, buyProject, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate, storeInCold, takeFromCold } from './sim/sim';
 import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
@@ -180,6 +180,7 @@ export class Game {
         store: (id) => this.run(storeInIce(this.state, id)),
         take: (id) => this.run(takeFromIce(this.state, id)),
         build: (id) => this.run(buyBuilding(this.state, id)),
+        buildProject: (id) => this.run(buyProject(this.state, id)),
         coldIn: (id) => this.run(storeInCold(this.state, id)),
         coldOut: (id) => this.run(takeFromCold(this.state, id)),
         smokeIn: (id) => this.run(smokeCrate(this.state, id)),

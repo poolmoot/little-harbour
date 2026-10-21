@@ -162,9 +162,9 @@ describe('lighthouse', () => {
 });
 
 describe('notice board', () => {
-  it('keeps orders on the first tab and adds a Contracts tab', () => {
+  it('keeps orders on the first tab and adds Contracts and Town tabs', () => {
     const v = noticesScreen(ctx(rich()));
-    expect(v.tabs?.map((t) => t.id)).toEqual(['orders', 'contracts']);
+    expect(v.tabs?.map((t) => t.id)).toEqual(['orders', 'contracts', 'town']);
     expect(v.tab).toBe('orders');
   });
 

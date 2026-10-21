@@ -14,12 +14,12 @@ export const FISH_PRICE: Record<Species, number> = {
   cod: 60, tuna: 110, swordfish: 220, anglerfish: 160, squid: 260, sturgeon: 800,
 };
 
-/** trip = seconds at sea. tripCost = food and supplies, paid when the boat leaves. needsHull = minimum hull tier (0 Rowboat .. 3 Trawler). */
-export const ZONES: Record<ZoneId, { trip: number; tripCost: number; needsHull: number; table: Partial<Record<Species, number>> }> = {
-  shallows: { trip: 25, tripCost: 3, needsHull: 0, table: { herring: 50, mackerel: 30, flounder: 20 } },
-  reef: { trip: 50, tripCost: 10, needsHull: 1, table: { seabass: 50, snapper: 35, lobster: 15 } },
-  opensea: { trip: 80, tripCost: 30, needsHull: 2, table: { cod: 50, tuna: 35, swordfish: 15 } },
-  deep: { trip: 120, tripCost: 80, needsHull: 3, table: { anglerfish: 50, squid: 35, sturgeon: 15 } },
+/** trip = seconds at sea. tripCost + crateCost x hold size = food, supplies and ice, paid when the boat leaves. needsHull = minimum hull tier (0 Rowboat .. 3 Trawler). */
+export const ZONES: Record<ZoneId, { trip: number; tripCost: number; crateCost: number; needsHull: number; table: Partial<Record<Species, number>> }> = {
+  shallows: { trip: 25, tripCost: 1, crateCost: 0.5, needsHull: 0, table: { herring: 50, mackerel: 30, flounder: 20 } },
+  reef: { trip: 50, tripCost: 4, crateCost: 4, needsHull: 1, table: { seabass: 50, snapper: 35, lobster: 15 } },
+  opensea: { trip: 80, tripCost: 10, crateCost: 12, needsHull: 2, table: { cod: 50, tuna: 35, swordfish: 15 } },
+  deep: { trip: 120, tripCost: 30, crateCost: 60, needsHull: 3, table: { anglerfish: 50, squid: 35, sturgeon: 15 } },
 };
 export const ZONE_IDS: ZoneId[] = ['shallows', 'reef', 'opensea', 'deep'];
 
@@ -103,6 +103,20 @@ export const TOP_RANK = RANK_THRESHOLDS.length - 1;
 export type Trait = 'swift' | 'lucky' | 'careful' | 'thrifty';
 export const TRAITS: Trait[] = ['swift', 'lucky', 'careful', 'thrifty'];
 export const CAPTAIN_WAGE = 40;
+/** A captain's pay a day by the hull of the boat they sail (Rowboat .. Trawler), before level and Thrifty. */
+export const CAPTAIN_WAGE_BY_HULL = [40, 120, 500, 1500];
+/** Trips finished to reach captain level 1..5. */
+export const CAPTAIN_LEVEL_TRIPS = [0, 8, 20, 40, 70];
+export const CAPTAIN_MAX_LEVEL = CAPTAIN_LEVEL_TRIPS.length;
+/** For each level above 1: extra pay, better fish (multiplies Nets), shorter trips. */
+export const CAPTAIN_LEVEL_WAGE = 0.25;
+export const CAPTAIN_LEVEL_CATCH = 0.08;
+export const CAPTAIN_LEVEL_SPEED = 0.03;
+/** From this rank some captains at the inn already have experience: chance of level 2 and of level 3. */
+export const VETERAN_RANK = 2;
+export const VETERAN_CHANCE: [number, number] = [0.3, 0.1];
+/** Care for each boat, paid at 06:00 with the wages, by hull (Rowboat .. Trawler). Never makes debt. */
+export const BOAT_UPKEEP = [0, 25, 120, 500];
 export const DOCKHAND_WAGE = 25;
 export const MAX_DOCKHANDS = 4;
 export const CANDIDATE_COUNT = 3;
@@ -278,6 +292,29 @@ export const CONTRACT_MAX_QTY = 60;
 /** Seconds a boat needs between trips (unloading, setting off), and the hours of sailing in a day. */
 export const CONTRACT_TURNAROUND = 12;
 export const CONTRACT_SAIL_HOURS = 14;
+
+// ---- Town projects -----------------------------------------------------------
+export type ProjectId = 'road' | 'hall' | 'houses' | 'fair' | 'wall' | 'school' | 'bandstand' | 'statue';
+export const PROJECT_IDS: ProjectId[] = ['road', 'hall', 'houses', 'fair', 'wall', 'school', 'bandstand', 'statue'];
+/** Paid once, lasting bonus. Names and words are in ui/screenText.ts (TOWN_TEXT). */
+export const PROJECTS: Record<ProjectId, { rank: number; cost: number }> = {
+  road: { rank: 2, cost: 3000 },
+  hall: { rank: 2, cost: 8000 },
+  houses: { rank: 3, cost: 25000 },
+  fair: { rank: 3, cost: 50000 },
+  wall: { rank: 3, cost: 80000 },
+  school: { rank: 4, cost: 150000 },
+  bandstand: { rank: 4, cost: 300000 },
+  statue: { rank: 4, cost: 600000 },
+};
+export const ROAD_SPEED_MULT = 1.2; // workers walk faster
+export const HALL_RECOVER_MULT = 2; // market prices recover faster
+export const HOUSES_RESTAURANT_MULT = 1.25; // the restaurant pays more
+export const FAIR_MARKET_DAY_MULT = 2; // market days come more often
+export const WALL_DAMAGE_MULT = 0.5; // storms break boats less often
+export const SCHOOL_TRIPS_MULT = 2; // captains learn faster
+export const BANDSTAND_GOLDEN_MULT = 2; // golden fish more common
+export const STATUE_SALE_MULT = 1.05; // every sale pays more
 
 // ---- King Fish and the money-per-minute figure ----------------------------------
 export const KING_CHANCE = 0.02;

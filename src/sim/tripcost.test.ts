@@ -13,9 +13,16 @@ describe('trip costs', () => {
   it('a new game starts with a little money and costs rise by zone', () => {
     expect(initialState().money).toBe(START_MONEY);
     const costs = ZONE_IDS.map((z) => tripCostFor(z));
-    expect(costs).toEqual([3, 10, 30, 80]);
+    expect(costs).toEqual([3, 20, 58, 270]);
     expect(costs.every((c, i) => i === 0 || c > costs[i - 1])).toBe(true);
-    expect(ZONES.shallows.tripCost).toBe(3);
+  });
+
+  it('a bigger hold costs more to fill, so trips stay a real cost', () => {
+    const b = initialState().boats[0];
+    b.hull = 3;
+    b.hold = 3; // 12 crates
+    expect(ZONE_IDS.map((z) => tripCostFor(z, b))).toEqual([7, 52, 154, 750]);
+    expect(tripCostFor('shallows', initialState().boats[0])).toBe(ZONES.shallows.tripCost + ZONES.shallows.crateCost * 4);
   });
 
   it('sending a boat pays the cost and records it in the day report', () => {
@@ -55,8 +62,9 @@ describe('trip costs', () => {
     s.boats[0].target = 'shallows';
     expect(stepCaptains(s)).toHaveLength(0);
     expect(s.boats[0].status).toBe('docked');
-    s.money = 3;
-    expect(stepCaptains(s)[0]).toMatchObject({ type: 'boatDispatched', auto: true, cost: 3 });
+    const cost = tripCostFor('shallows', s.boats[0]); // a Careful captain carries one more crate
+    s.money = cost;
+    expect(stepCaptains(s)[0]).toMatchObject({ type: 'boatDispatched', auto: true, cost });
     expect(s.money).toBe(0);
     // back home with a catch and no money: unloaded, then waits again
     stepBoats(s, 200, rng);
@@ -72,7 +80,7 @@ describe('trip costs', () => {
     delete raw.stats.tripCosts;
     const mem = new Map<string, string>([['harbour-game-save', JSON.stringify(raw)]]);
     const l = loadGame({ getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => void mem.set(k, v), removeItem: (k) => void mem.delete(k) }, new Rng(1))!;
-    expect(l.version).toBe(6);
+    expect(l.version).toBe(7);
     expect(l.stats.tripCosts).toBe(0);
   });
 });

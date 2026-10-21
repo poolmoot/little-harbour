@@ -72,7 +72,7 @@ describe('migration from the MVP save', () => {
     };
     st.setItem('harbour-game-save', JSON.stringify(old));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(6);
+    expect(l.version).toBe(7);
     expect(l.money).toBe(777);
     expect(l.boats).toHaveLength(2);
     for (const b of l.boats) {
@@ -99,7 +99,7 @@ describe('migration from the MVP save', () => {
     const c = addCrate(s, 'cod', 'hand');
     c.loc = 'haul';
     c.carrier = 9;
-    s.boats[0].captain = { id: 4, name: 'Ansel', trait: 'lucky', wage: 40 };
+    s.boats[0].captain = { id: 4, name: 'Ansel', trait: 'lucky' };
     saveGame(s, st);
     const l = loadGame(st, new Rng(1))!;
     expect(l.boats[0].captain?.trait).toBe('lucky');
@@ -114,7 +114,7 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     version: 3, money: 4321, day: 12, dayTime: 200, clock: 4000, nextId: 80, lifetime: 9000, rank: 2,
     upgrades: { icebox: true, handcart: true, stall1: true, stall2: false },
     boats: [
-      { id: 1, name: 'Gull', berth: 0, hull: 2, hold: 2, gear: 1, sails: 1, target: 'opensea', captain: { id: 5, name: 'Ansel', trait: 'swift', wage: 40 }, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [] },
+      { id: 1, name: 'Gull', berth: 0, hull: 2, hold: 2, gear: 1, sails: 1, target: 'opensea', captain: { id: 5, name: 'Ansel', trait: 'swift' }, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [] },
       { id: 2, name: 'Wren', berth: 1, hull: 1, hold: 1, gear: 0, sails: 0, target: 'reef', captain: null, status: 'docked', zone: null, progress: 0, tripTime: 0, catch: [] },
     ],
     dockhands: [{ id: 7, name: 'Pip', slot: 0, job: null }],
@@ -127,7 +127,7 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     const st = memory();
     st.setItem('harbour-game-save', JSON.stringify(v3()));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(6);
+    expect(l.version).toBe(7);
     expect(l.money).toBe(4321);
     expect(l.day).toBe(12);
     expect(l.lifetime).toBe(9000);
@@ -186,7 +186,7 @@ describe('migration to version 6 (starting guide)', () => {
     const store = new Map<string, string>();
     store.set(SAVE_KEY, JSON.stringify(old));
     const s = loadGame({ getItem: (k) => store.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
-    expect(s.version).toBe(6);
+    expect(s.version).toBe(7);
     expect(s.guide.step).toBeGreaterThanOrEqual(8);
     expect(s.guide.welcomed).toBe(true);
     expect(s.guide.gentle).toBe(false);

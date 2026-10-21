@@ -9,14 +9,15 @@ import { earnSale } from './ledger';
 import { creditOrder, matchingOrder } from './orders';
 import { creditContract } from './contracts';
 import { marketMult } from './weather';
+import { demandRecoverMult, saleTownMult } from './town';
 
 export function unitPrice(state: GameState, species: Species, freshness: number): number {
-  return FISH_PRICE[species] * freshnessMultiplier(freshness) * state.demand[species] * marketMult(state);
+  return FISH_PRICE[species] * freshnessMultiplier(freshness) * state.demand[species] * marketMult(state) * saleTownMult(state);
 }
 
 /** Smoked fish: a higher price that ignores freshness. */
 export function smokedPrice(state: GameState, species: Species): number {
-  return FISH_PRICE[species] * SMOKED_MULT * state.demand[species] * marketMult(state);
+  return FISH_PRICE[species] * SMOKED_MULT * state.demand[species] * marketMult(state) * saleTownMult(state);
 }
 
 /** What a crate would fetch right now (including the double for a matching order). */
@@ -31,7 +32,7 @@ export function recoverDemand(state: GameState, dt: number): void {
   state.demandTimer += dt;
   while (state.demandTimer >= DEMAND_RECOVER_EVERY) {
     state.demandTimer -= DEMAND_RECOVER_EVERY;
-    for (const s of SPECIES) state.demand[s] = Math.min(1, state.demand[s] + DEMAND_RECOVER);
+    for (const s of SPECIES) state.demand[s] = Math.min(1, state.demand[s] + DEMAND_RECOVER * demandRecoverMult(state));
   }
 }
 

@@ -43,6 +43,12 @@ export function spendOnTrip(state: GameState, amount: number): void {
   state.stats.tripCosts += amount;
 }
 
-export function netProfit(st: { earned: number; wages: number; tripCosts: number; spent: number; rewards?: number; away?: number }): number {
-  return st.earned + (st.rewards ?? 0) + (st.away ?? 0) - st.wages - st.tripCosts - st.spent;
+/** Care for the boats, paid at 06:00. */
+export function spendOnUpkeep(state: GameState, amount: number): void {
+  state.money -= amount;
+  state.stats.upkeep += amount;
+}
+
+export function netProfit(st: { earned: number; wages: number; tripCosts: number; spent: number; rewards?: number; away?: number; upkeep?: number }): number {
+  return st.earned + (st.rewards ?? 0) + (st.away ?? 0) - st.wages - (st.upkeep ?? 0) - st.tripCosts - st.spent;
 }

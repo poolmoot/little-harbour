@@ -1,7 +1,7 @@
-import { DEFAULT_HARBOUR_NAME, DEFAULT_SMOKE_LIST, SPECIES, START_MONEY, ZONE_IDS } from './config';
+import { DEFAULT_HARBOUR_NAME, DEFAULT_SMOKE_LIST, PROJECT_IDS, SPECIES, START_MONEY, ZONE_IDS } from './config';
 import { newGuide } from './guide';
 import type { GuideState, UnlockId } from './guide';
-import type { BuildingId, Phase, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from './config';
+import type { BuildingId, Phase, ProjectId, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from './config';
 
 export type CrateLoc = 'dock' | 'hand' | 'ice' | 'haul' | 'cold' | 'smoke';
 export interface Crate {
@@ -24,7 +24,7 @@ export interface Captain {
   id: number;
   name: string;
   trait: Trait;
-  wage: number;
+  trips?: number; // trips finished: sets the level (captains.ts). Pay is worked out from it and the boat each day.
   unpaid?: boolean; // could not be paid at the last 06:00, so idle today
 }
 
@@ -98,6 +98,7 @@ export interface DayStats {
   income: Record<Species, number>; // sale income by fish
   bonus: number; // order bonuses
   wages: number;
+  upkeep: number; // care for the boats, paid at 06:00
   tripCosts: number; // food and supplies paid when boats leave
   rewards: number; // goal rewards (not part of earned)
   away: number; // earnings while the player was away (not part of earned)
@@ -178,6 +179,7 @@ export interface GameState {
   incomeLog: number[]; // lifetime earnings sampled every few seconds (for money per minute)
   incomeTimer: number;
   harbourName: string;
+  town: Record<ProjectId, boolean>; // town projects paid for
   guide: GuideState; // the starting guide: step, cards shown, the gentle first minutes
   savedAt: number; // wall-clock milliseconds when last saved, given by the caller (0 = unknown)
 }
@@ -212,7 +214,9 @@ export type Ev =
   | { type: 'hired'; role: 'captain' | 'dockhand'; name: string }
   | { type: 'fired'; role: 'captain' | 'dockhand'; name: string }
   | { type: 'rankUp'; rank: number }
-  | { type: 'wagesPaid'; paid: number; unpaid: number }
+  | { type: 'wagesPaid'; paid: number; unpaid: number; upkeep: number }
+  | { type: 'captainLevelUp'; boatId: number; name: string; level: number }
+  | { type: 'projectDone'; id: ProjectId }
   | { type: 'phaseChanged'; phase: Phase }
   | { type: 'dayEnded'; day: number; stats: DayStats; forecast?: Forecast }
   | { type: 'guideStep'; index: number; done: boolean }
@@ -247,7 +251,7 @@ export interface Check {
   cost?: number;
 }
 
-export const STATE_VERSION = 6;
+export const STATE_VERSION = 7;
 
 function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
@@ -256,7 +260,7 @@ function perSpecies<T>(f: () => T): Record<Species, T> {
 }
 
 export function emptyStats(): DayStats {
-  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, tripCosts: 0, rewards: 0, away: 0, spent: 0, best: { species: null, price: 0 } };
+  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, upkeep: 0, tripCosts: 0, rewards: 0, away: 0, spent: 0, best: { species: null, price: 0 } };
 }
 
 export function emptyTally(): Tally {
@@ -308,6 +312,7 @@ export function initialState(): GameState {
     incomeLog: [],
     incomeTimer: 0,
     harbourName: DEFAULT_HARBOUR_NAME,
+    town: Object.fromEntries(PROJECT_IDS.map((id) => [id, false])) as Record<ProjectId, boolean>,
     guide: newGuide(),
     savedAt: 0,
   };

@@ -1,4 +1,5 @@
-import { STORM_ZONES, TRACKS, TRACK_MAX, ZONES, ZONE_IDS } from '../../sim/config';
+import { CAPTAIN_MAX_LEVEL, STORM_ZONES, TRACKS, TRACK_MAX, ZONES, ZONE_IDS } from '../../sim/config';
+import { captainLevel, captainWage, tripsToNextLevel } from '../../sim/captains';
 import type { Track } from '../../sim/config';
 import { zoneWeights } from '../../sim/catch';
 import { canUpgradeBoat, holdSize, rareMult, trackCost, tripCostFor, tripTimeFor, zoneUnlockedFor } from '../../sim/fleet';
@@ -68,7 +69,7 @@ function grounds(s: GameState, boat: Boat): string {
       .join('');
     return item({
       title: ZONE_NAME[z],
-      sub: `${Math.round(tripTimeFor(boat, z))}s trip · <span class="${unlocked && s.money < tripCostFor(z) ? 'bad' : ''}">${LABEL.tripCost} $${money(tripCostFor(z))}</span>`,
+      sub: `${Math.round(tripTimeFor(boat, z))}s trip · <span class="${unlocked && s.money < tripCostFor(z, boat) ? 'bad' : ''}">${LABEL.tripCost} $${money(tripCostFor(z, boat))}</span>`,
       extra: `<div class="chips">${fish}</div>${unlocked ? '' : lockNote({ money: s.money, rank: rankOf(s), reason: `${zoneNeeds(z)}. ${UPGRADE_ROW_TEXT.zoneHow}` })}`,
       state: sel ? 'sel' : unlocked ? undefined : 'locked',
       right: sel
@@ -82,23 +83,26 @@ function captain(s: GameState, boat: Boat): string {
   const cap = boat.captain;
   if (cap) {
     const info = TRAIT[cap.trait];
+    const lvl = captainLevel(cap);
+    const toNext = tripsToNextLevel(cap);
     return section(CAPTAIN_TEXT.hasTitle) + item({
       art: face(facePicture(captainLook(cap.id, cap.trait)), 56) || icon(cap.trait, 40),
-      title: `${cap.name} · ${info.name}`,
-      sub: `${info.desc} · ${CAPTAIN_TEXT.wage(cap.wage)}${cap.unpaid ? ' · <span class="bad">not paid, no work today</span>' : ` · ${CAPTAIN_TEXT.helpGoing}`}<br>${CAPTAIN_TEXT.fishes(ZONE_NAME[boat.target])}`,
+      title: `${cap.name} · ${info.name} · ${CAPTAIN_TEXT.level(lvl)} ${levelDots(lvl, CAPTAIN_MAX_LEVEL)}`,
+      sub: `${info.desc} · ${CAPTAIN_TEXT.wage(captainWage(cap, boat.hull))} · ${toNext === null ? CAPTAIN_TEXT.topLevel : CAPTAIN_TEXT.toNext(Math.ceil(toNext), lvl + 1)}${cap.unpaid ? ' · <span class="bad">not paid, no work today</span>' : ` · ${CAPTAIN_TEXT.helpGoing}`}<br>${CAPTAIN_TEXT.fishes(ZONE_NAME[boat.target])}`,
       right: `<div class="col-y">${button({ label: CAPTAIN_TEXT.change, act: 'tab', a: 'grounds', tone: 'info', size: 'sm' })}${button({ label: LABEL.endJob, act: 'firecap', a: boat.id, tone: 'danger', size: 'sm' })}</div>`,
     });
   }
-  const head = section(CAPTAIN_TEXT.getTitle) + `<p class="yard-help">${CAPTAIN_TEXT.getHelp}</p>`;
+  let head = section(CAPTAIN_TEXT.getTitle) + `<p class="yard-help">${CAPTAIN_TEXT.getHelp}</p>`;
   if (rankOf(s) < CAPTAINS_RANK) return head + lockNote({ money: s.money, rank: rankOf(s), needRank: CAPTAINS_RANK, reason: CAPTAIN_TEXT.lockedWhy });
   if (!s.candidates.length) return head + empty(CAPTAIN_TEXT.noneToHire);
+  head += `<p class="dim">${CAPTAIN_TEXT.levelHelp}</p>`;
   const can = canHireCaptain(s, boat.id).ok;
   return head + s.candidates.map((c) => {
     const info = TRAIT[c.trait];
     return item({
       art: face(facePicture(captainLook(c.id, c.trait)), 56) || icon(c.trait, 40),
-      title: `${c.name} · ${info.name}`,
-      sub: `${info.desc} · ${CAPTAIN_TEXT.wage(c.wage)}`,
+      title: `${c.name} · ${info.name} · ${CAPTAIN_TEXT.level(captainLevel(c))}`,
+      sub: `${info.desc} · ${CAPTAIN_TEXT.wage(captainWage(c, boat.hull))}`,
       right: button({ label: CAPTAIN_TEXT.hire, act: 'hirecap', a: c.id, b: boat.id, tone: 'go', off: !can }),
     });
   }).join('');
@@ -113,7 +117,7 @@ function portrait(boat: Boat): string {
 }
 
 function foot(s: GameState, boat: Boat): string {
-  const cost = tripCostFor(boat.target);
+  const cost = tripCostFor(boat.target, boat);
   const where = `<div class="row-x">${icon('anchor', 22)}<div><div class="ol">Going to ${ZONE_NAME[boat.target]}</div><div class="dim">${Math.round(tripTimeFor(boat, boat.target))}s trip · ${LABEL.tripCost} $${money(cost)}</div></div></div>`;
   if (boat.damaged) return `${where}${button({ label: boat.repairLeft !== undefined ? BOAT_TEXT.fixing(Math.ceil(boat.repairLeft)) : BOAT_TEXT.cannotSail, tone: 'ghost', off: true })}`;
   if (boat.captain) return `${where}<span class="dim">${boat.captain.name} sails for you</span>`;

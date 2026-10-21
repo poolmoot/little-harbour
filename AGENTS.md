@@ -113,7 +113,7 @@ See "Code map" at the bottom for a file-by-file list.
    `view/textures.ts`, the panel code) before writing new ones.
 5. Changing the saved-state shape needs a version bump and a migration in
    `src/sim/save.ts`, with a test that an old save still loads. (Now at
-   version 6: version 3 added the day report's trip-cost line; version 4 the
+   version 7; version 7 added town projects, captain trips and the boat-care line; version 3 added the day report's trip-cost line; version 4 the
    tycoon stage (buildings, weather, contracts, goals, King Fish); version 5
    fish sizes, golden fish, names and earnings while away; version 6 the
    starting guide.)
@@ -159,6 +159,11 @@ stepping on each other:
 - A distinct look for golden crates and the King Fish crate.
 - Rougher water in good wind and storms.
 - The world's cartoon restyle (in progress).
+- Town projects (`state.town`): each finished one should show in the town — a
+  mended road, a new fish-hall roof, painted houses, bunting on a fair ground, a
+  rebuilt sea wall, a sailing school sign, a bandstand, a statue. Rules work
+  without it.
+- A small level badge for experienced captains (`captainLevel` in `sim/captains.ts`).
 
 Measured by the graphics agent on High at the market: about 630–690 draw
 calls and 410k triangles, holding 60 fps with some dropped frames; shadows
@@ -193,6 +198,8 @@ In `docs/superpowers/specs/`, oldest first:
    the player, town sounds, the walk and movement feel.
 6. `2026-10-19-starting-guide-design.md` — the welcome, step cards, ground
    trail, unlock cards and the gentle first minutes.
+7. `2026-10-21-money-depth-design.md` — trip costs that grow with the hold,
+   captains who level up and ask more pay, boat care, and the town projects.
 
 Where they disagree, the newer one wins. Write a short spec like these
 before building any large new feature, and keep the cost tables in the spec
@@ -216,7 +223,7 @@ in step with `config.ts`.
 
 ## Ideas not built yet
 
-Captains who get better with experience, a reputation score for contracts,
+A reputation score for contracts,
 surprise finds in the catch (bottles, chests), seasons, decorating the
 harbour, named regulars with small stories, and a town that starts run-down
 and is restored as the player grows (the suggested selling hook).
@@ -254,7 +261,9 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `rank.ts` — rank from lifetime earnings and what each rank allows.
 - `ledger.ts` — money in and out, kept for the day report.
 - `upgrades.ts` — harbour-wide purchases (ice box, handcart, stalls).
-- `staff.ts` — captains, workers, wages, and the workers' carrying jobs.
+- `staff.ts` — captains, workers, wages and boat care, and the workers' carrying jobs.
+- `captains.ts` — captain levels from trips, pay by boat and level, the level bonuses.
+- `town.ts` — town projects: buying them and the lasting bonus each gives.
 - `save.ts` — save/load and migrations between save versions.
 - `bot.ts` — the scripted player used by the pacing test and `npm run tune`.
 - `goals.ts` — the goal chain (rules in `config.ts` GOALS), progress, rewards, old-save catch-up.
@@ -283,7 +292,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `components.ts` — reusable HTML builders (button, meter, slider, card, item, chip, section, stat, tick, `textField` for names with live `nameFeedback`, `esc` for typed text).
 - `icons.ts` — the chunky SVG icon set and fish icons.
 - `screens/types.ts` — `ScreenCtx` and `ScreenView`.
-- `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts`, `icebox.ts` — the in-game windows. `notices.ts` has the Orders and Contracts tabs; `crew.ts` holds the "Smoke these" ticks and the spare-crates choice; `boat.ts` has the "Stay home in storms" tick and the broken state; `shipyard.ts` has the Fix buttons.
+- `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts`, `icebox.ts` — the in-game windows. `notices.ts` has the Orders, Contracts and Town tabs; `crew.ts` holds the "Smoke these" ticks and the spare-crates choice; `boat.ts` has the "Stay home in storms" tick and the broken state; `shipyard.ts` has the Fix buttons.
 - `screens/plot.ts` — the window for a plot (For sale, or the right building window); `coldstore.ts`, `smokehouse.ts`, `restaurant.ts`, `lighthouse.ts` — the four building windows. `screens/ending.ts` — the King Fish ending.
 - `screens/logbook.ts` — the fish book (completion meters, sea zones with their rewards, one card per fish). `screens/ledger.ts` — the day report (with the away-earnings line).
 - `screens/title.ts` — the title screen (shows the harbour name). `screens/pause.ts` — the pause menu. `screens/away.ts` — the welcome-back window (money counting up) and the one-time captain tip.

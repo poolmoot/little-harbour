@@ -33,7 +33,7 @@ export const ledgerScreen: Screen = ({ state: s, summary }) => {
     + stat(`Order bonuses (${st.filled} done, ${st.missed} late)`, `+$${money(st.bonus)}`)
     + (st.rewards > 0 ? stat(REPORT_TEXT.rewards, `+$${money(st.rewards)}`) : '')
     + (st.away > 0 ? stat(AWAY.statsLine, `+$${money(st.away)}`) : '')
-    + section(LABEL.moneyOut) + stat('Pay for workers and captains', `-$${money(st.wages)}`) + stat('Trip costs', `-$${money(st.tripCosts)}`)
+    + section(LABEL.moneyOut) + stat('Pay for workers and captains', `-$${money(st.wages)}`) + (st.upkeep > 0 ? stat(REPORT_TEXT.upkeep, `-$${money(st.upkeep)}`) : '') + stat('Trip costs', `-$${money(st.tripCosts)}`)
     + stat('Upgrades and boats', `-$${money(st.spent)}`) + stat('Crates that went bad', `${st.spoiled}`)
     + stat('Profit for the day', `<span class="${net >= 0 ? 'good' : 'bad'}">${net >= 0 ? '+' : '-'}$${money(Math.abs(net))}</span>`, true)
     + stat('Best sale', st.best.species ? `${FISH_NAME[st.best.species]} $${money(st.best.price)}` : '-')

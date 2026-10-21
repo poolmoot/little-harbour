@@ -13,7 +13,7 @@ describe('ledger', () => {
     const s = initialState();
     s.money = 1000;
     s.lifetime = 3300;
-    s.boats[0].captain = { id: 5, name: 'A', trait: 'swift', wage: 40 };
+    s.boats[0].captain = { id: 5, name: 'A', trait: 'swift' };
     for (const sp of ['herring', 'lobster', 'lobster'] as const) sellCrate(s, addCrate(s, sp, 'hand').id);
     s.orders = [{ id: 9, species: 'herring', qty: 1, filled: 0, deadline: 999, name: 'Marta', baseValue: 100 }];
     creditOrder(s, 'herring');

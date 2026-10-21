@@ -4,6 +4,7 @@ import {
 } from './config';
 import type { WeatherId, ZoneId } from './config';
 import type { Rng } from './rng';
+import { marketDayMult } from './town';
 import type { Ev, Forecast, GameState, Special } from './state';
 
 /** Weather for a given day number. No storms in the first days. */
@@ -13,18 +14,19 @@ export function rollWeather(day: number, rng: Rng): WeatherId {
   return rng.weighted(table);
 }
 
-/** About one day in six is a market day, about one in five a big catch day (never both). */
-export function rollSpecial(rng: Rng): Special {
+/** About one day in six is a market day (more with the fair ground), about one in five a big catch day (never both). */
+export function rollSpecial(rng: Rng, marketDays = 1): Special {
   const r = rng.next();
-  if (r < MARKET_DAY_CHANCE) return { kind: 'market' };
-  if (r < MARKET_DAY_CHANCE + BIG_CATCH_CHANCE) return { kind: 'bigcatch', zone: rng.pick(ZONE_IDS) };
+  const market = MARKET_DAY_CHANCE * marketDays;
+  if (r < market) return { kind: 'market' };
+  if (r < market + BIG_CATCH_CHANCE) return { kind: 'bigcatch', zone: rng.pick(ZONE_IDS) };
   return null;
 }
 
 /** New game: roll the forecast for day 2. Day 1 is calm. */
 export function startWeather(state: GameState, rng: Rng): void {
   state.nextWeather = rollWeather(state.day + 1, rng);
-  state.nextSpecial = rollSpecial(rng);
+  state.nextSpecial = rollSpecial(rng, marketDayMult(state));
 }
 
 /** Called when a new day begins: tomorrow's weather becomes today's, and a new forecast is rolled. */
@@ -32,7 +34,7 @@ export function rollNewDay(state: GameState, rng: Rng): { forecast: Forecast; ev
   state.weather = state.nextWeather;
   state.special = state.nextSpecial;
   state.nextWeather = rollWeather(state.day + 1, rng);
-  state.nextSpecial = rollSpecial(rng);
+  state.nextSpecial = rollSpecial(rng, marketDayMult(state));
   const forecast: Forecast = { weather: state.weather, special: state.special, tomorrowWeather: state.nextWeather, tomorrowSpecial: state.nextSpecial };
   return { forecast, ev: { type: 'weatherChanged', weather: forecast.weather, special: forecast.special, tomorrowWeather: forecast.tomorrowWeather, tomorrowSpecial: forecast.tomorrowSpecial } };
 }

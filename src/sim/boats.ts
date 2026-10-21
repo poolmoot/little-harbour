@@ -4,7 +4,9 @@ import { rollCatch } from './catch';
 import { midSize, recordCatch, rollFish } from './fishbook';
 import { addCrate } from './crates';
 import { holdSize, rareMult, tripCostFor, tripTimeFor, zoneUnlockedFor } from './fleet';
+import { noteCaptainTrip } from './captains';
 import { spendOnTrip } from './ledger';
+import { goldenTownMult, stormDamageMult } from './town';
 import type { Rng } from './rng';
 import type { Boat, Ev, GameState } from './state';
 import { isNight, phaseOf } from './time';
@@ -26,7 +28,7 @@ export function dispatchBoat(state: GameState, boatId: number, zone?: ZoneId, au
   if (isNight(state) && !state.buildings.lighthouse) return [{ type: 'denied', reason: 'It is too dark to go out. Wait for morning.' }];
   if (!zoneUnlockedFor(boat, z)) return [{ type: 'denied', reason: 'This boat is too small to go there.' }];
   if (isStorm(state) && boat.stayInStorms && isStormZone(z)) return [{ type: 'denied', reason: 'There is a storm. This boat stays home.' }];
-  const cost = tripCostFor(z);
+  const cost = tripCostFor(z, boat);
   if (state.money < cost) return [{ type: 'denied', reason: `Not enough money for the trip. It costs $${cost}.` }];
   spendOnTrip(state, cost);
   boat.status = 'out';
@@ -65,7 +67,7 @@ export function rollBoatCatch(state: GameState, boat: Boat, rng: Rng): Species[]
   if (boat.tripWeather === 'storm' && isStormZone(zone)) n = Math.round(n * STORM_CATCH_MULT);
   n += boat.tripBonus ?? 0;
   const fish = rollCatch(zone, phaseOf(state.dayTime), n, rng, rareMult(boat));
-  boat.catchInfo = fish.map((sp) => rollFish(sp, rng, rareMult(boat)));
+  boat.catchInfo = fish.map((sp) => rollFish(sp, rng, rareMult(boat), goldenTownMult(state)));
   return fish;
 }
 
@@ -75,7 +77,7 @@ function returnBoat(state: GameState, boat: Boat, rng: Rng): Ev[] {
   const evs: Ev[] = [];
   const zone = boat.zone ?? 'shallows';
   const stormTrip = boat.tripWeather === 'storm' && isStormZone(zone);
-  if (stormTrip && rng.next() < STORM_DAMAGE_CHANCE) {
+  if (stormTrip && rng.next() < STORM_DAMAGE_CHANCE * stormDamageMult(state)) {
     boat.catch = [];
     boat.damaged = true;
     evs.push({ type: 'boatDamaged', boatId: boat.id });
@@ -92,6 +94,7 @@ function returnBoat(state: GameState, boat: Boat, rng: Rng): Ev[] {
     }
   }
   evs.unshift({ type: 'boatReturned', boatId: boat.id, count: boat.catch.length, auto: !!boat.captain && !boat.captain.unpaid });
+  evs.push(...noteCaptainTrip(state, boat.id));
   return evs;
 }
 

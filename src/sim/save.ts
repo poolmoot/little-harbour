@@ -1,4 +1,4 @@
-import { BOAT_NAMES, BUILDING_IDS, LAYOUT, SPECIES, ZONE_IDS } from './config';
+import { BOAT_NAMES, BUILDING_IDS, LAYOUT, PROJECT_IDS, SPECIES, ZONE_IDS } from './config';
 import { applyAway } from './away';
 import type { AwayResult } from './away';
 import { catchUpBookRewards, midSize } from './fishbook';
@@ -10,7 +10,7 @@ import { rankIndex } from './rank';
 import { resetDockhands } from './staff';
 import type { Rng } from './rng';
 import { STATE_VERSION, emptyTally, initialState, newBoat } from './state';
-import type { Ev, GameState } from './state';
+import type { Captain, Ev, GameState } from './state';
 
 export const SAVE_KEY = 'harbour-game-save';
 
@@ -18,6 +18,12 @@ export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
+}
+
+/** Version 7: captains count trips (old ones start at 0) and pay is worked out each day, so the old stored wage goes. */
+function cleanCaptain(c: Captain): Captain {
+  const { wage: _old, ...rest } = c as Captain & { wage?: number };
+  return { ...rest, trips: Math.max(0, Number(rest.trips) || 0) };
 }
 
 function serialize(state: GameState): string {
@@ -50,14 +56,17 @@ function migrate(raw: unknown): GameState | null {
       nb.hold = holdLvl;
       nb.hull = hullLvl;
     }
-    nb.captain = b.captain ?? null;
+    nb.captain = b.captain ? cleanCaptain(b.captain) : null;
     return nb;
   });
   s.crates = Array.isArray(d.crates) ? d.crates : [];
   s.orders = Array.isArray(d.orders) ? d.orders : [];
   s.orderCooldowns = Array.isArray(d.orderCooldowns) ? d.orderCooldowns : [];
   s.dockhands = Array.isArray(d.dockhands) ? d.dockhands : [];
-  s.candidates = Array.isArray(d.candidates) ? d.candidates : [];
+  s.candidates = Array.isArray(d.candidates) ? d.candidates.map(cleanCaptain) : [];
+  // ---- town projects (version 7)
+  s.town = { ...base.town };
+  for (const id of PROJECT_IDS) s.town[id] = !!d.town?.[id];
   // ---- fish book and sizes (version 5): crates from older saves get a middle size and are never golden
   for (const c of s.crates) if (c.size === undefined) c.size = midSize(c.species);
   if ((d.version ?? 0) < 5) catchUpBookRewards(s);

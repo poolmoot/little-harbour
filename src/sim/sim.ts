@@ -27,6 +27,8 @@ export { buyUpgrade } from './upgrades';
 export { buyBoat, buyBoatUpgrade, bestZone } from './fleet';
 export { buyBuilding, canBuyBuilding, nextBuildingCost, buildingMaxLevel, storeInCold, takeFromCold, smokeCrate, collectSmoked, setSmokeList, sellToRestaurant, restaurantPrice } from './buildings';
 export { acceptContract } from './contracts';
+export { buyProject, canBuyProject, projectDone } from './town';
+export { captainLevel, captainWage } from './captains';
 export { currentGoal, goalProgress } from './goals';
 export { stepGuide, noteWalk, noteBoardOpened, noteWelcomed, noteAway, isGentle, guideDone, GUIDE_STEPS, UNLOCKS } from './guide';
 export { repairBoat, canRepair, repairCost, setStayInStorms } from './storm';
