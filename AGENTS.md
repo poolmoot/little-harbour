@@ -283,6 +283,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `components.ts` — reusable HTML builders (button, meter, slider, card, item, chip, section, stat, tick, `textField` for names with live `nameFeedback`, `esc` for typed text).
 - `icons.ts` — the chunky SVG icon set and fish icons.
 - `screens/types.ts` — `ScreenCtx` and `ScreenView`.
+- `boatOffer.ts` — the boat you would get from "Buy a new boat" (price, what it can do, padlock note), shared by `screens/shipyard.ts` (one page: your boats, buy a boat, harbour upgrades) and `screens/berth.ts` (the empty boat spot window). `components.ts` also holds `lockNote` / `lockInfo` (padlock, price, one plain line on what is missing, money bar), `buyLabel` and `levelDots`; use them for anything locked. Tests: `screens/yard.test.ts`.
 - `screens/boat.ts`, `crew.ts`, `market.ts`, `shipyard.ts`, `notices.ts`, `icebox.ts` — the in-game windows. `notices.ts` has the Orders and Contracts tabs; `crew.ts` holds the "Smoke these" ticks and the spare-crates choice; `boat.ts` has the "Stay home in storms" tick and the broken state; `shipyard.ts` has the Fix buttons.
 - `screens/plot.ts` — the window for a plot (For sale, or the right building window); `coldstore.ts`, `smokehouse.ts`, `restaurant.ts`, `lighthouse.ts` — the four building windows. `screens/ending.ts` — the King Fish ending.
 - `screens/logbook.ts` — the fish book (completion meters, sea zones with their rewards, one card per fish). `screens/ledger.ts` — the day report (with the away-earnings line).
