@@ -1,20 +1,20 @@
-import { MAX_BOATS, UPGRADES, UPGRADE_IDS } from '../../sim/config';
+import { MAX_BOATS, TRACKS, TRACK_MAX, UPGRADES, UPGRADE_IDS } from '../../sim/config';
 import type { UpgradeId } from '../../sim/config';
-import { canBuyBoat, holdSize } from '../../sim/fleet';
+import { holdSize } from '../../sim/fleet';
 import { REPAIR_SECONDS } from '../../sim/config';
 import { canRepair, repairCost } from '../../sim/storm';
 import { rankOf } from '../../sim/rank';
 import type { GameState } from '../../sim/state';
 import { canBuy } from '../../sim/upgrades';
-import { button, card, cards, esc, item, meter, priceLabel, section } from '../components';
+import { button, buyLabel, card, cards, esc, item, levelDots, lockNote, meter, priceLabel, section } from '../components';
 import type { CardTone } from '../components';
 import { HULL_ICONS, icon } from '../icons';
 import { NPC_LOOK } from '../../view/people';
 import { portrait } from '../../view/portraits';
 import type { IconName } from '../icons';
-import { BOAT_TEXT, SHIPYARD_TEXT } from '../screenText';
-import { LABEL, RANK_NAME, UPGRADE, boatType, crates, denyText } from '../text';
-import { pickTab } from './types';
+import { boatOffer, offerButton, offerIcon } from '../boatOffer';
+import { BOAT_OFFER_TEXT, CAPTAIN_TEXT, BOAT_TEXT, LOCK_TEXT, SHIPYARD_TEXT, YARD_TEXT } from '../screenText';
+import { LABEL, UPGRADE, boatType, crates } from '../text';
 import type { Screen } from './types';
 
 const UPGRADE_LOOK: Record<UpgradeId, { tone: CardTone; icon: IconName }> = {
@@ -43,52 +43,62 @@ export function repairs(s: GameState): string {
   }).join('');
 }
 
-function fleet(s: GameState): string {
-  const bb = canBuyBoat(s);
-  let h = repairs(s) + (s.boats.some((b) => b.damaged) ? section(SHIPYARD_TEXT.yourBoats) : '') + item({
-    art: icon('rowboat', 40),
-    title: bb.cost === null ? 'You have all four boats' : 'New rowboat',
-    sub: bb.cost === null ? 'Every boat spot is used.' : `It gets boat spot ${s.boats.length + 1}. Upgrade it after you buy it.`,
-    state: bb.cost === null ? 'locked' : undefined,
-    right: bb.cost === null
-      ? button({ label: LABEL.full, tone: 'ghost', size: 'sm', off: true })
-      : button({ label: bb.ok ? priceLabel(bb.cost) : denyText(bb.reason, bb.needRank), act: 'buyboat', off: !bb.ok }),
-  });
-  for (const b of s.boats) {
-    h += item({
-      art: icon(HULL_ICONS[b.hull], 40),
-      title: esc(b.name),
-      sub: `${boatType(b.hull)} · carries ${crates(holdSize(b))}${b.captain ? ` · captain ${b.captain.name}` : ''}`,
-      right: button({ label: LABEL.open, act: 'openboat', a: b.id, tone: 'info', size: 'sm' }),
-    });
-  }
-  return h;
+/** One card per boat: its name, size, its upgrades in short, and a big Open button. */
+function boatCard(b: GameState['boats'][number]): string {
+  const ups = TRACKS.map((t) => `<span>${YARD_TEXT.upgradeShort[t]} ${levelDots(b[t], TRACK_MAX[t])}</span>`).join('');
+  const who = b.captain ? YARD_TEXT.captain(esc(b.captain.name)) : '';
+  const where = b.damaged ? `<span class="bad">${BOAT_TEXT.broken}</span>` : b.status === 'docked' ? YARD_TEXT.docked : YARD_TEXT.away;
+  return `<div class="bcard${b.damaged ? ' broken' : ''}"><div class="bcard-art">${icon(HULL_ICONS[b.hull], 64)}</div>`
+    + `<div class="bcard-main"><div class="item-title ol">${esc(b.name)}</div>`
+    + `<div class="bcard-line">${boatType(b.hull)} · carries ${crates(holdSize(b))} · ${where}</div>`
+    + `<div class="bcard-line">${b.captain ? `${who} · <b>${CAPTAIN_TEXT.selfSails}</b>` : `${CAPTAIN_TEXT.youSend}`}</div>`
+    + `<div class="bcard-ups">${ups}</div></div>`
+    + `<div class="bcard-act">${button({ label: `${YARD_TEXT.open} ${esc(b.name)}`, act: 'openboat', a: b.id, tone: 'info' })}${b.captain ? '' : button({ label: CAPTAIN_TEXT.getButton, act: 'openboat', a: b.id, tone: 'gold', size: 'sm' })}</div></div>`;
+}
+
+function yourBoats(s: GameState): string {
+  return section(YARD_TEXT.yourBoats(s.boats.length, MAX_BOATS)) + `<p class="yard-help">${YARD_TEXT.yourBoatsHelp}</p>`
+    + (s.boats.length ? s.boats.map(boatCard).join('') : `<p class="dim">${YARD_TEXT.noBoats}</p>`);
+}
+
+function buyBoat(s: GameState): string {
+  const o = boatOffer(s);
+  if (o.cost === null) return section(YARD_TEXT.buyTitle) + `<p class="yard-help">${YARD_TEXT.allBoats}</p>`;
+  return section(YARD_TEXT.buyTitle) + `<p class="yard-help">${YARD_TEXT.buyHelp}</p>`
+    + `<div class="bcard offer"><div class="bcard-art">${offerIcon(64)}</div>`
+    + `<div class="bcard-main"><div class="item-title ol">${BOAT_OFFER_TEXT.name} <span class="dim">· ${BOAT_OFFER_TEXT.spot(o.spot)}</span></div>`
+    + `<div class="bcard-line">${o.can}</div>${o.lock}</div>`
+    + `<div class="bcard-act">${offerButton(s, o)}</div></div>`;
 }
 
 function harbour(s: GameState): string {
   const rank = rankOf(s);
-  return cards(UPGRADE_IDS.map((id) => {
+  return section(YARD_TEXT.harbourTitle) + `<p class="yard-help">${YARD_TEXT.harbourHelp}</p>` + cards(UPGRADE_IDS.map((id) => {
     const u = UPGRADES[id];
     const owned = s.upgrades[id];
     const chk = canBuy(s, id);
     const look = UPGRADE_LOOK[id];
+    const rankLocked = !chk.ok && chk.needRank !== undefined;
     return card({
       tone: owned ? 'grey' : look.tone,
-      tag: owned ? LABEL.owned : rank < u.rank ? RANK_NAME[u.rank] : undefined,
-      art: icon(look.icon, 48),
+      tag: owned ? YARD_TEXT.owned : undefined,
+      art: icon(look.icon, 56),
       lines: [UPGRADE[id].desc],
       name: UPGRADE[id].name,
       foot: owned
         ? button({ label: LABEL.owned, tone: 'ghost', size: 'sm', off: true })
-        : button({ label: chk.ok ? priceLabel(u.cost) : denyText(chk.reason, chk.needRank), act: 'buy', a: id, size: 'sm', off: !chk.ok }),
+        : (chk.ok ? '' : lockNote({ cost: u.cost, money: s.money, rank, needRank: chk.needRank, reason: chk.reason }))
+          + `<span class="price ol">${LOCK_TEXT.price}: ${priceLabel(u.cost)}</span>`
+          + button({ label: rankLocked ? `${icon('lock', 18)}${LOCK_TEXT.locked}` : buyLabel(YARD_TEXT.buy, u.cost), act: 'buy', a: id, size: 'sm', off: !chk.ok }),
     });
-  }));
+  }), 230);
 }
 
+/** One page for everything: your boats, a new boat, and what helps the whole harbour. No hidden tabs. */
 export const shipyardScreen: Screen = (ctx) => {
   const s = ctx.state;
-  const broken = s.boats.filter((b) => b.damaged).length;
-  const tabs = [{ id: 'fleet', label: `Your boats ${s.boats.length} / ${MAX_BOATS}${broken ? SHIPYARD_TEXT.tabBroken(broken) : ''}` }, { id: 'harbour', label: 'For the harbour' }];
-  const tab = pickTab(ctx, tabs);
-  return { title: 'Shipyard', icon: icon('hammer', 28), host: portrait(NPC_LOOK.shipwright), tabs, tab, body: tab === 'fleet' ? fleet(s) : harbour(s) };
+  return {
+    title: 'Shipyard', icon: icon('hammer', 28), host: portrait(NPC_LOOK.shipwright), note: YARD_TEXT.note,
+    body: repairs(s) + yourBoats(s) + buyBoat(s) + harbour(s),
+  };
 };

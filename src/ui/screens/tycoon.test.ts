@@ -46,10 +46,10 @@ describe('plot windows', () => {
     poor.money = 5000;
     const v = plot(poor, 'restaurant');
     expect(v.foot).toContain('off');
-    expect(v.foot).toContain('Needs rank: Small Company');
+    expect(v.body).toContain('Needs rank: Small Company (you are Beginner)');
     const broke = rich();
     broke.money = 10;
-    expect(plot(broke, 'coldstore').foot).toContain('Not enough money');
+    expect(plot(broke, 'coldstore').body).toMatch(/You need \$[\d,]+ more/);
   });
 
   it('opens the right window for a built building, and lists later levels on the for-sale window', () => {
@@ -267,7 +267,7 @@ describe('boats and the shipyard', () => {
     expect(v.body).toContain('data-act="repair"');
     expect(v.body).toContain('Cost $35');
     expect(v.body).toContain(`Takes ${REPAIR_SECONDS} seconds`);
-    expect(v.tabs?.[0].label).toContain('1 broken');
+    expect(v.tabs).toBeUndefined();
   });
 
   it('greys the Fix button when the boat is still out or the money is short', () => {

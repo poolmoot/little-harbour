@@ -3,11 +3,11 @@
 .pn-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--well-2); border-bottom: var(--line); padding: 4px 10px; border-radius: 8px 8px 0 0; font-size: var(--fs-sm); }
 
 /* Sunken trough: resource pills and meters. */
-.well { position: relative; display: flex; align-items: center; justify-content: center; height: 26px; background: var(--well); border: var(--line); border-radius: var(--r-sm); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35), 0 2px 0 rgba(255, 255, 255, 0.14); font-size: var(--fs-md); }
+.well { position: relative; display: flex; align-items: center; justify-content: center; height: 30px; background: var(--well); border: var(--line); border-radius: var(--r-sm); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35), 0 2px 0 rgba(255, 255, 255, 0.14); font-size: var(--fs-md); }
 .pill { padding: 0 26px 0 12px; min-width: 96px; }
 .pill > .ic { position: absolute; right: -10px; top: 50%; margin-top: -17px; }
-.meter { height: 12px; overflow: hidden; font-size: var(--fs-xs); }
-.meter.tall { height: 20px; }
+.meter { height: 14px; overflow: hidden; font-size: var(--fs-xs); }
+.meter.tall { height: 24px; }
 .meter > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4); transition: width 0.3s var(--ease-out); }
 .meter > span { position: relative; }
 .meter.cyan > i { background: var(--cyan); } .meter.green > i { background: var(--green); } .meter.amber > i { background: var(--amber); } .meter.red > i { background: var(--red); } .meter.gold > i { background: var(--gold-hi); }
@@ -15,7 +15,7 @@
 /* Buttons: gradient face, gloss on top, lip underneath; they sink when pressed. */
 .btn { --hi: var(--go-hi); --lo: var(--go-lo); --lip: var(--go-lip); --gloss: var(--go-gloss);
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; cursor: pointer;
-  min-height: 40px; padding: 6px 18px 10px; font-size: 17px; border: var(--line); border-radius: var(--r-md);
+  min-height: 46px; padding: 7px 20px 11px; font-size: 19px; border: var(--line); border-radius: var(--r-md);
   background: linear-gradient(var(--hi), var(--lo)); box-shadow: inset 0 2px 0 var(--gloss), inset 0 -5px 0 var(--lip), var(--lift);
   transition: transform var(--t-fast) var(--ease-out), filter var(--t-fast), box-shadow var(--t-fast); }
 .btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
@@ -25,16 +25,16 @@
 .btn.danger { --hi: var(--danger-hi); --lo: var(--danger-lo); --lip: var(--danger-lip); --gloss: var(--danger-gloss); }
 .btn.ghost, .btn.off { --hi: var(--ghost-hi); --lo: var(--ghost-lo); --lip: var(--ghost-lip); --gloss: var(--ghost-gloss); }
 .btn.off { cursor: not-allowed; filter: none; transform: none; opacity: 0.6; box-shadow: inset 0 -3px 0 var(--lip); }
-.btn.sm { min-height: 34px; padding: 4px 14px 8px; font-size: var(--fs-md); border-radius: 9px; }
-.btn.lg { min-height: 54px; padding: 8px 26px 13px; font-size: 22px; border-radius: 14px; border-width: 3px; }
+.btn.sm { min-height: 40px; padding: 5px 16px 9px; font-size: var(--fs-md); border-radius: 9px; }
+.btn.lg { min-height: 58px; padding: 9px 28px 14px; font-size: 24px; border-radius: 14px; border-width: 3px; }
 .btn.wide { width: 100%; }
 
 /* The window's main action (Send out, Sell all, Build, Start the day): bigger, a light sweep across it, a gentle
    breathing glow, and the Enter key printed on it, so it is the first thing the eye lands on. Greyed-out ones stay calm. */
 /* #ui so it beats the base rule that makes every button inherit its parent's font. */
-#ui .btn.hero { font-size: 23px; }
+#ui .btn.hero { font-size: 25px; }
 #ui .btn .hero-key { font-size: var(--fs-sm); }
-.btn.hero { position: relative; overflow: hidden; min-height: 60px; padding: 9px 22px 14px 28px; font-size: 23px; border-width: 3px; gap: 10px;
+.btn.hero { position: relative; overflow: hidden; min-height: 64px; padding: 10px 24px 15px 30px; font-size: 25px; border-width: 3px; gap: 10px;
   animation: hero-breathe 1.8s ease-in-out infinite alternate; }
 .btn.hero::after { content: ''; position: absolute; top: -20%; bottom: -20%; width: 34%; left: -50%; pointer-events: none;
   background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent); transform: skewX(-18deg); animation: hero-shine 2.8s ease-in-out infinite; }
@@ -46,7 +46,7 @@
 .win-foot .btn.hero { margin-left: auto; flex: none; }
 
 /* Square icon button on the HUD. */
-.tile { position: relative; width: 60px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer; padding: 0;
+.tile { position: relative; width: 64px; height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer; padding: 0;
   background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: 9px; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18), var(--lift-sm); font-size: var(--fs-xs);
   transition: transform var(--t-fast) var(--ease-out), filter var(--t-fast); }
 .tile:hover { transform: translateY(-2px); filter: brightness(1.15); }
@@ -65,9 +65,9 @@
 .card.teal { --hi: #5fe6d0; --lo: #1ba59a; --band: #0f7f78; }
 .card.grey { --hi: #8c99b5; --lo: #5f6c8a; --band: #47536e; }
 .card-art { padding: 10px 0 2px; }
-.card-line { font-size: var(--fs-xs); padding: 1px 6px; min-height: 16px; }
+.card-line { font-size: var(--fs-xs); padding: 1px 8px; min-height: 18px; }
 .card-name { width: 100%; margin-top: 5px; padding: 2px 4px 4px; background: var(--band); font-size: var(--fs-md); }
-.card-foot { width: 100%; margin-top: auto; padding: 6px 7px 9px; background: var(--well-2); display: flex; flex-direction: column; gap: 5px; align-items: stretch; }
+.card-foot { width: 100%; margin-top: auto; padding: 8px 9px 11px; background: var(--well-2); display: flex; flex-direction: column; gap: 5px; align-items: stretch; }
 .tag { position: absolute; left: 5px; top: 5px; padding: 0 6px 1px; background: var(--well-2); border: var(--line); border-radius: 6px; font-size: var(--fs-xs); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card-min, 128px), 1fr)); gap: 10px; align-items: stretch; }
 
@@ -77,14 +77,14 @@
 .stars .ic { filter: none; stroke-width: 2.5; }
 
 /* List row inside a window. */
-.item { display: flex; align-items: center; gap: 10px; padding: 7px 10px 9px; margin-bottom: 7px; background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), var(--lift-sm); }
+.item { display: flex; align-items: center; gap: 12px; padding: 10px 12px 12px; margin-bottom: 9px; background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), var(--lift-sm); }
 .item.sel { background: linear-gradient(#2a8a3a, #1b6a2c); }
-.item.locked { opacity: 0.6; }
+.item.locked { opacity: 0.75; }
 .item-title { font-size: var(--fs-md); }
 .item-sub { font-size: var(--fs-xs); color: var(--text-dim); margin-top: 1px; }
 .price { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-md); white-space: nowrap; }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 2px; background: var(--well); border: var(--line); border-radius: 8px; font-size: var(--fs-xs); }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 3px; background: var(--well); border: var(--line); border-radius: 8px; font-size: var(--fs-xs); }
 .section { margin: 12px 0 6px; font-size: var(--fs-sm); color: var(--gold-hi); }
 .section:first-child { margin-top: 0; }
 .empty { padding: 14px 10px; text-align: center; color: var(--text-dim); background: var(--well); border: var(--line); border-radius: var(--r-md); margin-bottom: 7px; }
@@ -113,12 +113,12 @@
 @media (max-width: 640px) { .slider { width: 130px; } }
 
 /* Tick box with a label: one big button, so it is easy to hit. */
-.tick { display: inline-flex; align-items: center; gap: 7px; padding: 3px 11px 5px 5px; margin: 0 6px 6px 0; background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), var(--lift-sm); color: var(--text); font: inherit; font-size: var(--fs-sm); cursor: pointer; transition: transform var(--t-fast) var(--ease-out); }
+.tick { display: inline-flex; align-items: center; gap: 8px; padding: 5px 13px 7px 7px; margin: 0 6px 6px 0; background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), var(--lift-sm); color: var(--text); font: inherit; font-size: var(--fs-sm); cursor: pointer; transition: transform var(--t-fast) var(--ease-out); }
 .tick:hover { transform: translateY(-1px); }
 .tick:active { transform: translateY(2px); }
 .tick.on { background: linear-gradient(#2a8a3a, #1b6a2c); }
 .tick.off { opacity: 0.5; pointer-events: none; }
-.tick-box { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: var(--well); border: var(--line); border-radius: 7px; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35); }
+.tick-box { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--well); border: var(--line); border-radius: 7px; box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.35); }
 .tick-box .ic { filter: none; stroke-width: 1; }
 
 /* Fish sizes, stars and the golden look. */
@@ -143,3 +143,54 @@
 .tf-msg { min-height: 16px; font-size: var(--fs-xs); color: var(--danger-hi); }
 .rename { width: 100%; margin-top: 6px; }
 .rename-label { font-size: var(--fs-xs); color: var(--text-dim); }
+
+/* Locked things: a padlock, one plain line on what is missing, the price, and a money bar when money is what is missing. */
+.lock { display: flex; align-items: center; gap: 10px; padding: 7px 10px 8px; text-align: left; background: rgba(8, 20, 60, 0.55); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.28); }
+.lock-ic { flex: none; display: inline-flex; }
+.lock-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.lock-why { font-size: var(--fs-sm); line-height: 1.25; font-weight: var(--w-strong); }
+.lock.rank .lock-why { color: var(--gold-hi); }
+.lock.money .lock-why { color: #ffd9a0; }
+.lock-price { flex: none; }
+.lock .meter { width: 100%; }
+
+/* Level dots: filled ones are bought. */
+.dots { display: inline-flex; gap: 5px; vertical-align: middle; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; border: var(--line); background: var(--well); box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.35); }
+.dots i.on { background: var(--gold-hi); box-shadow: inset 0 2px 0 var(--gold-gloss); }
+
+/* Anything with a button looks pressable; the cursor says so on whole tabs, tiles and ticks too. */
+.btn:not(.off), .tab, .tile, .tick { cursor: pointer; }
+
+/* One upgrade, as a row: picture, name and level dots, what you have, what you get, and a big price button. */
+.urow { display: flex; align-items: center; gap: 14px; padding: 11px 13px 13px; margin-bottom: 10px; background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), var(--lift-sm); }
+.urow.maxed { background: linear-gradient(#a57c12, #6b4806); border-color: #3b2603; }
+.urow-art { flex: none; display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; border: var(--line); border-radius: var(--r-md); background: var(--well); box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.3); }
+.urow-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.urow-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.urow-lvl { font-size: var(--fs-xs); color: var(--text-dim); font-weight: var(--w-body); }
+.urow-line { font-size: var(--fs-sm); line-height: 1.25; }
+.urow-line b { color: var(--gold-hi); font-weight: var(--w-heavy); }
+.urow-act { flex: none; display: flex; flex-direction: column; align-items: stretch; width: 210px; }
+.urow-act .btn { white-space: normal; text-align: center; line-height: 1.1; }
+@media (max-width: 760px) { .urow { flex-wrap: wrap; } .urow-act { width: 100%; } }
+
+/* Shipyard and boat spot pages. */
+.yard-help { margin: -2px 0 10px; font-size: var(--fs-sm); color: var(--text-dim); font-weight: var(--w-body); line-height: 1.3; }
+.bcard { display: flex; align-items: center; gap: 14px; padding: 11px 13px 13px; margin-bottom: 10px; background: linear-gradient(var(--tile-hi), var(--tile-lo)); border: var(--line); border-radius: var(--r-md); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), var(--lift-sm); }
+.bcard.broken { background: linear-gradient(#7a2a2a, #4d1717); }
+.bcard-art { flex: none; display: flex; align-items: center; justify-content: center; width: 84px; height: 84px; border: var(--line); border-radius: var(--r-md); background: radial-gradient(circle at 50% 30%, #5cc8ff, #1f6fc6); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.25); }
+.bcard-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.bcard-line { font-size: var(--fs-sm); line-height: 1.25; color: var(--text-dim); font-weight: var(--w-body); }
+.bcard-ups { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-xs); }
+.bcard-ups span { display: inline-flex; align-items: center; gap: 6px; }
+.bcard-act { flex: none; width: 190px; display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.bcard-act .btn { white-space: normal; text-align: center; line-height: 1.1; }
+.bcard.offer .bcard-act { width: 220px; }
+@media (max-width: 760px) { .bcard { flex-wrap: wrap; } .bcard-act, .bcard.offer .bcard-act { width: 100%; } }
+.card-foot .lock { padding: 6px 8px 7px; }
+.card-foot .lock .lock-price { display: none; }
+.offer-hero { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 18px 16px 20px; border: var(--line); border-radius: var(--r-lg); background: radial-gradient(circle at 50% 25%, #5cc8ff, #1f6fc6 70%); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3), var(--lift); }
+.offer-hero .offer-name { font-size: 30px; }
+.offer-hero .offer-spot { font-size: var(--fs-sm); }
+.offer-text { margin: 12px 0 4px; font-size: var(--fs-md); line-height: 1.35; }

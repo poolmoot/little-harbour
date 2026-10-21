@@ -13,18 +13,18 @@
 #ui .win-title, #ui .menu-hero, #ui .stat .ol, #ui .chip b { font-family: var(--font); font-weight: 400; letter-spacing: 0.3px; }
 
 /* Buttons take their own designed sizes instead of whatever text they sit in. */
-#ui .btn { font-size: 17px; }
-#ui .btn.sm { font-size: var(--fs-md); }
-#ui .btn.lg { font-size: 22px; }
-#ui .btn.hero { font-size: 23px; }
+#ui .btn { font-size: 19px; }
+#ui .btn.sm { font-size: 17px; }
+#ui .btn.lg { font-size: 24px; }
+#ui .btn.hero { font-size: 25px; }
 
-.win-title { font-size: 26px; }
-.section { font-size: 17px; margin-top: 14px; }
-.item-title { font-size: 17px; }
-.item-sub { font-size: 14px; font-weight: var(--w-body); line-height: 1.3; }
-.card-line { font-size: 14px; line-height: 1.2; }
-.card-name { font-size: 17px; }
-.win-note, .win-foot .dim { font-size: 14px; font-weight: var(--w-body); line-height: 1.3; }
+.win-title { font-size: 30px; }
+.section { font-size: 21px; margin-top: 18px; }
+.item-title { font-size: 20px; }
+.item-sub { font-size: 16px; font-weight: var(--w-body); line-height: 1.3; }
+.card-line { font-size: 16px; line-height: 1.2; }
+.card-name { font-size: 20px; }
+.win-note, .win-foot .dim { font-size: 16px; font-weight: var(--w-body); line-height: 1.3; }
 .dim { font-weight: var(--w-body); }
 .chip { font-weight: var(--w-heavy); }
-.empty { font-size: 15px; font-weight: var(--w-strong); }
+.empty { font-size: 17px; font-weight: var(--w-strong); }

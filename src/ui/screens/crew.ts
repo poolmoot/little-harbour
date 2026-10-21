@@ -5,14 +5,14 @@ import { carryCapacity, coldCrates, iceCrates } from '../../sim/crates';
 import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import { canHireCaptain, canHireDockhand, dailyWages } from '../../sim/staff';
 import type { Dockhand, GameState } from '../../sim/state';
-import { button, card, cards, empty, esc, face, item, money, section, tick } from '../components';
+import { button, card, cards, empty, esc, face, item, lockNote, money, section, tick } from '../components';
 import { captainLook, dockhandLook, NPC_LOOK } from '../../view/people';
 import { portrait } from '../../view/portraits';
 import type { CardTone } from '../components';
 import { fishIcon, icon } from '../icons';
 import { hex, SPECIES_COLOUR } from '../../palette';
 import { WORKER_TEXT } from '../screenText';
-import { FISH_NAME, LABEL, RANK_NAME, TRAIT, crates, denyText } from '../text';
+import { FISH_NAME, LABEL, TRAIT, crates } from '../text';
 import { pickTab } from './types';
 import type { Screen } from './types';
 
@@ -26,14 +26,14 @@ function hire(s: GameState): string {
     art: face(portrait(dockhandLook(s.nextId)), 84) || icon('dockhand', 56),
     lines: [`Carries ${crates(carryCapacity(s))} at a time`, `${s.dockhands.length} of ${MAX_DOCKHANDS} hired`],
     name: 'Worker',
-    foot: `<span class="dim">$${DOCKHAND_WAGE} a day</span>${button({ label: dock.ok ? 'Hire' : denyText(dock.reason, dock.needRank), act: 'hiredock', size: 'sm', off: !dock.ok })}`,
+    foot: `<span class="dim">$${DOCKHAND_WAGE} a day</span>${dock.ok ? '' : lockNote({ money: s.money, rank: rankOf(s), needRank: dock.needRank, reason: dock.reason })}${button({ label: dock.ok ? 'Hire' : `${icon('lock', 18)}${LABEL.locked}`, act: 'hiredock', size: 'sm', off: !dock.ok })}`,
   })];
   const captainsOpen = rankOf(s) >= CAPTAINS_RANK;
   const free = s.boats.filter((b) => !b.captain);
   for (const c of s.candidates) {
     const info = TRAIT[c.trait];
     let actions: string;
-    if (!captainsOpen) actions = button({ label: `${icon('lock', 14)}${RANK_NAME[CAPTAINS_RANK]}`, tone: 'ghost', size: 'sm', off: true });
+    if (!captainsOpen) actions = lockNote({ money: s.money, rank: rankOf(s), needRank: CAPTAINS_RANK, reason: 'Captains sail a boat for you.' }) + button({ label: `${icon('lock', 18)}${LABEL.locked}`, tone: 'ghost', size: 'sm', off: true });
     else if (free.length === 0) actions = button({ label: 'No free boat', tone: 'ghost', size: 'sm', off: true });
     else actions = free.map((b) => button({ label: `Hire for ${esc(b.name)}`, act: 'hirecap', a: c.id, b: b.id, size: 'sm', off: !canHireCaptain(s, b.id).ok })).join('');
     list.push(card({

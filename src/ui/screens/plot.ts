@@ -4,9 +4,10 @@ import { buildingMaxLevel, canBuyBuilding, nextBuildingCost } from '../../sim/bu
 import { rankOf } from '../../sim/rank';
 import type { GameState } from '../../sim/state';
 import { buildingIcon } from '../buildingParts';
-import { button, priceLabel, section, stat } from '../components';
-import { PLOT_TEXT } from '../screenText';
-import { BUILDING_DESC, BUILDING_LABEL, BUILDING_LEVELS, BUILDING_NAME, PLOT_SIGN, RANK_NAME, buildingNeeds, denyText } from '../text';
+import { button, buyLabel, lockNote, section, stat } from '../components';
+import { icon } from '../icons';
+import { LOCK_TEXT, PLOT_TEXT } from '../screenText';
+import { BUILDING_DESC, BUILDING_LABEL, BUILDING_LEVELS, BUILDING_NAME, PLOT_SIGN, RANK_NAME } from '../text';
 import { coldstoreView } from './coldstore';
 import { lighthouseView } from './lighthouse';
 import { restaurantView } from './restaurant';
@@ -28,8 +29,9 @@ export function forSaleView(s: GameState, id: BuildingId): ScreenView {
       + `<p class="dim">${PLOT_TEXT.thisLevel}: ${BUILDING_LEVELS[id][0]}</p>`
       + stat(PLOT_TEXT.price, `$${cost.toLocaleString('en')}`)
       + stat(PLOT_TEXT.rankNeeded, `<span class="${rankOk ? 'good' : 'bad'}">${RANK_NAME[BUILDINGS[id].rank]}</span>`)
+      + (chk.ok ? '' : `<div style="margin:10px 0">${lockNote({ cost, money: s.money, rank: rankOf(s), needRank: chk.needRank, reason: chk.reason })}</div>`)
       + (later ? section(PLOT_TEXT.laterTitle) + later : ''),
-    foot: `<span class="${rankOk ? 'dim' : 'bad'}">${rankOk ? BUILDING_LABEL.empty : buildingNeeds(id)}</span>${button({ label: chk.ok ? `${PLOT_TEXT.build} ${priceLabel(cost)}` : denyText(chk.reason, chk.needRank), act: 'build', a: id, off: !chk.ok, hero: true })}`,
+    foot: `<span class="dim">${BUILDING_LABEL.empty}</span>${button({ label: chk.ok || rankOk ? buyLabel(PLOT_TEXT.build, cost) : `${icon('lock', 22)}${LOCK_TEXT.locked}`, act: 'build', a: id, off: !chk.ok, hero: true })}`,
   };
 }
 

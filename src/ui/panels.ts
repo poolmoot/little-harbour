@@ -7,6 +7,7 @@ import { isMenuKind } from './menuFlow';
 import { LABEL } from './text';
 import { awayScreen } from './screens/away';
 import { countedUp } from './awayFlow';
+import { berthScreen } from './screens/berth';
 import { boatScreen } from './screens/boat';
 import { crewScreen } from './screens/crew';
 import { iceboxScreen } from './screens/icebox';
@@ -24,7 +25,7 @@ import { shipyardScreen } from './screens/shipyard';
 import { titleScreen } from './screens/title';
 import type { AwayInfo, Screen, ScreenView } from './screens/types';
 
-export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away' | 'welcome' | 'help' | 'tips';
+export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away' | 'welcome' | 'help' | 'tips' | 'berth';
 
 const SCREENS: Record<PanelKind, Screen> = {
   boat: boatScreen,
@@ -45,6 +46,7 @@ const SCREENS: Record<PanelKind, Screen> = {
   welcome: welcomeScreen,
   help: helpScreen,
   tips: tipsScreen,
+  berth: berthScreen,
 };
 
 export interface PanelActions {

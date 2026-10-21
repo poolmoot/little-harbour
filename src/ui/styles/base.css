@@ -1,5 +1,5 @@
 #ui, #ui * { box-sizing: border-box; }
-#ui { font-family: var(--font); font-size: var(--fs-sm); letter-spacing: 0.3px; color: var(--text); user-select: none; -webkit-user-select: none; }
+#ui { font-family: var(--font); font-size: var(--fs-md); letter-spacing: 0.3px; color: var(--text); user-select: none; -webkit-user-select: none; }
 #ui button { font: inherit; letter-spacing: inherit; color: inherit; }
 #ui p, #ui h2, #ui h3 { margin: 0; font-weight: 400; }
 

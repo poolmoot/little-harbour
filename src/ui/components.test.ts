@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { button, card, esc, freshMeter, item, meter, money, mult, nameFeedback, percent, slider, stars, textField, tick } from './components';
+import { button, buyLabel, card, esc, freshMeter, item, levelDots, lockInfo, lockNote, meter, money, mult, nameFeedback, percent, slider, stars, textField, tick } from './components';
 
 describe('ui components', () => {
   it('formats money and multipliers', () => {
@@ -135,5 +135,42 @@ describe('main action button', () => {
     const h = button({ label: 'Too dark', act: 'send', hero: true, off: true });
     expect(h).not.toMatch(/\bhero\b/);
     expect(h).not.toContain('Enter');
+  });
+});
+
+describe('locked things', () => {
+  const base = { money: 100, rank: 1 };
+
+  it('says which rank is needed and which one the player is', () => {
+    const h = lockNote({ ...base, cost: 900, needRank: 2 });
+    expect(h).toContain('Needs rank: Small Company (you are Boat Owner)');
+    expect(h).toContain('lock rank');
+    expect(h).toContain('900');
+    expect(h).not.toContain('meter');
+  });
+
+  it('says how much money is missing and draws a bar towards it', () => {
+    const h = lockNote({ ...base, cost: 220, reason: 'Not enough money' });
+    expect(h).toContain('You need $120 more');
+    expect(h).toContain('$100 of $220');
+    expect(h).toContain('width:45%');
+  });
+
+  it('puts rank before money, and passes other reasons through', () => {
+    expect(lockInfo({ ...base, cost: 5000, needRank: 3 }).kind).toBe('rank');
+    expect(lockInfo({ ...base, cost: 50, reason: 'Buy the smaller one first' })).toEqual({ kind: 'other', why: 'Buy the smaller one first' });
+    expect(lockInfo({ ...base, needRank: 1 }).kind).toBe('other');
+  });
+
+  it('draws a padlock', () => {
+    expect(lockNote({ ...base, reason: 'Nope' })).toContain('<svg');
+  });
+
+  it('builds a buy label with a dash and the price, and level dots', () => {
+    expect(buyLabel('Upgrade', 1300)).toContain('Upgrade — ');
+    expect(buyLabel('Upgrade', 1300)).toContain('1,300');
+    const d = levelDots(2, 3);
+    expect(d.match(/<i/g)).toHaveLength(3);
+    expect(d.match(/class="on"/g)).toHaveLength(2);
   });
 });

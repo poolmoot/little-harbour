@@ -5,7 +5,7 @@ import { ORDER_BONUS, ORDER_CRATE_MULT, RESTAURANT_MIN_FRESH, SMOKED_MULT } from
 import type { BuildingId, WeatherId } from '../sim/config';
 import type { Special } from '../sim/state';
 import type { IconName } from './icons';
-import { WEATHER, specialName } from './text';
+import { RANK_NAME as LOCK_RANK_NAME, WEATHER, specialName } from './text';
 
 const pct = (x: number): number => Math.round(x * 100);
 
@@ -94,9 +94,9 @@ export const RESTAURANT_TEXT = {
 };
 
 export const LIGHTHOUSE_TEXT = {
-  lit: 'The light is on. Your boats can sail at night.',
+  lit: 'The light is on. Trips at night are faster.',
   nightTitle: 'Night trips',
-  night: 'At night the sea is quiet, and your boats can go out. Trips to the Deep Sea at night may find the King Fish.',
+  night: 'With the light on, trips that start at night take 30% less time. Trips to the Deep Sea at night may find the King Fish.',
   kingTitle: 'The King Fish',
   kingHunting: 'Send a boat to the Deep Sea at night. It is rare, so keep trying. Better nets and a lucky captain help.',
   kingOnBoat: 'A boat has the King Fish! Unload it, then carry it to the inn.',
@@ -227,4 +227,78 @@ export const MARKET_TEXT = {
   bad: 'Gone bad',
   fresh: (pct: number) => `${pct}% fresh`,
   tip: 'Fresh fish sell for more. Fish an order wants pay double.',
+};
+
+// ---- locked things (one wording for every window) -----------------------------------------------------------
+
+export const LOCK_TEXT = {
+  locked: 'Locked',
+  needRank: (need: number, you: number): string => `Needs rank: ${LOCK_RANK_NAME[need]} (you are ${LOCK_RANK_NAME[you]})`,
+  needMoney: (missing: number): string => `You need $${Math.ceil(missing).toLocaleString('en')} more`,
+  moneyBar: (have: number, cost: number): string => `$${Math.floor(have).toLocaleString('en')} of $${cost.toLocaleString('en')}`,
+  price: 'Price',
+};
+
+// ---- the shipyard page and the boat spot window ------------------------------------------------------------
+
+export const YARD_TEXT = {
+  note: 'Buy and upgrade boats here, and buy things that help the whole harbour.',
+  yourBoats: (n: number, max: number): string => `Your boats (${n} of ${max})`,
+  yourBoatsHelp: 'Press Open on a boat to upgrade it, choose where it fishes, or give it a captain.',
+  noBoats: 'You have no boats yet.',
+  buyTitle: 'Buy a new boat',
+  buyHelp: 'A new boat starts small. You can upgrade it after you buy it.',
+  allBoats: 'You have all four boats. Every boat spot is used.',
+  harbourTitle: 'Harbour upgrades',
+  harbourHelp: 'These help the whole harbour, not just one boat. Each one is bought once.',
+  upgradeShort: { hull: 'Size', hold: 'Space', gear: 'Nets', sails: 'Speed' },
+  away: 'Out fishing',
+  docked: 'In the harbour',
+  captain: (name: string): string => `Captain ${name}`,
+  noCaptain: 'No captain',
+  open: 'Open',
+  owned: 'Bought',
+  buy: 'Buy',
+};
+
+export const BOAT_OFFER_TEXT = {
+  name: 'New rowboat',
+  spot: (n: number): string => `Boat spot ${n}`,
+  can: (crates: number, zone: string, secs: number): string => `A small, sturdy boat. It carries ${crates} crates and fishes the ${zone}. A trip takes about ${secs} seconds.`,
+  later: 'Upgrade it later to carry more, catch rarer fish and go further out.',
+  buy: 'Buy this boat',
+  buyShort: 'Buy',
+  full: 'You have all four boats.',
+  taken: (name: string): string => `${name} is tied up here.`,
+  otherSpot: (n: number): string => `A new boat goes to boat spot ${n} first.`,
+  title: (n: number): string => `Boat spot ${n}`,
+};
+
+export const UPGRADE_ROW_TEXT = {
+  level: (n: number, max: number): string => `${n} of ${max} upgrades`,
+  now: 'Now',
+  next: 'Next',
+  upgrade: 'Upgrade',
+  maxed: 'Fully upgraded',
+  allDone: 'This is as good as it gets.',
+  upgradeNote: 'Each upgrade costs more than the last. Boat size also needs a higher harbour rank.',
+  zoneHow: 'Upgrade Boat size on the Upgrade tab.',
+};
+
+// ---- captains, as shown in the boat window and the shipyard ------------------------------------------------
+
+export const CAPTAIN_TEXT = {
+  getTitle: 'Get a captain',
+  getHelp: 'A captain sends this boat out for you, again and again. You do not need to press anything.',
+  wage: (n: number): string => `$${n} a day`,
+  hire: 'Hire',
+  noneToHire: 'No captains are looking for work right now. Check the inn later.',
+  lockedWhy: 'Captains sail a boat for you.',
+  hasTitle: 'Your captain',
+  fishes: (zone: string): string => `Fishes: ${zone}`,
+  change: 'Change place',
+  selfSails: 'Sails by itself',
+  youSend: 'You send it',
+  getButton: 'Get a captain',
+  helpGoing: 'Sails, unloads and sails again by itself.',
 };

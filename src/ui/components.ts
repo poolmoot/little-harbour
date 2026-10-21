@@ -1,6 +1,7 @@
 /** Reusable UI parts. Each is a pure function from data to an HTML string, so screens stay declarative and testable. */
 import { checkName } from '../sim/names';
 import { icon } from './icons';
+import { LOCK_TEXT } from './screenText';
 import { NAME_PROBLEM } from './text';
 
 export type Tone = 'go' | 'gold' | 'info' | 'danger' | 'ghost';
@@ -168,4 +169,47 @@ export function textField(o: TextFieldOpts): string {
   const fb = nameFeedback(o.value);
   const data = `${o.a !== undefined ? ` data-a="${o.a}"` : ''}${o.b !== undefined ? ` data-b="${o.b}"` : ''}`;
   return `<span class="${cls('tf', o.stack && 'stack', !fb.ok && 'bad')}"><span class="tf-row"><input class="textfield" type="text" data-field="${o.id}" data-save="${o.save}"${data} data-orig="${esc(o.value)}" value="${esc(o.value)}" maxlength="40" autocomplete="off" spellcheck="false" aria-label="${esc(o.label)}">${button({ label: o.saveLabel, act: o.save, a: o.a, b: o.b, size: 'sm', off: !fb.ok })}</span><span class="tf-msg" role="status">${fb.message}</span></span>`;
+}
+
+// ---- locked things ---------------------------------------------------------------------------------------------
+
+export interface LockOpts {
+  /** What it costs, when it has a price. */
+  cost?: number;
+  /** Money the player has now. */
+  money: number;
+  /** The player's rank now (0 to 4). */
+  rank: number;
+  /** Rank number the thing needs (the sim's needRank). */
+  needRank?: number;
+  /** The sim's plain "why not" reason. */
+  reason?: string;
+}
+
+export type LockKind = 'rank' | 'money' | 'other';
+
+/** The one plain line that says what is missing, and what kind of missing it is. Rank comes first, then money, then anything else the sim said. */
+export function lockInfo(o: LockOpts): { kind: LockKind; why: string } {
+  if (o.needRank !== undefined && o.rank < o.needRank) return { kind: 'rank', why: LOCK_TEXT.needRank(o.needRank, o.rank) };
+  if (o.reason && o.reason !== 'Not enough money' && o.reason !== 'Rank too low') return { kind: 'other', why: o.reason };
+  if (o.cost !== undefined && o.money < o.cost) return { kind: 'money', why: LOCK_TEXT.needMoney(o.cost - o.money) };
+  return { kind: 'other', why: o.reason ?? 'You cannot do that now.' };
+}
+
+/** A padlock, the price, one plain line on what is missing, and a progress bar towards the money when money is what is missing. */
+export function lockNote(o: LockOpts): string {
+  const info = lockInfo(o);
+  const bar = info.kind === 'money' && o.cost ? meter(o.money / o.cost, 'amber', LOCK_TEXT.moneyBar(o.money, o.cost)) : '';
+  const cost = o.cost !== undefined ? `<span class="lock-price">${price(money(o.cost))}</span>` : '';
+  return `<div class="lock ${info.kind}" role="note"><span class="lock-ic">${icon('lock', 24)}</span><div class="lock-main"><div class="lock-why">${info.why}</div>${bar}</div>${cost}</div>`;
+}
+
+/** A button label for buying: the verb, a dash and the price. */
+export const buyLabel = (verb: string, cost: number): string => `${verb} \u2014 ${priceLabel(cost)}`;
+
+/** A row of small dots: filled ones are done, empty ones are still to come. */
+export function levelDots(level: number, max: number): string {
+  let h = '';
+  for (let i = 1; i <= max; i++) h += `<i class="${i <= level ? 'on' : ''}"></i>`;
+  return `<span class="dots" role="img" aria-label="${level} of ${max}">${h}</span>`;
 }

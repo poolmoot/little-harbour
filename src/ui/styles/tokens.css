@@ -39,11 +39,11 @@
   --w-body: 700;
   --w-strong: 800;
   --w-heavy: 900;
-  --fs-xs: 13px;
-  --fs-sm: 14px;
-  --fs-md: 16px;
-  --fs-lg: 20px;
-  --fs-xl: 24px;
+  --fs-xs: 15px;
+  --fs-sm: 16px;
+  --fs-md: 18px;
+  --fs-lg: 22px;
+  --fs-xl: 28px;
 
   --ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.35);
   --ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);

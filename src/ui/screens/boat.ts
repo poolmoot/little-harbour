@@ -4,21 +4,22 @@ import { zoneWeights } from '../../sim/catch';
 import { canUpgradeBoat, holdSize, rareMult, trackCost, tripCostFor, tripTimeFor, zoneUnlockedFor } from '../../sim/fleet';
 import { unitPrice } from '../../sim/market';
 import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
+import { canHireCaptain } from '../../sim/staff';
 import type { Boat, GameState } from '../../sim/state';
 import { isNight, phaseOf } from '../../sim/time';
 import { hex, SPECIES_COLOUR } from '../../palette';
-import { button, card, cards, chip, empty, esc, face, item, money, mult, priceLabel, stars, textField, tick } from '../components';
+import { button, buyLabel, chip, section, empty, esc, face, item, levelDots, lockNote, money, mult, priceLabel, stars, textField, tick } from '../components';
 import { captainLook } from '../../view/people';
 import { portrait as facePicture } from '../../view/portraits';
 import type { CardTone } from '../components';
 import { fishIcon, HULL_ICONS, icon } from '../icons';
 import type { IconName } from '../icons';
-import { BOAT_TEXT } from '../screenText';
-import { FISH_NAME, LABEL, NAME_LABEL, WEATHER_LABEL, RANK_NAME, TRACK_NAME, TRAIT, ZONE_NAME, boatType, crates, denyText, trackNext, trackNow, zoneNeeds } from '../text';
+import { BOAT_TEXT, CAPTAIN_TEXT, LOCK_TEXT, UPGRADE_ROW_TEXT } from '../screenText';
+import { FISH_NAME, LABEL, NAME_LABEL, WEATHER_LABEL, TRACK_NAME, TRAIT, ZONE_NAME, boatType, crates, trackNext, trackNow, zoneNeeds } from '../text';
 import { pickTab } from './types';
 import type { Screen, TabDef } from './types';
 
-const TABS: TabDef[] = [{ id: 'upgrades', label: 'Upgrade' }, { id: 'grounds', label: 'Where to fish' }, { id: 'captain', label: LABEL.captain }];
+const TABS: TabDef[] = [{ id: 'upgrades', label: 'Upgrade' }, { id: 'grounds', label: 'Where to fish' }];
 const TRACK_LOOK: Record<Track, { tone: CardTone; icon: IconName }> = {
   hull: { tone: 'orange', icon: 'sloop' },
   hold: { tone: 'gold', icon: 'crate' },
@@ -26,22 +27,28 @@ const TRACK_LOOK: Record<Track, { tone: CardTone; icon: IconName }> = {
   sails: { tone: 'blue', icon: 'sail' },
 };
 
+/** One row per upgrade: what it is, how far along, what you have, what you get, and a big button with the price. */
+export function upgradeRow(s: GameState, boat: Boat, t: Track): string {
+  const cost = trackCost(boat, t);
+  const chk = canUpgradeBoat(s, boat.id, t);
+  const look = TRACK_LOOK[t];
+  const max = TRACK_MAX[t];
+  const maxed = cost === null;
+  const rankLocked = !chk.ok && chk.needRank !== undefined;
+  const lock = maxed || chk.ok ? '' : lockNote({ cost, money: s.money, rank: rankOf(s), needRank: chk.needRank, reason: chk.reason });
+  const act = maxed
+    ? button({ label: LABEL.maxed, tone: 'gold', off: true })
+    : button({ label: rankLocked ? `${icon('lock', 20)}${LOCK_TEXT.locked}` : buyLabel(UPGRADE_ROW_TEXT.upgrade, cost), act: 'up', a: boat.id, b: t, off: !chk.ok });
+  const next = maxed ? UPGRADE_ROW_TEXT.allDone : trackNext(boat, t);
+  return `<div class="urow${maxed ? ' maxed' : ''}"><div class="urow-art">${icon(t === 'hull' ? HULL_ICONS[boat.hull] : look.icon, 52)}</div>`
+    + `<div class="urow-main"><div class="urow-head"><span class="item-title ol">${TRACK_NAME[t]}</span>${levelDots(boat[t], max)}<span class="urow-lvl">${maxed ? UPGRADE_ROW_TEXT.maxed : UPGRADE_ROW_TEXT.level(boat[t], max)}</span></div>`
+    + `<div class="urow-line">${UPGRADE_ROW_TEXT.now}: <b>${trackNow(boat, t)}</b></div>`
+    + `<div class="urow-line">${maxed ? '' : `${UPGRADE_ROW_TEXT.next}: `}${next}</div>${lock}</div>`
+    + `<div class="urow-act">${act}</div></div>`;
+}
+
 function upgrades(s: GameState, boat: Boat): string {
-  return cards(TRACKS.map((t) => {
-    const cost = trackCost(boat, t);
-    const chk = canUpgradeBoat(s, boat.id, t);
-    const look = TRACK_LOOK[t];
-    const foot = cost === null
-      ? button({ label: LABEL.maxed, tone: 'gold', size: 'sm', off: true })
-      : button({ label: chk.ok ? priceLabel(cost) : denyText(chk.reason, chk.needRank), act: 'up', a: boat.id, b: t, size: 'sm', off: !chk.ok });
-    return card({
-      tone: look.tone,
-      art: icon(t === 'hull' ? HULL_ICONS[boat.hull] : look.icon, 48),
-      lines: [stars(boat[t], TRACK_MAX[t]), trackNow(boat, t), cost === null ? 'All done' : `Next: ${trackNext(boat, t)}`],
-      name: TRACK_NAME[t],
-      foot,
-    });
-  }), 104);
+  return TRACKS.map((t) => upgradeRow(s, boat, t)).join('');
 }
 
 /** The "Stay home in storms" tick, with a line about what it does. */
@@ -61,26 +68,40 @@ function grounds(s: GameState, boat: Boat): string {
       .join('');
     return item({
       title: ZONE_NAME[z],
-      sub: `${Math.round(tripTimeFor(boat, z))}s trip · <span class="${unlocked && s.money < tripCostFor(z) ? 'bad' : ''}">${LABEL.tripCost} $${money(tripCostFor(z))}</span>${unlocked ? '' : ` · ${zoneNeeds(z)}`}`,
-      extra: `<div class="chips">${fish}</div>`,
+      sub: `${Math.round(tripTimeFor(boat, z))}s trip · <span class="${unlocked && s.money < tripCostFor(z) ? 'bad' : ''}">${LABEL.tripCost} $${money(tripCostFor(z))}</span>`,
+      extra: `<div class="chips">${fish}</div>${unlocked ? '' : lockNote({ money: s.money, rank: rankOf(s), reason: `${zoneNeeds(z)}. ${UPGRADE_ROW_TEXT.zoneHow}` })}`,
       state: sel ? 'sel' : unlocked ? undefined : 'locked',
       right: sel
         ? button({ label: 'Chosen', tone: 'gold', size: 'sm', off: true })
-        : button({ label: unlocked ? 'Choose' : LABEL.locked, act: 'target', a: boat.id, b: z, tone: 'info', size: 'sm', off: !unlocked }),
+        : button({ label: unlocked ? 'Choose' : `${icon('lock', 18)}${LABEL.locked}`, act: 'target', a: boat.id, b: z, tone: 'info', size: 'sm', off: !unlocked }),
     });
   }).join('');
 }
 
 function captain(s: GameState, boat: Boat): string {
   const cap = boat.captain;
-  if (!cap) return empty(rankOf(s) >= CAPTAINS_RANK ? 'No captain. A captain sails the boat for you. Hire one at the inn.' : `Captains come at rank ${RANK_NAME[CAPTAINS_RANK]}.`);
-  const info = TRAIT[cap.trait];
-  return item({
-    art: face(facePicture(captainLook(cap.id, cap.trait)), 56) || icon(cap.trait, 40),
-    title: `${cap.name} · ${info.name}`,
-    sub: `${info.desc} · $${cap.wage} a day${cap.unpaid ? ' · <span class="bad">not paid, no work today</span>' : ' · sails by day and pays the trip cost'}`,
-    right: button({ label: LABEL.endJob, act: 'firecap', a: boat.id, tone: 'danger', size: 'sm' }),
-  });
+  if (cap) {
+    const info = TRAIT[cap.trait];
+    return section(CAPTAIN_TEXT.hasTitle) + item({
+      art: face(facePicture(captainLook(cap.id, cap.trait)), 56) || icon(cap.trait, 40),
+      title: `${cap.name} · ${info.name}`,
+      sub: `${info.desc} · ${CAPTAIN_TEXT.wage(cap.wage)}${cap.unpaid ? ' · <span class="bad">not paid, no work today</span>' : ` · ${CAPTAIN_TEXT.helpGoing}`}<br>${CAPTAIN_TEXT.fishes(ZONE_NAME[boat.target])}`,
+      right: `<div class="col-y">${button({ label: CAPTAIN_TEXT.change, act: 'tab', a: 'grounds', tone: 'info', size: 'sm' })}${button({ label: LABEL.endJob, act: 'firecap', a: boat.id, tone: 'danger', size: 'sm' })}</div>`,
+    });
+  }
+  const head = section(CAPTAIN_TEXT.getTitle) + `<p class="yard-help">${CAPTAIN_TEXT.getHelp}</p>`;
+  if (rankOf(s) < CAPTAINS_RANK) return head + lockNote({ money: s.money, rank: rankOf(s), needRank: CAPTAINS_RANK, reason: CAPTAIN_TEXT.lockedWhy });
+  if (!s.candidates.length) return head + empty(CAPTAIN_TEXT.noneToHire);
+  const can = canHireCaptain(s, boat.id).ok;
+  return head + s.candidates.map((c) => {
+    const info = TRAIT[c.trait];
+    return item({
+      art: face(facePicture(captainLook(c.id, c.trait)), 56) || icon(c.trait, 40),
+      title: `${c.name} · ${info.name}`,
+      sub: `${info.desc} · ${CAPTAIN_TEXT.wage(c.wage)}`,
+      right: button({ label: CAPTAIN_TEXT.hire, act: 'hirecap', a: c.id, b: boat.id, tone: 'go', off: !can }),
+    });
+  }).join('');
 }
 
 function portrait(boat: Boat): string {
@@ -109,7 +130,7 @@ export const boatScreen: Screen = (ctx) => {
   const boat = s.boats.find((b) => b.id === ctx.arg);
   if (!boat) return { title: 'Boat', icon: icon('rowboat', 28), body: empty('There is no such boat.') };
   const tab = pickTab(ctx, TABS);
-  const pane = tab === 'upgrades' ? upgrades(s, boat) : tab === 'grounds' ? grounds(s, boat) : captain(s, boat);
+  const pane = tab === 'upgrades' ? captain(s, boat) + upgrades(s, boat) : grounds(s, boat);
   return {
     title: esc(boat.name),
     icon: icon(HULL_ICONS[boat.hull], 28),

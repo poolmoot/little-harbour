@@ -13,10 +13,10 @@
 .toasts { scale: var(--ui-zoom); transform-origin: top center; top: calc(70px * var(--ui-zoom)); }
 .banner { scale: var(--ui-zoom); transform-origin: top center; }
 /* Windows grow too, but never past the screen: their own size is divided by the same factor. */
-.win-wrap { scale: var(--win-zoom); width: min(700px, calc(62vw / var(--win-zoom))); }
-.win { max-height: calc(84vh / var(--win-zoom)); }
+.win-wrap { scale: var(--win-zoom); width: min(860px, calc(76vw / var(--win-zoom))); }
+.win { max-height: calc(88vh / var(--win-zoom)); }
 .win.menu { width: min(460px, calc(92vw / var(--win-zoom))); }
-@media (max-width: 1000px) { .win-wrap { width: min(700px, calc(94vw / var(--win-zoom))); } }
+@media (max-width: 1000px) { .win-wrap { width: min(860px, calc(94vw / var(--win-zoom))); } }
 
 /* Buttons in a card's footer wrap onto two lines instead of running out of the card. */
 .card-foot .btn { white-space: normal; line-height: 1.1; text-align: center; padding-left: 8px; padding-right: 8px; }
