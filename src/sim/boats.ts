@@ -1,4 +1,4 @@
-import { KING_CHANCE, STORM_CATCH_MULT, STORM_DAMAGE_CHANCE } from './config';
+import { KING_CHANCE, LIGHTHOUSE_NIGHT_TRIP_MULT, STORM_CATCH_MULT, STORM_DAMAGE_CHANCE } from './config';
 import type { Species, ZoneId } from './config';
 import { rollCatch } from './catch';
 import { midSize, recordCatch, rollFish } from './fishbook';
@@ -23,7 +23,6 @@ export function dispatchBoat(state: GameState, boatId: number, zone?: ZoneId, au
   if (boat.status === 'out') return [{ type: 'denied', reason: 'That boat is already out at sea.' }];
   if (boat.status === 'returned') return [{ type: 'denied', reason: 'Unload the boat first.' }];
   if (boat.damaged) return [{ type: 'denied', reason: 'This boat is broken. Fix it at the shipyard.' }];
-  if (isNight(state) && !state.buildings.lighthouse) return [{ type: 'denied', reason: 'It is too dark to go out. Wait for morning.' }];
   if (!zoneUnlockedFor(boat, z)) return [{ type: 'denied', reason: 'This boat is too small to go there.' }];
   if (isStorm(state) && boat.stayInStorms && isStormZone(z)) return [{ type: 'denied', reason: 'There is a storm. This boat stays home.' }];
   const cost = tripCostFor(z);
@@ -33,7 +32,7 @@ export function dispatchBoat(state: GameState, boatId: number, zone?: ZoneId, au
   boat.zone = z;
   boat.target = z;
   boat.progress = 0;
-  boat.tripTime = tripTimeFor(boat, z) * weatherTripMult(state);
+  boat.tripTime = tripTimeFor(boat, z) * weatherTripMult(state) * (isNight(state) && state.buildings.lighthouse > 0 ? LIGHTHOUSE_NIGHT_TRIP_MULT : 1);
   boat.tripWeather = state.weather;
   boat.tripBonus = bigCatchExtra(state, z);
   boat.nightTrip = isNight(state);

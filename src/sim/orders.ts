@@ -8,6 +8,7 @@ import type { Ev, GameState, Order } from './state';
 import { nextId } from './state';
 import { earnBonus } from './ledger';
 import { maxHullOwned } from './fleet';
+import { realSecondsFor } from './time';
 
 export function reachableSpecies(state: GameState): Species[] {
   const out = new Set<Species>();
@@ -30,7 +31,7 @@ export function spawnOrder(state: GameState, rng: Rng): Ev[] {
     species,
     qty,
     filled: 0,
-    deadline: state.clock + hours * HOUR_SECONDS,
+    deadline: state.clock + realSecondsFor(state.dayTime, hours * HOUR_SECONDS), // in-game hours; the night passes faster, so this is fewer real seconds when it spans one
     name: rng.pick(names),
     baseValue: qty * FISH_PRICE[species],
   };

@@ -14,7 +14,7 @@ export const keycaps = (keys: readonly string[]): string => `<span class="caps">
 
 /** The words for a step; while the step cannot be done yet, the advice replaces them. */
 export function adviceLine(a: GuideAdvice): string {
-  return a.why === 'night' ? ADVICE.night : `${ADVICE.cost(a.need!.cost)} ${ADVICE.how[a.how]}`;
+  return `${ADVICE.cost(a.need!.cost)} ${ADVICE.how[a.how]}`;
 }
 
 export function stepCardHtml(index: number, advice: GuideAdvice | null = null): string {

@@ -214,6 +214,8 @@ export type Ev =
   | { type: 'rankUp'; rank: number }
   | { type: 'wagesPaid'; paid: number; unpaid: number }
   | { type: 'phaseChanged'; phase: Phase }
+  | { type: 'workersSleep' }
+  | { type: 'workersWake' }
   | { type: 'dayEnded'; day: number; stats: DayStats; forecast?: Forecast }
   | { type: 'guideStep'; index: number; done: boolean }
   | { type: 'guideUnlock'; id: UnlockId }

@@ -22,7 +22,7 @@ export const maxBoats = (rank: number): number => Math.min(MAX_BOATS, rank + 1);
 /** Highest hull tier that may be bought at this rank. */
 export const maxHullTier = (rank: number): number => Math.min(3, rank);
 export const DOCKHANDS_RANK = 1;
-export const CAPTAINS_RANK = 2;
+export const CAPTAINS_RANK = 1;
 export const dockhandsUnlocked = (rank: number): boolean => rank >= DOCKHANDS_RANK;
 export const captainsUnlocked = (rank: number): boolean => rank >= CAPTAINS_RANK;
 

@@ -22,9 +22,10 @@ function nightDeep(lighthouse = true): GameState {
 }
 
 describe('King Fish', () => {
-  it('only deep night trips with the lighthouse lit can bring it, and no sailing at night without one', () => {
+  it('only deep night trips with the lighthouse lit can bring it', () => {
     const dark = nightDeep(false);
-    expect(dispatchBoat(dark, 1, 'deep')[0].type).toBe('denied');
+    expect(dispatchBoat(dark, 1, 'deep')[0].type).toBe('boatDispatched');
+    expect(stepBoats(dark, 999, new Fixed(0.001)).some((e) => e.type === 'kingFishFound')).toBe(false);
     const s = nightDeep();
     expect(dispatchBoat(s, 1, 'deep')[0].type).toBe('boatDispatched');
     const evs = stepBoats(s, 999, new Fixed(0.001));

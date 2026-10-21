@@ -204,6 +204,12 @@ export class EventRouter {
           if (e.phase === 'dawn') a.dawn();
           if (e.phase === 'night') h.toast(say.nightFalls);
           break;
+        case 'workersSleep':
+          h.toast(say.workersSleep);
+          break;
+        case 'workersWake':
+          h.toast(say.workersWake);
+          break;
         case 'dayEnded':
           a.dayReport();
           this.d.showSummary(e.day, e.stats);

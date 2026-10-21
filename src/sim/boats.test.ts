@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dispatchBoat, stepBoats, unloadBoat } from './boats';
+import { ZONES } from './config';
 import { dockCrates } from './crates';
 import { Rng } from './rng';
 import { initialState } from './state';
@@ -10,7 +11,7 @@ describe('boat lifecycle', () => {
     const rng = new Rng(1);
     expect(dispatchBoat(s, 1, 'shallows')[0].type).toBe('boatDispatched');
     expect(dispatchBoat(s, 1, 'shallows')[0].type).toBe('denied');
-    expect(stepBoats(s, 24, rng)).toHaveLength(0);
+    expect(stepBoats(s, ZONES.shallows.trip - 1, rng)).toHaveLength(0);
     const ev = stepBoats(s, 2, rng);
     expect(ev[0].type).toBe('boatReturned');
     expect(s.boats[0].catch).toHaveLength(4);
@@ -21,27 +22,35 @@ describe('boat lifecycle', () => {
     expect(dockCrates(s).every((c) => c.freshness === 100)).toBe(true);
     expect(s.boats[0].status).toBe('docked');
   });
-  it('cannot sail at night, but a boat already out still returns', () => {
+  it('can sail at night, and the lighthouse makes a night trip 30% shorter', () => {
     const s = initialState();
     const rng = new Rng(1);
-    dispatchBoat(s, 1, 'shallows');
     s.dayTime = 220;
-    expect(stepBoats(s, 30, rng)[0].type).toBe('boatReturned');
+    expect(dispatchBoat(s, 1, 'shallows')[0].type).toBe('boatDispatched');
+    expect(s.boats[0].tripTime).toBeCloseTo(ZONES.shallows.trip);
+    expect(stepBoats(s, 60, rng)[0].type).toBe('boatReturned');
     unloadBoat(s, 1);
-    expect(dispatchBoat(s, 1, 'shallows')[0].type).toBe('denied');
+    s.buildings.lighthouse = 1;
+    dispatchBoat(s, 1, 'shallows');
+    expect(s.boats[0].tripTime).toBeCloseTo(ZONES.shallows.trip * 0.7);
+    unloadBoat(s, 1);
+    s.dayTime = 100;
+    s.boats[0].status = 'docked';
+    dispatchBoat(s, 1, 'shallows');
+    expect(s.boats[0].tripTime).toBeCloseTo(ZONES.shallows.trip); // day trips do not change
   });
-  it('reef needs the hull and takes 50 s', () => {
+  it('reef needs the hull and takes its own time', () => {
     const s = initialState();
     expect(dispatchBoat(s, 1, 'reef')[0].type).toBe('denied');
     s.boats[0].hull = 1;
     dispatchBoat(s, 1, 'reef');
-    expect(s.boats[0].tripTime).toBe(50);
+    expect(s.boats[0].tripTime).toBe(ZONES.reef.trip);
   });
   it('hold upgrades change the catch size', () => {
     const s = initialState();
     s.boats[0].hold = 2;
     dispatchBoat(s, 1, 'shallows');
-    stepBoats(s, 30, new Rng(2));
+    stepBoats(s, 60, new Rng(2));
     expect(s.boats[0].catch).toHaveLength(8);
   });
 });

@@ -63,6 +63,12 @@ export function step(state: GameState, dt: number, rng: Rng): Ev[] {
     evs.push(w.ev);
   }
   evs.push(...clockEvs);
+  if (state.dockhands.length > 0) {
+    for (const e of clockEvs) {
+      if (e.type === 'phaseChanged' && e.phase === 'night') evs.push({ type: 'workersSleep' });
+      if (e.type === 'phaseChanged' && e.phase === 'dawn') evs.push({ type: 'workersWake' });
+    }
+  }
   evs.push(...stepBoats(state, dt, rng));
   evs.push(...stepCaptains(state));
   evs.push(...stepDockhands(state, dt));

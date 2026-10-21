@@ -16,10 +16,10 @@ export const FISH_PRICE: Record<Species, number> = {
 
 /** trip = seconds at sea. tripCost = food and supplies, paid when the boat leaves. needsHull = minimum hull tier (0 Rowboat .. 3 Trawler). */
 export const ZONES: Record<ZoneId, { trip: number; tripCost: number; needsHull: number; table: Partial<Record<Species, number>> }> = {
-  shallows: { trip: 25, tripCost: 3, needsHull: 0, table: { herring: 50, mackerel: 30, flounder: 20 } },
-  reef: { trip: 50, tripCost: 10, needsHull: 1, table: { seabass: 50, snapper: 35, lobster: 15 } },
-  opensea: { trip: 80, tripCost: 30, needsHull: 2, table: { cod: 50, tuna: 35, swordfish: 15 } },
-  deep: { trip: 120, tripCost: 80, needsHull: 3, table: { anglerfish: 50, squid: 35, sturgeon: 15 } },
+  shallows: { trip: 32, tripCost: 3, needsHull: 0, table: { herring: 50, mackerel: 30, flounder: 20 } },
+  reef: { trip: 65, tripCost: 10, needsHull: 1, table: { seabass: 50, snapper: 35, lobster: 15 } },
+  opensea: { trip: 105, tripCost: 30, needsHull: 2, table: { cod: 50, tuna: 35, swordfish: 15 } },
+  deep: { trip: 155, tripCost: 80, needsHull: 3, table: { anglerfish: 50, squid: 35, sturgeon: 15 } },
 };
 export const ZONE_IDS: ZoneId[] = ['shallows', 'reef', 'opensea', 'deep'];
 
@@ -34,6 +34,14 @@ export const DAY_SECONDS = 360;
 export const HOUR_SECONDS = DAY_SECONDS / 24;
 export const START_HOUR = 6;
 export const PHASE_HOURS = { dawnStart: 6, dayStart: 8, duskStart: 18, nightStart: 20 };
+/** The night passes this many times faster than the rest of the day, so the player can keep playing. */
+export const NIGHT_SPEED = 2.5;
+/** Clock seconds (since 06:00) when the night starts; the night then runs to the end of the day. */
+export const NIGHT_START_TIME = (PHASE_HOURS.nightStart - START_HOUR) * HOUR_SECONDS;
+/** Real seconds one in-game day takes now that the night runs faster. */
+export const DAY_REAL_SECONDS = NIGHT_START_TIME + (DAY_SECONDS - NIGHT_START_TIME) / NIGHT_SPEED;
+/** With the lighthouse built, trips that leave at night take this share of the normal time. */
+export const LIGHTHOUSE_NIGHT_TRIP_MULT = 0.7;
 
 // Crates
 export const DOCK_DECAY_SECONDS = 150;
@@ -102,7 +110,7 @@ export const TOP_RANK = RANK_THRESHOLDS.length - 1;
 // ---- Staff --------------------------------------------------------------
 export type Trait = 'swift' | 'lucky' | 'careful' | 'thrifty';
 export const TRAITS: Trait[] = ['swift', 'lucky', 'careful', 'thrifty'];
-export const CAPTAIN_WAGE = 40;
+export const CAPTAIN_WAGE = 60;
 export const DOCKHAND_WAGE = 25;
 export const MAX_DOCKHANDS = 4;
 export const CANDIDATE_COUNT = 3;
@@ -280,7 +288,7 @@ export const CONTRACT_TURNAROUND = 12;
 export const CONTRACT_SAIL_HOURS = 14;
 
 // ---- King Fish and the money-per-minute figure ----------------------------------
-export const KING_CHANCE = 0.02;
+export const KING_CHANCE = 0.04;
 export const RATE_SAMPLE_SECONDS = 5;
 export const RATE_WINDOW_SECONDS = 120;
 
@@ -314,7 +322,7 @@ export const BOOK_REWARD_STARS: Record<ZoneId, number> = { shallows: 100, reef: 
 export const AWAY_MIN_SECONDS = 60; // shorter absences are ignored
 export const AWAY_MAX_SECONDS = 8 * 3600; // time away counts for at most 8 hours
 export const AWAY_SHARE = 0.5; // the harbour earns half as much when you are not there
-export const AWAY_SIM_SECONDS = DAY_SECONDS; // one in-game day is simulated to measure the rate
+export const AWAY_SIM_SECONDS = DAY_REAL_SECONDS; // one in-game day is simulated to measure the rate
 
 // ---- Goals -------------------------------------------------------------------
 export type GoalKind =

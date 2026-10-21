@@ -5,7 +5,7 @@ import { zoneUnlocked } from './boats';
 import { buyUpgrade, canBuy } from './upgrades';
 import { buyBoat, buyBoatUpgrade, canBuyBoat, holdSize, trackCost, tripTimeFor, rareMult } from './fleet';
 import { stallLevel } from './market';
-import { DEMAND_DROPS } from './config';
+import { DEMAND_DROPS, ZONES } from './config';
 import { sellCrate } from './market';
 import { addCrate } from './crates';
 
@@ -55,7 +55,7 @@ describe('per-boat upgrades', () => {
     expect(holdSize(s.boats[0])).toBe(8);
     expect(holdSize(s.boats[1])).toBe(4);
     buyBoatUpgrade(s, 1, 'sails');
-    expect(tripTimeFor(s.boats[0], 'shallows')).toBeCloseTo(25 * 0.85);
+    expect(tripTimeFor(s.boats[0], 'shallows')).toBeCloseTo(ZONES.shallows.trip * 0.85);
     buyBoatUpgrade(s, 1, 'gear');
     expect(rareMult(s.boats[0])).toBe(1.5);
   });

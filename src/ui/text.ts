@@ -139,7 +139,9 @@ export const say = {
   fired: (name: string) => `${name} left.`,
   unpaid: (n: number) => `Could not pay ${plural(n, 'person', 'people')}. They do not work today.`,
   rankUp: (rank: number) => `New rank! You unlocked: ${RANK_UNLOCKS[rank]}`,
-  nightFalls: 'Night is here. Boats cannot go out until morning.',
+  nightFalls: 'Night is here. It passes quickly. Your boats can still sail.',
+  workersSleep: 'Your workers have gone home to sleep. They are back in the morning.',
+  workersWake: 'Your workers are back at work.',
   sold: (n: number, total: number) => `Sold ${crates(n)} for $${total}.`,
   bonusPop: (bonus: number) => `Bonus +$${bonus}`,
   // prompts
@@ -184,7 +186,7 @@ export function pickLine(role: Role, c: LineContext, n: number): string {
     if (c.phase === 'dawn' || c.phase === 'dusk') lines.push('Flounder bite in the morning and the evening. They sell well.');
     lines.push('Fresh fish sells best. Do not let it sit in the sun.', 'If I get too much of one fish, the price goes down. Bring a mix!');
   } else if (role === 'shipwright') {
-    if (c.phase === 'night') lines.push('Boats cannot go out in the dark. Come back in the morning.');
+    if (c.phase === 'night') lines.push('Boats can still go out in the dark. The night does not last long.');
     if (c.boatsOut > 0) lines.push('Your boat is out there. Listen for the bell.');
     if (c.money >= 150) lines.push('I see money in your pocket. Want more crate space?');
     lines.push('More crate space means more fish on every trip.', 'A bigger boat can go to the coral reef.');
@@ -227,7 +229,7 @@ export const GOAL_TEXT: Record<string, string> = {
   level2: 'Upgrade any building.',
   seafish: 'Catch every kind of fish in the Open Sea.',
   rank4: 'Become the Harbour Boss.',
-  lighthouse: 'Build the lighthouse. Then your boats can sail at night.',
+  lighthouse: 'Build the lighthouse. Then your night trips are faster.',
   king: 'Catch the King Fish. Sail to the Deep Sea at night.',
 };
 export const GOAL_LABEL = { title: 'Goal', reward: 'Reward', done: 'All goals done!', all: 'You finished every goal.' };
@@ -243,7 +245,7 @@ export const BUILDING_DESC: Record<BuildingId, string> = {
   coldstore: 'Keeps fish fresh for a very long time. Fish lose all their freshness in 20 minutes here, not 2 and a half. The ice box stays too.',
   smokehouse: `Turns a fresh crate into a smoked crate. Smoked fish sells for ${SMOKED_MULT} times the price, and it never goes bad.`,
   restaurant: `Buys fresh fish (at least ${RESTAURANT_MIN_FRESH}% fresh) for ${RESTAURANT_MULT} times the price. It does not lower the market price. It pays ${Math.round(RESTAURANT_VARIETY_BONUS * 100)}% more for each different fish it was served today.`,
-  lighthouse: 'Lights the way, so your boats can sail at night. You need it to find the King Fish.',
+  lighthouse: 'Lights the way, so trips at night are 30% faster. You need it to find the King Fish.',
 };
 
 /** What each level gives, for the building panel. Index = level - 1. */
@@ -251,7 +253,7 @@ export const BUILDING_LEVELS: Record<BuildingId, string[]> = {
   coldstore: [1, 2, 3].map((l) => `Holds ${crates(COLD_CAPACITY[l])}.`),
   smokehouse: [1, 2, 3].map((l) => `${plural(SMOKE_RACKS[l], 'rack')}. ${SMOKE_SECONDS[l]} seconds for each crate.`),
   restaurant: [1, 2, 3].map((l) => `Buys ${crates(RESTAURANT_CAPACITY[l])} a day.`),
-  lighthouse: ['Boats can sail at night.'],
+  lighthouse: ['Trips at night are 30% faster.'],
 };
 
 export const buildingNeeds = (id: BuildingId): string => needsRank(BUILDINGS[id].rank);

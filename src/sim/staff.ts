@@ -125,7 +125,7 @@ export function stepCaptains(state: GameState): Ev[] {
   for (const b of state.boats) {
     if (!activeCaptain(b)) continue;
     if (b.status === 'returned') evs.push(...unloadBoat(state, b.id, true));
-    if (b.status === 'docked' && (!isNight(state) || state.buildings.lighthouse > 0)) {
+    if (b.status === 'docked') {
       const r = dispatchBoat(state, b.id, undefined, true);
       if (r[0].type === 'boatDispatched') evs.push(r[0]);
     }
@@ -241,6 +241,15 @@ function releaseCrates(state: GameState, d: Dockhand): void {
   d.job = null;
 }
 
+/** Night has come while a worker was walking to pick something up: let go of the crates and walk home. Workers already carrying crates deliver them first. */
+function sendHome(state: GameState, d: Dockhand): void {
+  const job = d.job!;
+  const here = { x: 0, z: 0, dx: 0, dz: 0 };
+  jobPose(job, here);
+  for (const c of state.crates) if (c.carrier === d.id) c.carrier = undefined;
+  d.job = mkJob('back', walkPath({ x: here.x, z: here.z }, homePos(d.slot)), [], job.dest);
+}
+
 function startJob(state: GameState, d: Dockhand): void {
   const plan = planJob(state);
   if (!plan) return;
@@ -307,11 +316,13 @@ function finishPhase(state: GameState, d: Dockhand, evs: Ev[]): void {
 
 export function stepDockhands(state: GameState, dt: number): Ev[] {
   const evs: Ev[] = [];
+  const asleep = isNight(state);
   for (const d of state.dockhands) {
     if (!d.job) {
-      if (!d.unpaid) startJob(state, d);
+      if (!d.unpaid && !asleep) startJob(state, d); // at night the workers are home asleep
       continue;
     }
+    if (asleep && d.job.phase === 'out') sendHome(state, d);
     d.job.d += DOCKHAND_SPEED * dt;
     if (d.job.d >= d.job.len) finishPhase(state, d, evs);
   }

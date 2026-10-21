@@ -157,7 +157,7 @@ describe('captains are easy to find', () => {
   it('explains the lock when captains are not open yet', () => {
     const v = (() => { const s = initialState(); return boatScreen(ctx(s, { arg: s.boats[0].id })); })();
     expect(v.body).toContain('Get a captain');
-    expect(v.body).toContain('Needs rank: Small Company (you are Beginner)');
+    expect(v.body).toContain('Needs rank: Boat Owner (you are Beginner)');
   });
 
   it('shows the captain, the place they fish and End job when hired', () => {
