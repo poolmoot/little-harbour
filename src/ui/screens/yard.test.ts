@@ -1,3 +1,4 @@
+import { TRACK_MAX } from '../../sim/config';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../audio/settings';
 import { TRACKS } from '../../sim/config';
@@ -85,7 +86,7 @@ describe('boat window upgrades', () => {
 
   it('shows a Maxed state and no button action when fully upgraded', () => {
     const s = rich();
-    s.boats[0].hold = 3;
+    s.boats[0].hold = TRACK_MAX.hold;
     const html = boatScreen(ctx(s, { arg: s.boats[0].id })).body;
     expect(html).toContain('Maxed');
     expect(html).toContain('Fully upgraded');

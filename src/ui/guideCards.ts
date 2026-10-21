@@ -1,4 +1,4 @@
-import { GUIDE_STEPS, guideDone } from '../sim/guide';
+import { GUIDE_STEPS, guideDone, shownStep } from '../sim/guide';
 import type { GuideTarget } from '../sim/guide';
 import type { GuideAdvice } from '../sim/guideAdvice';
 import type { GameState } from '../sim/state';
@@ -66,7 +66,7 @@ export class GuideCards {
     if (this.cardId) return unlockTarget(this.cardId);
     if (this.replayStep) return GUIDE_STEPS[this.replayStep.index]?.target ?? null;
     if (this.advice) return this.advice.target;
-    return guideDone(state) ? null : GUIDE_STEPS[state.guide.step].target;
+    return guideDone(state) ? null : GUIDE_STEPS[shownStep(state)].target;
   }
 
   /** Call every frame. `on` is false on the title screen, when paused, or when guide tips are switched off. */
@@ -95,7 +95,7 @@ export class GuideCards {
     }
 
     // step card
-    const idx = !on ? -1 : this.replayStep ? this.replayStep.index : guideDone(state) ? -1 : state.guide.step;
+    const idx = !on ? -1 : this.replayStep ? this.replayStep.index : guideDone(state) ? -1 : shownStep(state);
     const adv = this.replayStep ? null : advice;
     const key = idx >= 0 ? `step:${idx}${adv ? `:${adviceLine(adv)}` : ''}` : '';
     const html = idx >= 0 ? stepCardHtml(idx, adv) : '';

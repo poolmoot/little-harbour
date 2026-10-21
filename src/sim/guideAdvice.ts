@@ -1,6 +1,6 @@
 import { handCrates } from './crates';
 import { trackCost, tripCostFor } from './fleet';
-import { GUIDE_STEPS, guideDone } from './guide';
+import { GUIDE_STEPS, guideDone, shownStep } from './guide';
 import type { GuideTarget } from './guide';
 import type { GameState } from './state';
 import { isNight } from './time';
@@ -34,7 +34,7 @@ export function guideAdvice(s: GameState): GuideAdvice | null {
   if (guideDone(s)) return null;
   const boat = s.boats[0];
   if (!boat) return null;
-  switch (GUIDE_STEPS[s.guide.step].id) {
+  switch (GUIDE_STEPS[shownStep(s)].id) {
     case 'send': {
       if (isNight(s)) return { why: 'night', how: 'pier', target: 'pierEnd' };
       const cost = tripCostFor(boat.target, boat);

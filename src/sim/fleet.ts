@@ -1,6 +1,6 @@
 import {
   BOAT_COST, BOAT_NAMES, GEAR_MULT, HOLD_SIZES, LUCKY_MULT, MAX_BOATS, SAILS_MULT, SWIFT_MULT, TIER_COST_MULT,
-  TRACK_COST, TRACK_MAX, ZONES, ZONE_IDS,
+  TRACK_COST, TRACK_LEVEL_HULL, TRACK_MAX, ZONES, ZONE_IDS,
 } from './config';
 import type { Track, ZoneId } from './config';
 import { levelCatchMult, levelSpeedMult } from './captains';
@@ -41,6 +41,12 @@ export function trackCost(b: Boat, track: Track): number | null {
   return track === 'hull' ? base : Math.round(base * TIER_COST_MULT[b.hull]);
 }
 
+/** The Boat size the next level of this track needs, or null when this boat is big enough (or the track is done). */
+export function needsHullFor(b: Boat, track: Track): number | null {
+  const need = TRACK_LEVEL_HULL[track][b[track] + 1];
+  return need !== undefined && b.hull < need ? need : null;
+}
+
 export function canUpgradeBoat(state: GameState, boatId: number, track: Track): Check {
   const b = state.boats.find((x) => x.id === boatId);
   if (!b) return { ok: false, reason: 'No such boat' };
@@ -49,6 +55,8 @@ export function canUpgradeBoat(state: GameState, boatId: number, track: Track): 
   if (track === 'hull' && b.hull + 1 > maxHullTier(rankOf(state))) {
     return { ok: false, reason: 'Rank too low', needRank: b.hull + 1, cost };
   }
+  const needHull = needsHullFor(b, track);
+  if (needHull !== null) return { ok: false, reason: 'Boat too small', needHull, cost };
   if (state.money < cost) return { ok: false, reason: 'Not enough money', cost };
   return { ok: true, cost };
 }

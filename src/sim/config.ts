@@ -78,18 +78,25 @@ export const UPGRADE_IDS: UpgradeId[] = ['icebox', 'handcart', 'stall1', 'stall2
 // ---- Fleet (per-boat tracks) -------------------------------------------
 export type Track = 'hull' | 'hold' | 'gear' | 'sails';
 export const TRACKS: Track[] = ['hull', 'hold', 'gear', 'sails'];
-export const TRACK_MAX: Record<Track, number> = { hull: 3, hold: 3, gear: 2, sails: 2 };
-export const HOLD_SIZES = [4, 6, 8, 12];
-export const GEAR_MULT = [1, 1.5, 2.2];
-export const SAILS_MULT = [1, 0.85, 0.7];
+export const TRACK_MAX: Record<Track, number> = { hull: 3, hold: 6, gear: 4, sails: 4 };
+export const HOLD_SIZES = [4, 6, 8, 12, 16, 20, 25];
+export const GEAR_MULT = [1, 1.5, 2.2, 3, 4];
+export const SAILS_MULT = [1, 0.85, 0.7, 0.6, 0.5];
+/** Smallest Boat size (hull) each level needs (index = level). The later levels are for the big boats and keep the game going. */
+export const TRACK_LEVEL_HULL: Record<Track, number[]> = {
+  hull: [0, 0, 0, 0],
+  hold: [0, 0, 0, 0, 2, 3, 3],
+  gear: [0, 0, 0, 2, 3],
+  sails: [0, 0, 0, 2, 3],
+};
 export const MAX_BOATS = 4;
 export const BOAT_NAMES = ['Gull', 'Wren', 'Marigold', 'Albatross'];
 /** Cost to reach level i of each track (index 0 unused). Hold, Gear and Sails are multiplied by TIER_COST_MULT[hull]. */
 export const TRACK_COST: Record<Track, number[]> = {
   hull: [0, 400, 2500, 4500],
-  hold: [0, 110, 450, 1200],
-  gear: [0, 350, 950],
-  sails: [0, 350, 800],
+  hold: [0, 110, 450, 1200, 3000, 8000, 20000],
+  gear: [0, 350, 950, 3000, 9000],
+  sails: [0, 350, 800, 2500, 8000],
 };
 export const TIER_COST_MULT = [1, 1.6, 2.6, 4];
 /** Price of the nth boat (index = boats already owned). Bought as a rowboat. */

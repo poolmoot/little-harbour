@@ -1,4 +1,4 @@
-import { GUIDE_STEPS, guideDone } from '../sim/guide';
+import { GUIDE_STEPS, guideDone, shownStep } from '../sim/guide';
 import type { StepId } from '../sim/guide';
 import type { GuideAdvice } from '../sim/guideAdvice';
 import type { GameState } from '../sim/state';
@@ -61,7 +61,7 @@ export class Coach {
   /** Call every frame. `on` is false on the title screen, when paused or when guide tips are off. `target` is the world point the trail leads to. */
   update(s: GameState, open: PanelKind | null, on: boolean, target: Pt3 | null, project: Project, advice: GuideAdvice | null = null): void {
     if (!on || guideDone(s)) { this.hideAll(); return; }
-    const hint = hintFor(GUIDE_STEPS[s.guide.step].id, open, advice);
+    const hint = hintFor(GUIDE_STEPS[shownStep(s)].id, open, advice);
     // A greyed-out button is never ringed.
     const btn = hint ? [...document.querySelectorAll<HTMLElement>(hint.press.split(', ').map((q) => `.overlay.open ${q}`).join(', '))].find((b) => !b.classList.contains('off')) : null;
     if (hint && btn) {

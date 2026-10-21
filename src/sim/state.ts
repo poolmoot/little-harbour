@@ -249,6 +249,7 @@ export interface Check {
   reason?: string;
   needRank?: number;
   cost?: number;
+  needHull?: number; // set when only a bigger boat is missing (Boat size level)
 }
 
 export const STATE_VERSION = 7;

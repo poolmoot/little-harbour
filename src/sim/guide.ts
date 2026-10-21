@@ -69,6 +69,17 @@ export const isGentle = (s: GameState): boolean => s.guide.gentle && s.tally.sol
 /** Index of a step id. */
 export const stepIndex = (id: StepId): number => GUIDE_STEPS.findIndex((x) => x.id === id);
 
+/**
+ * The step to show now. Usually the saved step, but before the first sale a fish in the player's hands (from the pier or a
+ * crate) jumps straight to "Sell your fish", so nobody stands holding a fish waiting for the boat. After that sale the guide
+ * carries on from the saved step (unloading the boat, and so on).
+ */
+export function shownStep(s: GameState): number {
+  const sell = stepIndex('sell');
+  if (s.guide.step < sell && s.tally.sold === 0 && s.crates.some((c) => c.loc === 'hand' && !c.king)) return sell;
+  return s.guide.step;
+}
+
 function stepDone(s: GameState, id: StepId): boolean {
   const t = s.tally;
   switch (id) {
