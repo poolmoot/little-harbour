@@ -42,7 +42,7 @@ describe('shipyard page', () => {
 
   it('shows each harbour upgrade with its price and a Buy button in view', () => {
     const v = shipyardScreen(ctx(rich()));
-    expect(v.body.match(/data-act="buy"/g)).toHaveLength(4);
+    expect(v.body.match(/data-act="buy"/g)).toHaveLength(3);
     expect(v.body).toContain('Buy — ');
   });
 

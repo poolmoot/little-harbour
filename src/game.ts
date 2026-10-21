@@ -5,10 +5,10 @@ import { HOUR_SECONDS, START_HOUR } from './sim/config';
 import type { ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
-import { applyAway, buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy } from './sim/sim';
+import { applyAway, buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget } from './sim/sim';
 import { renameBoat, setHarbourName } from './sim/sim';
-import { acceptContract, buyBuilding, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate, storeInCold, takeFromCold } from './sim/sim';
-import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce } from './sim/sim';
+import { acceptContract, buyBuilding, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate } from './sim/sim';
+import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
 import { guideAdvice } from './sim/guideAdvice';
@@ -176,12 +176,7 @@ export class Game {
         fireCaptain: (b) => this.run(fireCaptain(this.state, b)),
         hireDockhand: () => this.run(hireDockhand(this.state, this.rng)),
         fireDockhand: (id) => this.run(fireDockhand(this.state, id)),
-        setPolicy: (p) => this.run(setHaulPolicy(this.state, p)),
-        store: (id) => this.run(storeInIce(this.state, id)),
-        take: (id) => this.run(takeFromIce(this.state, id)),
         build: (id) => this.run(buyBuilding(this.state, id)),
-        coldIn: (id) => this.run(storeInCold(this.state, id)),
-        coldOut: (id) => this.run(takeFromCold(this.state, id)),
         smokeIn: (id) => this.run(smokeCrate(this.state, id)),
         smokeOut: (id) => this.run(collectSmoked(this.state, id)),
         sellToRestaurant: (id) => this.run(sellToRestaurant(this.state, id)),

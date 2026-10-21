@@ -62,7 +62,6 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
     type Opt = { cost: number; go: () => void; pay?: boolean };
     const opts: Opt[] = [];
     for (const id of UPGRADE_IDS) {
-      if (id === 'icebox') continue;
       if (canBuy(s, id).ok) opts.push({ cost: UPGRADES[id].cost, go: () => { buyUpgrade(s, id); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}`); } });
     }
     for (const b of s.boats) {
@@ -72,9 +71,8 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
       }
     }
     for (const id of BUILDING_IDS) {
-      if (id === 'coldstore' && s.rank < 2) continue; // the scripted player does not use the cold store, but buys it for the goals
       // The lighthouse is the road to the King Fish: only once the fleet is worth night trips.
-      if (id === 'lighthouse' && s.boats.filter((b) => b.hull === 3).length < 1) continue;
+      if (id === 'lighthouse' && s.boats.filter((b) => b.hull === 3).length < 2) continue;
       const c = canBuyBuilding(s, id);
       if (c.ok) opts.push({ cost: c.cost!, pay: id === 'smokehouse' || id === 'restaurant' || id === 'lighthouse', go: () => { buyBuilding(s, id as BuildingId); if (id === 'smokehouse') for (const sp of SPECIES) setSmokeList(s, sp, true); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}${s.buildings[id]}`); } });
     }

@@ -32,14 +32,13 @@ export const UNLOCK_GAP = 45;
 /** Fish caught before the fish book card comes up. */
 export const BOOK_CARD_FISH = 3;
 
-export type UnlockId = 'workers' | 'captains' | 'coldstore' | 'smokehouse' | 'restaurant' | 'lighthouse' | 'contracts' | 'weather' | 'book' | 'away';
+export type UnlockId = 'workers' | 'captains' | 'smokehouse' | 'restaurant' | 'lighthouse' | 'contracts' | 'weather' | 'book' | 'away';
 
 interface UnlockDef { id: UnlockId; target?: GuideTarget; ready?(s: GameState): boolean }
 
 export const UNLOCKS: readonly UnlockDef[] = [
   { id: 'workers', target: 'inn', ready: (s) => rankOf(s) >= DOCKHANDS_RANK },
   { id: 'captains', target: 'inn', ready: (s) => rankOf(s) >= CAPTAINS_RANK },
-  { id: 'coldstore', target: 'coldstore', ready: (s) => rankOf(s) >= BUILDINGS.coldstore.rank },
   { id: 'smokehouse', target: 'smokehouse', ready: (s) => rankOf(s) >= BUILDINGS.smokehouse.rank },
   { id: 'restaurant', target: 'restaurant', ready: (s) => rankOf(s) >= BUILDINGS.restaurant.rank },
   { id: 'lighthouse', target: 'lighthouse', ready: (s) => rankOf(s) >= BUILDINGS.lighthouse.rank },
@@ -143,7 +142,6 @@ export function guideForOldSave(s: GameState): GuideState {
   const used: Partial<Record<UnlockId, boolean>> = {
     workers: s.dockhands.length > 0,
     captains: s.boats.some((b) => b.captain),
-    coldstore: s.buildings.coldstore > 0,
     smokehouse: s.buildings.smokehouse > 0,
     restaurant: s.buildings.restaurant > 0,
     lighthouse: s.buildings.lighthouse > 0,

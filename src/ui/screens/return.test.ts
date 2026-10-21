@@ -5,8 +5,6 @@ import { addCrate } from '../../sim/crates';
 import { zoneFish } from '../../sim/fishbook';
 import { initialState } from '../../sim/sim';
 import type { GameState } from '../../sim/state';
-import { coldstoreView } from './coldstore';
-import { iceboxScreen } from './icebox';
 import { logbookScreen } from './logbook';
 import { marketScreen } from './market';
 import { restaurantRefusal, restaurantView } from './restaurant';
@@ -25,8 +23,6 @@ const rich = (): GameState => {
   const s = initialState();
   s.lifetime = 1_000_000;
   s.money = 1_000_000;
-  s.upgrades.icebox = true;
-  s.buildings.coldstore = 1;
   s.buildings.smokehouse = 1;
   s.buildings.restaurant = 1;
   return s;
@@ -96,18 +92,6 @@ describe('sizes, stars and golden fish in crate windows', () => {
     expect(body).toContain('Golden Tuna');
     expect(body).toContain(`pays ${GOLDEN_MULT} times as much`);
     expect(body).toContain('gold-tag');
-  });
-
-  it('shows size and stars in the ice box and the cold store', () => {
-    const s = rich();
-    const a = addCrate(s, 'seabass', 'hand', 0, { size: 79 });
-    const b = addCrate(s, 'tuna', 'hand', 0, { golden: true });
-    expect(iceboxScreen(ctx(s)).body).toContain('79 cm');
-    expect(iceboxScreen(ctx(s)).body).toContain('Golden Tuna');
-    const cold = coldstoreView(s).body;
-    expect(cold).toContain('79 cm');
-    expect(cold).toContain('item gold');
-    expect([a.id, b.id].length).toBe(2);
   });
 
   it('refuses a golden fish in the smokehouse and says why', () => {

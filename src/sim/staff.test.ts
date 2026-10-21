@@ -3,8 +3,8 @@ import { step, startGame } from './sim';
 import { Rng } from './rng';
 import { initialState } from './state';
 import type { GameState } from './state';
-import { dockCrates, addCrate, iceCrates, pickUp, handCrates } from './crates';
-import { canHireCaptain, fireCaptain, fireDockhand, hireCaptain, hireDockhand, payWages, refreshCandidates, setBoatTarget, setHaulPolicy, stepCaptains } from './staff';
+import { dockCrates, addCrate, pickUp, handCrates } from './crates';
+import { canHireCaptain, fireCaptain, fireDockhand, hireCaptain, hireDockhand, payWages, refreshCandidates, setBoatTarget, stepCaptains } from './staff';
 import { holdSize, rareMult, tripTimeFor } from './fleet';
 import { CAPTAIN_WAGE, DOCKHAND_WAGE, ZONES } from './config';
 import { dispatchBoat, stepBoats } from './boats';
@@ -232,26 +232,6 @@ describe('dockhands', () => {
     for (let t = 0; t < 40; t += 0.25) step(t2, 0.25, r2);
     expect(t2.stats.sold).toBe(sold0 + 1);
     expect(t2.dockhands[0].job).toBeNull();
-  });
-  it('haul policy "ice" fills the ice box first, then sends the rest to market', () => {
-    const s = ranked(500);
-    s.upgrades.icebox = true;
-    s.upgrades.handcart = true;
-    hire(s);
-    setHaulPolicy(s, 'ice');
-    for (let i = 0; i < 8; i++) addCrate(s, 'seabass', 'dock', 0);
-    run(s, 90);
-    expect(iceCrates(s)).toHaveLength(6);
-    expect(s.stats.sold).toBeGreaterThanOrEqual(2);
-    expect(dockCrates(s)).toHaveLength(0);
-  });
-  it('policy "ice" without an ice box falls back to market', () => {
-    const s = ranked(500);
-    hire(s);
-    setHaulPolicy(s, 'ice');
-    addCrate(s, 'seabass', 'dock', 0);
-    step(s, 0.1, rng());
-    expect(s.dockhands[0].job?.dest).toBe('market');
   });
   it('the player can still take a crate a dockhand has claimed, and firing returns carried crates', () => {
     const s = ranked(500);

@@ -1,17 +1,17 @@
 import {
-  CAPTAIN_NAMES, CAPTAIN_WAGE, CANDIDATE_COUNT, DOCKHAND_NAMES, DOCKHAND_SPEED, DOCKHAND_WAGE, ICE_CAPACITY, LAYOUT,
+  CAPTAIN_NAMES, CAPTAIN_WAGE, CANDIDATE_COUNT, DOCKHAND_NAMES, DOCKHAND_SPEED, DOCKHAND_WAGE, LAYOUT,
   MAX_DOCKHANDS, THRIFTY_MULT, TRAITS,
 } from './config';
 import type { ZoneId } from './config';
 import { dispatchBoat, unloadBoat } from './boats';
-import { rackRoom, restaurantWants, serveRestaurantCrate, startSmoking, coldRoom } from './buildings';
+import { rackRoom, restaurantWants, serveRestaurantCrate, startSmoking } from './buildings';
 import { freeDockSlot, isSpoiled, removeCrate } from './crates';
 import { planJob } from './routing';
 import { activeCaptain, bestZone, zoneUnlockedFor } from './fleet';
 import { sellCrateObj } from './market';
 import { CAPTAINS_RANK, DOCKHANDS_RANK, captainsUnlocked, dockhandsUnlocked, rankOf } from './rank';
 import type { Rng } from './rng';
-import type { Check, Crate, Dockhand, Ev, GameState, HaulPolicy, Job, Pt } from './state';
+import type { Check, Crate, Dockhand, Ev, GameState, Job, Pt } from './state';
 import { nextId } from './state';
 import { isNight } from './time';
 
@@ -81,11 +81,6 @@ export function fireDockhand(state: GameState, id: number): Ev[] {
   return [{ type: 'fired', role: 'dockhand', name: d.name }];
 }
 
-export function setHaulPolicy(state: GameState, p: HaulPolicy): Ev[] {
-  state.haulPolicy = p;
-  return [];
-}
-
 export function setBoatTarget(state: GameState, boatId: number, zone: ZoneId): Ev[] {
   const b = state.boats.find((x) => x.id === boatId);
   if (!b) return [{ type: 'denied', reason: 'No such boat.' }];
@@ -149,7 +144,7 @@ function mkJob(phase: Job['phase'], path: Pt[], crateIds: number[], dest: Job['d
   return job;
 }
 
-const BUILDING_DEST: Partial<Record<Job['dest'], keyof typeof LAYOUT.plots>> = { cold: 'coldstore', restaurant: 'restaurant', smoke: 'smokehouse' };
+const BUILDING_DEST: Partial<Record<Job['dest'], keyof typeof LAYOUT.plots>> = { restaurant: 'restaurant', smoke: 'smokehouse' };
 const doorOf = (id: keyof typeof LAYOUT.plots): Pt => ({ x: LAYOUT.plots[id].doorX, z: LAYOUT.plots[id].doorZ });
 
 /** The walking lane as a U round the open middle of the square: down the west side, along the sea side, down the east side (centre lines). */
@@ -219,13 +214,10 @@ function haulPath(from: Pt, dest: Job['dest']): Pt[] {
   const bld = BUILDING_DEST[dest];
   if (bld) return walkPath(from, doorOf(bld));
   if (from.z > 4 && dest === 'market') return walkPath(from, LAYOUT.marketDrop); // collecting from a building on the quay
-  if (dest === 'market') return walkPath(from, LAYOUT.marketDrop);
-  return walkPath(from, LAYOUT.iceDrop);
+  return walkPath(from, LAYOUT.marketDrop);
 }
-function backPath(from: Pt, home: Pt, dest: Job['dest']): Pt[] {
-  if (BUILDING_DEST[dest] || dest === 'market') return walkPath(from, home);
-  if (dest === 'ice') return walkPath(from, home);
-  return [from, laneEntry(from.x), home];
+function backPath(from: Pt, home: Pt): Pt[] {
+  return walkPath(from, home);
 }
 
 function releaseCrates(state: GameState, d: Dockhand): void {
@@ -277,7 +269,7 @@ function finishPhase(state: GameState, d: Dockhand, evs: Ev[]): void {
     }
     for (const c of state.crates) if (c.carrier === d.id && !got.includes(c)) c.carrier = undefined;
     if (got.length === 0) {
-      d.job = mkJob('back', backPath(here, home, job.dest), [], job.dest);
+      d.job = mkJob('back', backPath(here, home), [], job.dest);
       return;
     }
     for (const c of got) { c.loc = 'haul'; c.smokeLeft = undefined; }
@@ -296,10 +288,6 @@ function finishPhase(state: GameState, d: Dockhand, evs: Ev[]): void {
       } else if (job.dest === 'smoke' && rackRoom(state) > 0 && !c.smoked && !c.golden && !isSpoiled(c)) {
         startSmoking(state, c);
         evs.push({ type: 'crateSmoking', crateId: c.id });
-      } else if (job.dest === 'cold' && coldRoom(state) > 0 && !isSpoiled(c)) {
-        c.loc = 'cold';
-      } else if (job.dest === 'ice' && state.crates.filter((k) => k.loc === 'ice').length < ICE_CAPACITY) {
-        c.loc = 'ice';
       } else if (isSpoiled(c)) {
         removeCrate(state, c.id);
       } else {
@@ -308,7 +296,7 @@ function finishPhase(state: GameState, d: Dockhand, evs: Ev[]): void {
         c.x = p.x; c.z = p.z; c.layer = p.layer;
       }
     }
-    d.job = mkJob('back', backPath(here, home, job.dest), [], job.dest);
+    d.job = mkJob('back', backPath(here, home), [], job.dest);
     return;
   }
   d.job = null;

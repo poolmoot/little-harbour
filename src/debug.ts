@@ -47,7 +47,7 @@ export function installDebug(g: DebugHost): void {
       g.cameraRig.focus.set(x, 0, z);
     },
     money: (n: number) => { g.state.money += n; },
-    /** Harbour upgrade (icebox, handcart, stall1, stall2) or a boat track: upgrade('hull', 2, boatIndex) sets that track level. */
+    /** Harbour upgrade (handcart, stall1, stall2) or a boat track: upgrade('hull', 2, boatIndex) sets that track level. */
     upgrade: (id: keyof GameState['upgrades'] | Track, level = 1, boat = 0) => {
       if (id in g.state.upgrades) { g.state.upgrades[id as keyof GameState['upgrades']] = true; return; }
       const b = g.state.boats[boat];
@@ -166,7 +166,7 @@ export function installDebug(g: DebugHost): void {
       const goal = currentGoal(st);
       lines.push(goal ? `Goal ${goal.index + 1}/${goal.total} [${goal.id}] ${GOAL_TEXT[goal.id]} (${goal.have}/${goal.need}, reward $${goal.reward}${goal.arrow ? `, arrow: ${goal.arrow}` : ''})` : 'All goals done.');
       lines.push('Buildings: ' + BUILDING_IDS.map((b) => `${BUILDING_NAME[b]} ${st.buildings[b] || '-'}`).join(', '));
-      lines.push(`Smoke list: ${st.smokeList.join(', ') || '(none)'}; racks used ${st.crates.filter((c) => c.loc === 'smoke').length}; cold store ${st.crates.filter((c) => c.loc === 'cold').length}; restaurant served ${st.restaurant.served}`);
+      lines.push(`Smoke list: ${st.smokeList.join(', ') || '(none)'}; racks used ${st.crates.filter((c) => c.loc === 'smoke').length}; restaurant served ${st.restaurant.served}`);
       lines.push(`Day ${st.day}: ${WEATHER[st.weather].name} / ${specialName(st.special)}. Tomorrow: ${WEATHER[st.nextWeather].name} / ${specialName(st.nextSpecial)}.`);
       lines.push('Boats: ' + st.boats.map((b) => `${b.name}${b.damaged ? ' (broken)' : ''}${b.stayInStorms ? '' : ' (sails in storms)'}`).join(', '));
       const c = st.contracts;

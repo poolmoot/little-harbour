@@ -13,7 +13,7 @@ export function canBuy(state: GameState, id: UpgradeId): Check {
   return { ok: true };
 }
 
-/** Harbour-wide purchases: ice box, handcart, market stall. Boats are bought through fleet.ts. */
+/** Harbour-wide purchases: handcart, market stall. Boats are bought through fleet.ts. */
 export function buyUpgrade(state: GameState, id: UpgradeId): Ev[] {
   const check = canBuy(state, id);
   if (!check.ok) return [{ type: 'denied', reason: check.reason ?? 'You cannot buy that.', needRank: check.needRank }];

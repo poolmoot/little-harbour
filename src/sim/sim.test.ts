@@ -23,7 +23,7 @@ describe('whole-sim playthrough', () => {
         sellAll(s);
         castLine(s, rng);
         hook(s, rng);
-        for (const u of ['handcart', 'icebox'] as const) buyUpgrade(s, u);
+        buyUpgrade(s, 'handcart');
         buyBoatUpgrade(s, 1, 'hold');
         buyBoatUpgrade(s, 1, 'hull');
       }

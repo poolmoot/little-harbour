@@ -102,7 +102,6 @@ export class EventRouter {
           h.toast(say.unloaded(e.count));
           break;
         case 'cratePicked': a.fx.cratePickUp(); break;
-        case 'crateStored': a.fx.crateIce(); break;
         case 'crateTaken': a.fx.cratePickUp(); break;
         case 'crateSold':
           a.noteSale(1);

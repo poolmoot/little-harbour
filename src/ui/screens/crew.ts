@@ -1,7 +1,6 @@
-import { DOCKHAND_WAGE, ICE_CAPACITY, MAX_DOCKHANDS, SPECIES } from '../../sim/config';
+import { DOCKHAND_WAGE, MAX_DOCKHANDS, SPECIES } from '../../sim/config';
 import type { Trait } from '../../sim/config';
-import { coldCapacity } from '../../sim/buildings';
-import { carryCapacity, coldCrates, iceCrates } from '../../sim/crates';
+import { carryCapacity } from '../../sim/crates';
 import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import { canHireCaptain, canHireDockhand, dailyWages } from '../../sim/staff';
 import type { Dockhand, GameState } from '../../sim/state';
@@ -56,23 +55,15 @@ function dockhandTask(d: Dockhand): string {
   return 'Walking back';
 }
 
-/** The "Smoke these" ticks (once the smokehouse is built) and the choice of where spare crates go (once there is somewhere to store them). */
+/** The "Smoke these" ticks, once the smokehouse is built. */
 export function workerRules(s: GameState): string {
   let h = '';
-  const storage = s.buildings.coldstore > 0 || s.upgrades.icebox;
   if (s.buildings.smokehouse > 0) {
     const caught = SPECIES.filter((sp) => s.book[sp].caught > 0);
     h += section(WORKER_TEXT.smokeTitle) + `<p class="dim">${WORKER_TEXT.smokeNote}</p>`;
     h += caught.length
       ? `<div>${caught.map((sp) => tick({ label: FISH_NAME[sp], on: s.smokeList.includes(sp), act: 'smokelist', a: sp, b: s.smokeList.includes(sp) ? 0 : 1, art: fishIcon(hex(SPECIES_COLOUR[sp]), 15) })).join('')}</div>`
       : empty(WORKER_TEXT.smokeNone);
-  }
-  if (storage) {
-    h += section(WORKER_TEXT.spareTitle) + item({
-      title: s.haulPolicy === 'ice' ? WORKER_TEXT.storage : WORKER_TEXT.market,
-      sub: `${WORKER_TEXT.spareNote} (Ice box ${iceCrates(s).length} of ${ICE_CAPACITY}${s.buildings.coldstore ? `, cold store ${coldCrates(s).length} of ${coldCapacity(s)}` : ''}.)`,
-      right: `${button({ label: WORKER_TEXT.market, act: 'policy', a: 'market', tone: s.haulPolicy === 'market' ? 'go' : 'ghost', size: 'sm' })}${button({ label: WORKER_TEXT.storage, act: 'policy', a: 'ice', tone: s.haulPolicy === 'ice' ? 'go' : 'ghost', size: 'sm' })}`,
-    });
   }
   if (s.buildings.smokehouse > 0 || s.buildings.restaurant > 0) h += `<p class="dim">${WORKER_TEXT.rules}</p>`;
   return h;

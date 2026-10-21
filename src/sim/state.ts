@@ -3,7 +3,7 @@ import { newGuide } from './guide';
 import type { GuideState, UnlockId } from './guide';
 import type { BuildingId, Phase, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from './config';
 
-export type CrateLoc = 'dock' | 'hand' | 'ice' | 'haul' | 'cold' | 'smoke';
+export type CrateLoc = 'dock' | 'hand' | 'haul' | 'smoke';
 export interface Crate {
   id: number;
   species: Species;
@@ -38,7 +38,7 @@ export interface Job {
   dest: Dest;
   src?: 'dock' | 'smoke'; // where the crates are picked up (default: the dock)
 }
-export type Dest = 'market' | 'ice' | 'cold' | 'restaurant' | 'smoke';
+export type Dest = 'market' | 'restaurant' | 'smoke';
 export interface Dockhand {
   id: number;
   name: string;
@@ -46,8 +46,6 @@ export interface Dockhand {
   unpaid?: boolean;
   job: Job | null;
 }
-
-export type HaulPolicy = 'market' | 'ice';
 
 export interface Boat {
   id: number;
@@ -151,7 +149,6 @@ export interface GameState {
   rank: number; // highest rank announced so far
   dockhands: Dockhand[];
   candidates: Captain[];
-  haulPolicy: HaulPolicy;
   boats: Boat[];
   crates: Crate[];
   demand: Record<Species, number>;
@@ -194,7 +191,6 @@ export type Ev =
   | { type: 'boatReturned'; boatId: number; count: number; auto?: boolean }
   | { type: 'boatUnloaded'; boatId: number; count: number; auto?: boolean }
   | { type: 'cratePicked'; crateId: number }
-  | { type: 'crateStored'; crateId: number }
   | { type: 'crateTaken'; crateId: number }
   | { type: 'crateSold'; species: Species; price: number; freshness: number; orderBonus: boolean; staff: boolean }
   | { type: 'crateSpoiled'; crateId: number; species: Species }
@@ -249,7 +245,7 @@ export interface Check {
   cost?: number;
 }
 
-export const STATE_VERSION = 6;
+export const STATE_VERSION = 7;
 
 function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
@@ -279,12 +275,11 @@ export function initialState(): GameState {
     dayTime: 0,
     clock: 0,
     nextId: 3,
-    upgrades: { icebox: false, handcart: false, stall1: false, stall2: false },
+    upgrades: { handcart: false, stall1: false, stall2: false },
     lifetime: 0,
     rank: 0,
     dockhands: [],
     candidates: [],
-    haulPolicy: 'market',
     boats: [newBoat(1, 0, 'Gull')],
     crates: [],
     demand: perSpecies(() => 1),
@@ -296,7 +291,7 @@ export function initialState(): GameState {
     bookClaims: Object.fromEntries(ZONE_IDS.map((z) => [z, { caught: false, stars: false }])) as GameState['bookClaims'],
     stats: emptyStats(),
     lastPhase: 'dawn',
-    buildings: { coldstore: 0, smokehouse: 0, restaurant: 0, lighthouse: 0 },
+    buildings: { smokehouse: 0, restaurant: 0, lighthouse: 0 },
     smokeList: [...DEFAULT_SMOKE_LIST],
     restaurant: { served: 0, kinds: [] },
     weather: 'calm',

@@ -21,7 +21,7 @@ export function measureAwayRate(state: GameState, rng: Rng): number {
   const sim: GameState = structuredClone(state);
   const r = rng.clone();
   // Start from a clean quay so one-off stock does not inflate the figure.
-  sim.crates = sim.crates.filter((c) => c.loc === 'smoke' || c.loc === 'cold');
+  sim.crates = sim.crates.filter((c) => c.loc === 'smoke');
   for (const b of sim.boats) b.catch = [];
   sim.fishing = { phase: 'idle', timer: 0 };
   for (const d of sim.dockhands) d.job = null;

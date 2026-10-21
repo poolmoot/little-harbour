@@ -6,7 +6,6 @@ import { grantKingFish } from '../../sim/ending';
 import { initialState } from '../../sim/sim';
 import type { GameState } from '../../sim/state';
 import { boatScreen } from './boat';
-import { coldstoreView } from './coldstore';
 import { crewScreen } from './crew';
 import { endingScreen } from './ending';
 import { forecast, ledgerScreen } from './ledger';
@@ -21,7 +20,6 @@ import type { ScreenCtx } from './types';
 const ctx = (state: GameState, over: Partial<ScreenCtx> = {}): ScreenCtx => ({
   state, arg: 0, tab: '', confirmReset: false, quality: 'auto', summary: null, hasSave: false, confirmNew: false, audio: { ...DEFAULT_SETTINGS }, ...over,
 });
-const acts = (html: string) => [...html.matchAll(/data-act="([a-z]+)"/g)].map((m) => m[1]);
 const rich = (): GameState => {
   const s = initialState();
   s.lifetime = 1_000_000;
@@ -49,39 +47,14 @@ describe('plot windows', () => {
     expect(v.body).toContain('Needs rank: Small Company (you are Beginner)');
     const broke = rich();
     broke.money = 10;
-    expect(plot(broke, 'coldstore').body).toMatch(/You need \$[\d,]+ more/);
+    expect(plot(broke, 'smokehouse').body).toMatch(/You need \$[\d,]+ more/);
   });
 
   it('opens the right window for a built building, and lists later levels on the for-sale window', () => {
     const s = rich();
-    s.buildings.coldstore = 1;
-    expect(plot(s, 'coldstore').title).toBe('Cold store');
-    expect(plot(rich(), 'coldstore').body).toContain('Level 3');
-  });
-});
-
-describe('cold store', () => {
-  it('offers Put in for carried fish and Take out for stored fish, and Upgrade', () => {
-    const s = rich();
-    s.buildings.coldstore = 1;
-    const a = addCrate(s, 'cod', 'hand');
-    addCrate(s, 'tuna', 'cold');
-    const html = coldstoreView(s).body;
-    expect(acts(html)).toEqual(expect.arrayContaining(['coldin', 'coldout', 'build']));
-    expect(html).toContain(`data-a="${a.id}"`);
-    expect(html).toContain('1 of 12 crates');
-  });
-
-  it('shows Full and greys Put in when the store is full; leaves smoked fish out of the list', () => {
-    const s = rich();
-    s.buildings.coldstore = 1;
-    for (let i = 0; i < 12; i++) addCrate(s, 'cod', 'cold');
-    addCrate(s, 'cod', 'hand');
-    const smoked = addCrate(s, 'cod', 'hand');
-    smoked.smoked = true;
-    const html = coldstoreView(s).body;
-    expect(html).toContain('Full');
-    expect(html.match(/data-act="coldin"/g)).toHaveLength(1);
+    s.buildings.smokehouse = 1;
+    expect(plot(s, 'smokehouse').title).toBe('Smokehouse');
+    expect(plot(rich(), 'restaurant').body).toContain('Level 3');
   });
 });
 
@@ -203,10 +176,9 @@ describe('notice board', () => {
 describe('workers', () => {
   const crewRoster = (s: GameState) => crewScreen(ctx(s, { tab: 'crew' })).body;
 
-  it('shows no smoke list or storage choice before the buildings exist', () => {
+  it('shows no smoke list before the buildings exist', () => {
     const body = crewRoster(rich());
     expect(body).not.toContain('Smoke these');
-    expect(body).not.toContain('Spare crates go to');
   });
 
   it('shows the Smoke these ticks only for fish the player has caught, with the current choice ticked', () => {
@@ -222,13 +194,6 @@ describe('workers', () => {
     expect(body).not.toContain('Tuna');
     expect(body).toContain('data-act="smokelist" data-a="herring" data-b="0"'); // ticked: pressing it turns it off
     expect(body).toContain('data-act="smokelist" data-a="cod" data-b="1"');
-  });
-
-  it('shows the storage choice once a cold store or ice box exists', () => {
-    const s = rich();
-    s.buildings.coldstore = 1;
-    expect(crewRoster(s)).toContain('Spare crates go to');
-    expect(acts(crewRoster(s))).toContain('policy');
   });
 });
 

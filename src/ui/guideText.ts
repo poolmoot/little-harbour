@@ -51,7 +51,6 @@ export interface CardText { title: string; line: string }
 export const UNLOCK_TEXT: Record<UnlockId, CardText> = {
   workers: { title: 'Workers', line: 'You can hire a worker at the inn. Workers carry crates for you.' },
   captains: { title: 'Captains', line: 'You can hire a captain at the inn. A captain sails a boat for you, even when you are busy.' },
-  coldstore: { title: 'Cold store', line: 'You can build a cold store. Fish stay fresh in there much longer.' },
   smokehouse: { title: 'Smokehouse', line: 'You can build a smokehouse. Smoked fish never spoil and sell for more.' },
   restaurant: { title: 'Restaurant', line: 'You can build a restaurant. It buys fish at a good price.' },
   lighthouse: { title: 'Lighthouse', line: 'You can build a lighthouse. It makes night trips faster and lets you find the King Fish.' },

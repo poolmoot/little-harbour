@@ -71,9 +71,9 @@ describe('unlock cards', () => {
   it('an old save skips cards for things it already uses', () => {
     const s = initialState();
     s.lifetime = 600;
-    s.buildings.coldstore = 1;
+    s.dockhands.push({ id: 1, name: 'Pip', slot: 0, job: null });
     const g = guideForOldSave(s);
-    expect(g.seen).toContain('coldstore');
+    expect(g.seen).toContain('workers');
     expect(g.seen).not.toContain('smokehouse');
     expect(g.step).toBe(GUIDE_STEPS.length);
   });

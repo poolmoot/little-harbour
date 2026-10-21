@@ -12,12 +12,12 @@ import { addCrate } from './crates';
 describe('harbour upgrades', () => {
   it('cannot buy without enough money, and spends the cost when bought', () => {
     const s = initialState();
-    expect(buyUpgrade(s, 'icebox')[0].type).toBe('denied');
-    s.money = 130;
-    expect(buyUpgrade(s, 'icebox')[0].type).toBe('upgradeBought');
+    expect(buyUpgrade(s, 'handcart')[0].type).toBe('denied');
+    s.money = 210;
+    expect(buyUpgrade(s, 'handcart')[0].type).toBe('upgradeBought');
     expect(s.money).toBe(10);
-    expect(s.stats.spent).toBe(120);
-    expect(canBuy(s, 'icebox').ok).toBe(false);
+    expect(s.stats.spent).toBe(200);
+    expect(canBuy(s, 'handcart').ok).toBe(false);
   });
   it('handcart raises carrying capacity', () => {
     const s = initialState();
