@@ -4,7 +4,7 @@ import { carryCapacity, handCrates } from '../sim/crates';
 import { holdSize } from '../sim/fleet';
 import { rankOf, rankProgress } from '../sim/rank';
 import type { Boat, Crate, GameState, Order } from '../sim/state';
-import { formatClock, isNight, phaseOf } from '../sim/time';
+import { formatClock, gameSecondsFor, isNight, phaseOf } from '../sim/time';
 import { hex, SPECIES_COLOUR } from '../palette';
 import { esc, meter, money, stars } from './components';
 import { crateArt, crateTitle } from './fishParts';
@@ -55,7 +55,7 @@ export interface Prompt {
 
 function orderRow(state: GameState, o: Order): string {
   const left = Math.max(0, o.deadline - state.clock);
-  const by = formatClock((state.dayTime + left) % (HOUR_SECONDS * 24));
+  const by = formatClock((state.dayTime + gameSecondsFor(state.dayTime, left)) % (HOUR_SECONDS * 24));
   const frac = left / ORDER_METER_SECONDS;
   return `<div class="hud-orders-row${left < URGENT_SECONDS ? ' urgent' : ''}">${fishIcon(hex(SPECIES_COLOUR[o.species]), 18)}<div class="grow">
     <div class="hud-orders-text ol">${o.name} · ${o.filled}/${o.qty} ${FISH_NAME[o.species]}</div>

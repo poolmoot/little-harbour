@@ -6,7 +6,7 @@ import { unitPrice } from '../../sim/market';
 import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import { canHireCaptain } from '../../sim/staff';
 import type { Boat, GameState } from '../../sim/state';
-import { isNight, phaseOf } from '../../sim/time';
+import { phaseOf } from '../../sim/time';
 import { hex, SPECIES_COLOUR } from '../../palette';
 import { button, buyLabel, chip, section, empty, esc, face, item, levelDots, lockNote, money, mult, priceLabel, stars, textField, tick } from '../components';
 import { captainLook } from '../../view/people';
@@ -117,11 +117,10 @@ function foot(s: GameState, boat: Boat): string {
   const where = `<div class="row-x">${icon('anchor', 22)}<div><div class="ol">Going to ${ZONE_NAME[boat.target]}</div><div class="dim">${Math.round(tripTimeFor(boat, boat.target))}s trip · ${LABEL.tripCost} $${money(cost)}</div></div></div>`;
   if (boat.damaged) return `${where}${button({ label: boat.repairLeft !== undefined ? BOAT_TEXT.fixing(Math.ceil(boat.repairLeft)) : BOAT_TEXT.cannotSail, tone: 'ghost', off: true })}`;
   if (boat.captain) return `${where}<span class="dim">${boat.captain.name} sails for you</span>`;
-  const night = isNight(s);
   const stays = s.weather === 'storm' && boat.stayInStorms && STORM_ZONES.includes(boat.target);
   const poor = s.money < cost;
-  const ok = boat.status === 'docked' && !night && !poor && !stays;
-  const label = stays ? 'Stays home (storm)' : night ? 'Too dark' : boat.status !== 'docked' ? 'Boat is away' : poor ? `Not enough money ($${money(cost)} needed)` : `Send out ${priceLabel(cost)}`;
+  const ok = boat.status === 'docked' && !poor && !stays;
+  const label = stays ? 'Stays home (storm)' : boat.status !== 'docked' ? 'Boat is away' : poor ? `Not enough money ($${money(cost)} needed)` : `Send out ${priceLabel(cost)}`;
   return `${where}${button({ label: ok ? `${icon(HULL_ICONS[boat.hull], 26)}${label}` : label, act: 'send', a: boat.id, b: boat.target, off: !ok, hero: true })}`;
 }
 
@@ -138,7 +137,7 @@ export const boatScreen: Screen = (ctx) => {
     tab,
     note: boat.damaged
       ? `<span class="bad">${boat.repairLeft !== undefined ? BOAT_TEXT.fixing(Math.ceil(boat.repairLeft)) : `${BOAT_TEXT.brokenChip} ${BOAT_TEXT.fixHint}`}</span>`
-      : tab === 'grounds' && !isNight(s) ? LABEL.tripCostNote : isNight(s) ? '<span class="warn">It is too dark to go out. Boats can sail again in the morning.</span>' : undefined,
+      : tab === 'grounds' ? LABEL.tripCostNote : undefined,
     body: `<div class="split">${portrait(boat)}<div>${pane}</div></div>`,
     foot: foot(s, boat),
   };
