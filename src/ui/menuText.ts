@@ -152,9 +152,9 @@ export const LEGAL = {
 /** The question asked on the title screen, and the matching Settings row. Both answers look the same on purpose. */
 export const CONSENT = {
   title: 'Can we count how you play?',
-  text: 'It helps us make the game better. If you say yes, we record your visit, clicks, errors and a recording of your screen. If you say no, nothing is recorded. You can change this any time in Settings. Details are under Privacy, just below.',
-  yes: 'Yes, count my play',
-  no: 'No, thanks',
+  text: 'It helps us make the game better. If you say no, nothing is recorded. You can change your mind in Settings.',
+  yes: 'Yes',
+  no: 'No thanks',
   settingsTitle: 'Play data',
   settingsTitleSection: 'Play data',
   settingsNote: 'Lets us count your visit, clicks, errors and screen recordings to improve the game. See Privacy.',
