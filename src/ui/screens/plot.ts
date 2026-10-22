@@ -8,7 +8,6 @@ import { button, buyLabel, lockNote, section, stat } from '../components';
 import { icon } from '../icons';
 import { LOCK_TEXT, PLOT_TEXT } from '../screenText';
 import { BUILDING_DESC, BUILDING_LABEL, BUILDING_LEVELS, BUILDING_NAME, PLOT_SIGN, RANK_NAME } from '../text';
-import { coldstoreView } from './coldstore';
 import { lighthouseView } from './lighthouse';
 import { restaurantView } from './restaurant';
 import { smokehouseView } from './smokehouse';
@@ -41,7 +40,6 @@ export const plotScreen: Screen = (ctx) => {
   const s = ctx.state;
   if (s.buildings[id] === 0) return forSaleView(s, id);
   switch (id) {
-    case 'coldstore': return coldstoreView(s);
     case 'smokehouse': return smokehouseView(s);
     case 'restaurant': return restaurantView(s);
     case 'lighthouse': return lighthouseView(s);

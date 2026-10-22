@@ -10,7 +10,6 @@ export const GATES: Spot[] = [
   { x: LAYOUT.stations.inn.x, z: LAYOUT.stations.inn.z },
   toWorld(LAYOUT.bellTower, 0.6, FOOT.bellTower[1] + 1.2),
   { x: LAYOUT.plots.smokehouse.doorX, z: LAYOUT.plots.smokehouse.doorZ },
-  { x: LAYOUT.plots.coldstore.doorX, z: LAYOUT.plots.coldstore.doorZ },
 ];
 
 export function randomGate(except = -1): { spot: Spot; index: number } {

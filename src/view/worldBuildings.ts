@@ -92,13 +92,4 @@ export function buildBoardAndIce(w: Build): void {
   const sign = signMesh('NOTICES', 1.4, 0.3, '#2f4f3a');
   sign.position.set(nb.x, 0.62, nb.z + 0.09);
   s.add(sign);
-
-  const I = LAYOUT.iceBox, { s: is } = w.place(I.x, I.z, I.rot), ib = { x: 0, z: 0 };
-  tBox(1.7, 0.9, 1.3, M.white, 1.4, ib.x, 0.45, ib.z, is);
-  bx(1.8, 0.1, 1.4, flat(0x8fb5c6, 0.4), ib.x, 0.92, ib.z, is);
-  for (const dy of [0.2, 0.7]) bx(1.74, 0.05, 1.34, M.iron, ib.x, dy, ib.z, is);
-  bx(0.4, 0.12, 0.1, flat(0xb0b6ba, 0.3), ib.x, 0.7, ib.z + 0.68, is);
-  const sg = signMesh('ICE', 0.6, 0.25, '#4a7a96');
-  sg.position.set(ib.x, 0.45, ib.z + 0.69);
-  is.add(sg);
 }

@@ -5,10 +5,10 @@ import { HOUR_SECONDS, START_HOUR } from './sim/config';
 import type { ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
-import { applyAway, buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget, setHaulPolicy } from './sim/sim';
+import { applyAway, buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget } from './sim/sim';
 import { renameBoat, setHarbourName } from './sim/sim';
-import { acceptContract, buyBuilding, buyProject, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate, storeInCold, takeFromCold } from './sim/sim';
-import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate, storeInIce, takeFromIce } from './sim/sim';
+import { acceptContract, buyBuilding, buyProject, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate } from './sim/sim';
+import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
 import { guideAdvice } from './sim/guideAdvice';
@@ -32,6 +32,7 @@ import './ui/styles/index.css';
 import type { AwayInfo } from './ui/screens/types';
 import { say } from './ui/text';
 import { BoatsView } from './view/boatsView';
+import { BerthMarks } from './view/berthMarks';
 import { StaffView } from './view/staffView';
 import { CameraRig } from './view/cameraRig';
 import { CratesView } from './view/cratesView';
@@ -80,6 +81,7 @@ export class Game {
   private player: Player;
   private cameraRig: CameraRig;
   private boatsView: BoatsView;
+  private berthMarks: BerthMarks;
   private cratesView: CratesView;
   private tycoonView: TycoonView;
   private staffView: StaffView;
@@ -137,6 +139,7 @@ export class Game {
     this.player = new Player(this.rig.scene, this.world);
     this.cameraRig = new CameraRig(this.rig.camera, this.player.pos);
     this.boatsView = new BoatsView(this.rig.scene, this.wake);
+    this.berthMarks = new BerthMarks(this.rig.scene);
     this.cratesView = new CratesView(this.rig.scene, this.player);
     this.tycoonView = new TycoonView(this.rig, this.world);
     this.staffView = new StaffView(this.rig.scene, this.cratesView.haul);
@@ -176,13 +179,8 @@ export class Game {
         fireCaptain: (b) => this.run(fireCaptain(this.state, b)),
         hireDockhand: () => this.run(hireDockhand(this.state, this.rng)),
         fireDockhand: (id) => this.run(fireDockhand(this.state, id)),
-        setPolicy: (p) => this.run(setHaulPolicy(this.state, p)),
-        store: (id) => this.run(storeInIce(this.state, id)),
-        take: (id) => this.run(takeFromIce(this.state, id)),
         build: (id) => this.run(buyBuilding(this.state, id)),
         buildProject: (id) => this.run(buyProject(this.state, id)),
-        coldIn: (id) => this.run(storeInCold(this.state, id)),
-        coldOut: (id) => this.run(takeFromCold(this.state, id)),
         smokeIn: (id) => this.run(smokeCrate(this.state, id)),
         smokeOut: (id) => this.run(collectSmoked(this.state, id)),
         sellToRestaurant: (id) => this.run(sellToRestaurant(this.state, id)),
@@ -467,6 +465,7 @@ export class Game {
     this.water.update(this.now, this.rig.skyState, this.rig.fog.near, this.rig.fog.far, this.boatsView.foam, this.fishView.ripples);
     this.wake.update(sdt, this.now, this.rig.skyState.foam);
     this.boatsView.sync(s, this.now, sdt);
+    this.berthMarks.sync(s, this.now);
     this.staffView.sync(s, sdt);
     this.cratesView.sync(s, this.now, sdt);
     const stall = s.upgrades.stall2 ? 2 : s.upgrades.stall1 ? 1 : 0;

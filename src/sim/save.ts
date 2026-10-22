@@ -1,4 +1,5 @@
 import { BOAT_NAMES, BUILDING_IDS, LAYOUT, PROJECT_IDS, SPECIES, ZONE_IDS } from './config';
+import { freeDockSlot } from './crates';
 import { applyAway } from './away';
 import type { AwayResult } from './away';
 import { catchUpBookRewards, midSize } from './fishbook';
@@ -38,7 +39,7 @@ function migrate(raw: unknown): GameState | null {
   const base = initialState();
   const old = d.version < 2;
   const s: GameState = { ...base, ...d, version: STATE_VERSION } as GameState;
-  s.upgrades = { icebox: !!d.upgrades?.icebox, handcart: !!d.upgrades?.handcart, stall1: !!d.upgrades?.stall1, stall2: !!d.upgrades?.stall2 };
+  s.upgrades = { handcart: !!d.upgrades?.handcart, stall1: !!d.upgrades?.stall1, stall2: !!d.upgrades?.stall2 };
   s.demand = { ...base.demand, ...(d.demand ?? {}) };
   s.book = { ...base.book, ...(d.book ?? {}) };
   for (const sp of SPECIES) s.book[sp] = { ...base.book[sp], ...s.book[sp] };
@@ -60,11 +61,12 @@ function migrate(raw: unknown): GameState | null {
     return nb;
   });
   s.crates = Array.isArray(d.crates) ? d.crates : [];
+  delete (s as { haulPolicy?: unknown }).haulPolicy;
   s.orders = Array.isArray(d.orders) ? d.orders : [];
   s.orderCooldowns = Array.isArray(d.orderCooldowns) ? d.orderCooldowns : [];
   s.dockhands = Array.isArray(d.dockhands) ? d.dockhands : [];
   s.candidates = Array.isArray(d.candidates) ? d.candidates.map(cleanCaptain) : [];
-  // ---- town projects (version 7)
+  // ---- town projects (version 8)
   s.town = { ...base.town };
   for (const id of PROJECT_IDS) s.town[id] = !!d.town?.[id];
   // ---- fish book and sizes (version 5): crates from older saves get a middle size and are never golden
@@ -110,8 +112,33 @@ function migrate(raw: unknown): GameState | null {
     g.seen = Array.isArray(g.seen) ? g.seen : [];
     s.guide = g;
   }
+  // ---- ice box and cold store removed (version 7): crates that were stored go back on the dock as fresh as they were, and the money spent on them is refunded
+  if ((d.version ?? 0) < 7) removeStorage(s, d);
   return s;
 }
+
+/** Cost of the removed cold store, level by level (it was 600, then 2000, then 6000 more). */
+const OLD_COLD_COST = [0, 600, 2000, 6000];
+const OLD_ICEBOX_COST = 120;
+
+/** Put stored crates back on the dock and refund the ice box and the cold store. Goal numbers after the removed cold store goal move up by one. */
+function removeStorage(s: GameState, d: Partial<GameState> & { buildings?: Record<string, number> }): void {
+  for (const c of s.crates) {
+    const loc = c.loc as string;
+    if (loc !== 'ice' && loc !== 'cold') continue;
+    c.loc = 'dock';
+    const p = freeDockSlot(s, 0);
+    c.x = p.x; c.z = p.z; c.layer = p.layer;
+  }
+  let refund = (d.upgrades as Record<string, boolean> | undefined)?.icebox ? OLD_ICEBOX_COST : 0;
+  const cold = Math.max(0, Math.min(3, Math.floor(Number(d.buildings?.coldstore) || 0)));
+  for (let i = 1; i <= cold; i++) refund += OLD_COLD_COST[i];
+  s.money += refund;
+  delete (s.buildings as Record<string, number>).coldstore;
+  // the goal list lost its 'cold' goal (number 10); a save that was past it moves up by one
+  if ((d.version ?? 0) >= 4 && s.goal > OLD_COLD_GOAL) s.goal -= 1;
+}
+const OLD_COLD_GOAL = 10;
 
 /** Boats that were at sea come home with their catch ready; any cast line is reset; hauled crates go back on the dock. */
 function settleLoaded(state: GameState, rng: Rng): void {

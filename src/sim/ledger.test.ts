@@ -29,10 +29,10 @@ describe('ledger', () => {
     expect(st.income.lobster).toBeGreaterThan(100);
     expect(st.bonus).toBe(50);
     expect(st.spent).toBe(cost);
-    expect(st.wages).toBe(40);
+    expect(st.wages).toBe(60);
     expect(st.spoiled).toBe(2);
     expect(st.best).toEqual({ species: 'lobster', price: 90 });
-    expect(netProfit(st)).toBe(st.earned - 40 - cost);
+    expect(netProfit(st)).toBe(st.earned - 60 - cost);
     expect(s.stats.earned).toBe(0);
     expect(s.stats.income.lobster).toBe(0);
   });

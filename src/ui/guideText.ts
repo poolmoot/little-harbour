@@ -51,10 +51,9 @@ export interface CardText { title: string; line: string }
 export const UNLOCK_TEXT: Record<UnlockId, CardText> = {
   workers: { title: 'Workers', line: 'You can hire a worker at the inn. Workers carry crates for you.' },
   captains: { title: 'Captains', line: 'You can hire a captain at the inn. A captain sails a boat for you, even when you are busy.' },
-  coldstore: { title: 'Cold store', line: 'You can build a cold store. Fish stay fresh in there much longer.' },
   smokehouse: { title: 'Smokehouse', line: 'You can build a smokehouse. Smoked fish never spoil and sell for more.' },
   restaurant: { title: 'Restaurant', line: 'You can build a restaurant. It buys fish at a good price.' },
-  lighthouse: { title: 'Lighthouse', line: 'You can build a lighthouse. It lets your boats fish at night.' },
+  lighthouse: { title: 'Lighthouse', line: 'You can build a lighthouse. It makes night trips faster and lets you find the King Fish.' },
   contracts: { title: 'Contracts', line: 'The notice board now has contracts. A big job pays a big reward.' },
   weather: { title: 'Weather', line: 'The weather changes the days. Stormy seas can break a boat, so check tomorrow before a long trip.' },
   book: { title: 'Fish book', line: 'Press L to open the fish book. Catch every fish in a sea to earn a reward.' },
@@ -64,7 +63,6 @@ export const UNLOCK_TEXT: Record<UnlockId, CardText> = {
 /** What to do instead while a step cannot be done yet (see sim/guideAdvice.ts). */
 export const ADVICE = {
   cost: (cost: number) => `That costs $${cost}. Earn a little first:`,
-  night: 'Boats cannot sail at night. Fish from the end of the pier.',
   how: {
     unload: 'unload your boat, it is back.',
     carry: 'carry your fish to the market.',

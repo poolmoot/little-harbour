@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { LAYOUT, toWorld } from '../sim/config';
-import { coldStorePos, smokeRackPos } from './tycoonView';
+import { smokeRackPos } from './tycoonView';
 import type { Species } from '../sim/config';
 import type { Crate, GameState } from '../sim/state';
 import { SPECIES_COLOUR } from '../palette';
@@ -91,7 +90,6 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 const backOut = (t: number) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
 const tgtPos = new THREE.Vector3();
 const wp = new THREE.Vector3();
-const icePt = new THREE.Vector3();
 const dropOff = new THREE.Vector3(0, 0.9, 0);
 
 export class CratesView {
@@ -104,17 +102,10 @@ export class CratesView {
   private binLeader = new Map<number, number>();
   constructor(private scene: THREE.Scene, private player: Player) {}
 
-  /** Positions of ice-box crates sit on top of the box, in a 3x2 grid. */
-  private icePos(i: number): THREE.Vector3 {
-    const ib = LAYOUT.iceBox;
-    const p = toWorld(ib, -0.55 + (i % 3) * 0.55, -0.25 + Math.floor(i / 3) * 0.5);
-    return icePt.set(p.x, 1.0, p.z);
-  }
-
   sync(state: GameState, now: number, dt: number): void {
     const seen = this.seen;
     seen.clear();
-    let hand = 0, ice = 0, smoke = 0;
+    let hand = 0, smoke = 0;
     const count = this.binCount, leader = this.binLeader;
     count.clear();
     leader.clear();
@@ -166,13 +157,6 @@ export class CratesView {
       } else if (c.loc === 'smoke') {
         smokeRackPos(smoke++, tgtPos);
         ts = 0.5;
-      } else if (c.loc === 'cold') {
-        coldStorePos(tgtPos);
-        ts = 0.01;
-      } else if (c.loc === 'ice') {
-        tgtPos.copy(this.icePos(ice++));
-        ry = e.spin * 0.2;
-        ts = 0.7;
       } else {
         const i = hand++;
         tgtPos.set(i % 2 ? 0.2 : -0.2, 0.95 + Math.floor(i / 2) * 0.36 + Math.sin(now * 3 + i) * 0.01, 0.5);

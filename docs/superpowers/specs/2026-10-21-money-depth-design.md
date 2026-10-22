@@ -126,3 +126,14 @@ freshness and price.
 
 Pacing after this round (8 seeds, medians): ranks at 2.7, 13.4, 33.1 and 68.3 minutes;
 King Fish at the inn at about 90 minutes.
+
+## Merged with night sailing (2026-10-22)
+
+`main` had meanwhile added night sailing, removed the ice box and cold store (save version 7)
+and raised trip times and captain pay. This work sits on top of that: save version 8 (town
+projects, captain trips, boat care), captain pay by hull starts at 60, trip times are the
+longer night-sailing ones. Because the new Nets and Speed levels and experienced captains gave
+more chances at the King Fish, its chance boost is capped at the old best (`KING_MULT_MAX`
+2.75) and the base chance is 1.8%. Medians on 8 seeds: ranks at 2.5, 10.0, 27.5 and 50.7
+minutes; King Fish at the inn at about 113 minutes.
+

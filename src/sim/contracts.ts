@@ -1,6 +1,6 @@
 import {
   CONTRACT_COOLDOWN_DAYS, CONTRACT_DAYS, CONTRACT_MAX_QTY, CONTRACT_MIN_QTY, CONTRACT_OFFERS, CONTRACT_RANK, CONTRACT_REWARD_MULT,
-  CONTRACT_SAIL_HOURS, CONTRACT_SHARE, CONTRACT_TURNAROUND, DAY_SECONDS, FISH_PRICE, HOUR_SECONDS, SMOKED_MULT, ZONES, ZONE_IDS,
+  CONTRACT_SAIL_HOURS, CONTRACT_SHARE, CONTRACT_TURNAROUND, DAY_REAL_SECONDS, DAY_SECONDS, FISH_PRICE, HOUR_SECONDS, SMOKED_MULT, ZONES, ZONE_IDS,
 } from './config';
 import type { Species, ZoneId } from './config';
 import { holdSize, tripTimeFor, zoneUnlockedFor } from './fleet';
@@ -10,12 +10,12 @@ import type { Rng } from './rng';
 import type { Contract, Crate, Ev, GameState } from './state';
 import { nextId } from './state';
 
-/** Crates per day the fleet could bring from a zone if every boat that can reach it went there. */
+/** Crates per day (real seconds: the night passes faster) the fleet could bring from a zone if every boat that can reach it went there. */
 export function zoneSupplyPerDay(state: GameState, zone: ZoneId): number {
   let n = 0;
   for (const b of state.boats) {
     if (!zoneUnlockedFor(b, zone)) continue;
-    n += holdSize(b) * Math.floor((CONTRACT_SAIL_HOURS * HOUR_SECONDS) / (tripTimeFor(b, zone) + CONTRACT_TURNAROUND));
+    n += holdSize(b) * Math.floor(((CONTRACT_SAIL_HOURS * HOUR_SECONDS * DAY_REAL_SECONDS) / DAY_SECONDS) / (tripTimeFor(b, zone) + CONTRACT_TURNAROUND));
   }
   return n;
 }
@@ -47,7 +47,7 @@ export function stepContracts(state: GameState, rng: Rng): Ev[] {
   if (c.active && state.clock >= c.active.deadline) {
     evs.push({ type: 'contractFailed', contractId: c.active.id });
     c.active = null;
-    c.coolUntil = state.clock + CONTRACT_COOLDOWN_DAYS * DAY_SECONDS;
+    c.coolUntil = state.clock + CONTRACT_COOLDOWN_DAYS * DAY_REAL_SECONDS;
   }
   if (!c.active && c.offers.length === 0 && contractsUnlocked(state) && state.clock >= c.coolUntil) {
     const avoid: Species[] = [];
@@ -67,7 +67,7 @@ export function acceptContract(state: GameState, contractId: number): Ev[] {
   if (c.active) return [{ type: 'denied', reason: 'You already have a contract.' }];
   const o = c.offers.find((x) => x.id === contractId);
   if (!o) return [{ type: 'denied', reason: 'That contract is gone.' }];
-  o.deadline = state.clock + o.days * DAY_SECONDS;
+  o.deadline = state.clock + o.days * DAY_REAL_SECONDS;
   c.active = o;
   c.offers = [];
   return [{ type: 'contractAccepted', contractId }];

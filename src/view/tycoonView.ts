@@ -15,19 +15,13 @@ import type { World } from './world';
 
 // ---- where crates sit at the new buildings (used by cratesView) -------------------------------
 
-const SMOKE = LAYOUT.plots.smokehouse, COLD = LAYOUT.plots.coldstore;
+const SMOKE = LAYOUT.plots.smokehouse;
 const RACK_X = -2.0, RACK_Z = 2.2, RACK_STEP = 0.55, RACK_SHELF = [0.72, 1.2];
 /** Spot on the smokehouse racks for the i-th smoking crate. */
 export function smokeRackPos(i: number, out: THREE.Vector3): THREE.Vector3 {
   const p = toWorld(SMOKE, RACK_X + (i % 3) * RACK_STEP, RACK_Z);
   return out.set(p.x, RACK_SHELF[Math.floor(i / 3) % 2], p.z);
 }
-/** Crates in the cold store are inside the building: they shrink away through its door. */
-export function coldStorePos(out: THREE.Vector3): THREE.Vector3 {
-  const p = toWorld(COLD, 0, 1.6);
-  return out.set(p.x, 0.8, p.z);
-}
-
 // ---- buildings ------------------------------------------------------------------------------------
 
 interface Plan { w: number; d: number; build(g: THREE.Group, level: number, v: TycoonView): void }
@@ -42,39 +36,7 @@ function emptyLot(g: THREE.Group, p: Plan): void {
   cy(0.05, 0.05, 1.5, post, 0, 0.75, p.d / 2, g, 6);
 }
 
-const ICE = 0xbfe9ff, FROST = 0xf2f7fb;
-
 const PLANS: Record<BuildingId, Plan> = {
-  coldstore: {
-    w: 4.6, d: 3.8,
-    build(g, level, v) {
-      const wall = flat(FROST, 0.8), trim = flat(0x3f8fbf, 0.7), h = 2.5 + (level - 1) * 0.35;
-      bx(4.8, 0.3, 4.0, flat(0x9aa7b2, 0.9), 0, 0.15, 0, g);
-      bx(4.6, h, 3.8, wall, 0, 0.3 + h / 2, 0, g);
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(0.2, h, 0.2, trim, sx * 2.3, 0.3 + h / 2, sz * 1.9, g);
-      bx(5.0, 0.22, 4.2, trim, 0, 0.3 + h + 0.1, 0, g);                                   // flat roof edge
-      bx(4.6, 0.1, 3.8, flat(ICE, 0.4), 0, 0.3 + h + 0.24, 0, g);
-      // big sliding door with a frosted window
-      bx(1.9, 2.0, 0.1, flat(0x7fb6d6, 0.6), 0, 1.3, 1.92, g);
-      bx(2.2, 0.12, 0.14, flat(0x2d3236, 0.5), 0, 2.38, 1.94, g);
-      bx(0.7, 0.5, 0.06, flat(ICE, 0.3), 0, 1.7, 1.98, g);
-      // icicles along the front edge, ice blocks by the door
-      for (let i = 0; i < 9; i++) {
-        const ic = put(new THREE.ConeGeometry(0.06, 0.22 + (i % 3) * 0.1, 5), flat(ICE, 0.3), -2.2 + i * 0.55, 0.3 + h - 0.12, 2.05, g);
-        ic.rotation.x = Math.PI;
-      }
-      if (level >= 2) {                                                                    // cooling unit on the roof
-        bx(1.4, 0.7, 1.0, flat(0x8a97a2, 0.6), -1.1, 0.3 + h + 0.64, -0.6, g);
-        cy(0.3, 0.3, 0.08, flat(0x2d3236, 0.5), -1.1, 0.3 + h + 1.03, -0.6, g, 12);
-      }
-      if (level >= 3) {                                                                    // store room on the roof, towards the back
-        bx(2.2, 1.2, 1.4, wall, 0.9, 0.3 + h + 0.9, -1.0, g);
-        bx(2.4, 0.16, 1.6, trim, 0.9, 0.3 + h + 1.57, -1.0, g);
-        bx(1.0, 0.6, 0.8, flat(0x8a97a2, 0.6), -1.1, 0.3 + h + 0.6, 0.7, g);
-      }
-      addDoorFurniture(g, 0, 1.97, 1.5, v.world.M.iron);
-    },
-  },
   smokehouse: {
     w: 3.8, d: 3.6,
     build(g, level, v) {

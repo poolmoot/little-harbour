@@ -102,7 +102,6 @@ export class EventRouter {
           h.toast(say.unloaded(e.count));
           break;
         case 'cratePicked': a.fx.cratePickUp(); break;
-        case 'crateStored': a.fx.crateIce(); break;
         case 'crateTaken': a.fx.cratePickUp(); break;
         case 'crateSold':
           a.noteSale(1);
@@ -203,6 +202,12 @@ export class EventRouter {
         case 'phaseChanged':
           if (e.phase === 'dawn') a.dawn();
           if (e.phase === 'night') h.toast(say.nightFalls);
+          break;
+        case 'workersSleep':
+          h.toast(say.workersSleep);
+          break;
+        case 'workersWake':
+          h.toast(say.workersWake);
           break;
         case 'dayEnded':
           a.dayReport();

@@ -46,18 +46,6 @@ export const PLOT_TEXT = {
   nothingForThis: 'You are not carrying any fish that fits here.',
 };
 
-export const COLD_TEXT = {
-  inside: (n: number, cap: number): string => `In the cold store ${n} / ${cap}`,
-  note: 'Fish keep fresh here for a very long time.',
-  putIn: 'Put in',
-  takeOut: 'Take out',
-  empty: 'Nothing in the cold store.',
-  full: 'It is full. Upgrade it to keep more.',
-  hands: 'Your hands are full.',
-  fullLabel: 'Full',
-  howFull: (n: number, cap: number): string => `${n} of ${cap} crates`,
-};
-
 export const SMOKE_TEXT = {
   racks: 'Racks',
   note: `Smoked fish sells for ${SMOKED_MULT} times the price and never goes bad.`,
@@ -105,7 +93,7 @@ export const LIGHTHOUSE_TEXT = {
   kingDone: 'The King Fish hangs on the wall of the inn.',
 };
 
-export const BUILDING_ICON: Record<BuildingId, IconName> = { coldstore: 'ice', smokehouse: 'smoke', restaurant: 'plate', lighthouse: 'lighthouse' };
+export const BUILDING_ICON: Record<BuildingId, IconName> = { smokehouse: 'smoke', restaurant: 'plate', lighthouse: 'lighthouse' };
 export const WEATHER_ICON: Record<WeatherId, IconName> = { calm: 'sun', wind: 'wind', fog: 'fog', storm: 'storm' };
 
 // ---- contracts tab ---------------------------------------------------------------------------------------
@@ -125,14 +113,9 @@ export const WORKER_TEXT = {
   smokeTitle: 'Smoke these',
   smokeNote: 'Your workers put these fish in the smokehouse. You only see fish you have caught.',
   smokeNone: 'Catch some fish first. They will show up here.',
-  spareTitle: 'Spare crates go to',
-  spareNote: 'Workers take other crates to the market, or to storage to keep them fresh. Storage is the cold store first, then the ice box.',
-  market: 'Market',
-  storage: 'Storage',
-  storageNone: 'Storage (build the cold store first)',
-  rules: 'Workers go to the restaurant first, then the smokehouse, then to the market or to storage.',
+  rules: 'Workers go to the restaurant first, then the smokehouse, then to the market.',
   carryingTo: (dest: string): string => `Carrying to the ${dest}`,
-  dest: { market: 'market', ice: 'ice box', cold: 'cold store', restaurant: 'restaurant', smoke: 'smokehouse' },
+  dest: { market: 'market', restaurant: 'restaurant', smoke: 'smokehouse' },
   carryingSmoked: 'Carrying smoked fish to the market',
 };
 
@@ -204,7 +187,7 @@ export const SAY2 = {
 
 export const MARK_TEXT = {
   /** The words on each signboard and name plate. */
-  names: { market: 'Fish market', icebox: 'Ice box', board: 'Notice board', shipyard: 'Shipyard', inn: 'The inn', coldstore: 'Cold store', smokehouse: 'Smokehouse', restaurant: 'Restaurant', lighthouse: 'Lighthouse' },
+  names: { market: 'Fish market', board: 'Notice board', shipyard: 'Shipyard', inn: 'The inn', smokehouse: 'Smokehouse', restaurant: 'Restaurant', lighthouse: 'Lighthouse' },
   forSale: 'For sale',
   /** Small bubbles over a building: smoked fish is done, something can be bought now, a building has just opened up. */
   bubble: { ready: 'ready', up: 'up', new: 'new' },

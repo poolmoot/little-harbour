@@ -12,7 +12,7 @@ describe('whole-sim playthrough', () => {
     startGame(s, rng);
     expect(s.orders).toHaveLength(2);
     let days = 0;
-    for (let t = 0; t < 360 * 12; t += 0.1) {
+    for (let t = 0; t < 270 * 12; t += 0.1) {
       for (const e of step(s, 0.1, rng)) if (e.type === 'dayEnded') days++;
       if (Math.round(t * 10) % 20 === 0) {
         for (const b of s.boats) {
@@ -23,7 +23,7 @@ describe('whole-sim playthrough', () => {
         sellAll(s);
         castLine(s, rng);
         hook(s, rng);
-        for (const u of ['handcart', 'icebox'] as const) buyUpgrade(s, u);
+        buyUpgrade(s, 'handcart');
         buyBoatUpgrade(s, 1, 'hold');
         buyBoatUpgrade(s, 1, 'hull');
       }

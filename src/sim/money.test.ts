@@ -37,7 +37,7 @@ describe('captain experience and pay', () => {
     expect(captainWage(rookie, 0)).toBe(CAPTAIN_WAGE_BY_HULL[0]);
     expect(captainWage(rookie, 3)).toBe(CAPTAIN_WAGE_BY_HULL[3]);
     expect(captainWage({ trips: 999, trait: 'swift' }, 3)).toBe(CAPTAIN_WAGE_BY_HULL[3] * 2);
-    expect(captainWage({ trips: 0, trait: 'thrifty' }, 0)).toBe(28);
+    expect(captainWage({ trips: 0, trait: 'thrifty' }, 0)).toBe(42);
   });
 
   it('experience brings better fish and shorter trips', () => {
@@ -138,8 +138,8 @@ describe('town projects', () => {
   });
 });
 
-describe('version 7 save', () => {
-  it('a version 6 save loads with no projects, captains at level 1 and no old stored pay', () => {
+describe('version 8 save', () => {
+  it('an older save loads with no projects, captains at level 1 and no old stored pay', () => {
     const old = JSON.parse(JSON.stringify(initialState()));
     old.version = 6;
     delete old.town;
@@ -148,7 +148,7 @@ describe('version 7 save', () => {
     old.candidates = [{ id: 5, name: 'Brigid', trait: 'swift', wage: 40 }];
     const mem = new Map<string, string>([['harbour-game-save', JSON.stringify(old)]]);
     const l = loadGame({ getItem: (k) => mem.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
-    expect(l.version).toBe(7);
+    expect(l.version).toBe(8);
     expect(PROJECT_IDS.every((id) => l.town[id] === false)).toBe(true);
     expect(l.stats.upkeep).toBe(0);
     expect(l.boats[0].captain).toEqual({ id: 4, name: 'Ansel', trait: 'lucky', trips: 0 });

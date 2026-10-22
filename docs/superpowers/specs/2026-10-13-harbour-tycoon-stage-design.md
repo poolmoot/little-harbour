@@ -215,3 +215,9 @@ minutes, up to 8 minutes while it saves for the restaurant or the lighthouse
   Restaurant (18.5, 3.5), Lighthouse (19.5, 11.5). Workers stop at the door,
   2 to 2.4 in front. Workers walk along the east-west line z = 7.4.
 - The storm goal can wait several days for a storm (storms are 15% of days).
+
+## Changes on 2026-10-21 (the newer words win over anything above)
+
+- The cold store and the ice box are removed (see the business-stage spec). The buildings are now the smokehouse, restaurant and lighthouse; the 'cold' goal is gone from the goal chain. Workers go to the restaurant, then to collect smoked crates, then the smokehouse for ticked fish, then the market.
+- The lighthouse no longer "lets boats sail at night" (they always can). It makes trips that start at night take 30% less time, and it is still needed for the King Fish (a Deep Sea trip that left at night). Cost 24,000. King Fish base chance 2.5% per night Deep Sea trip.
+- Layout: west row is shipyard (centre z 0.8) and smokehouse (centre z 9.2); the sea row is market, notice board (x 4.9), clock tower (x 9.5).

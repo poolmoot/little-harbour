@@ -19,7 +19,6 @@ import { startGame, step } from './sim';
 import { buyUpgrade, canBuy } from './upgrades';
 import { BUILDINGS, BUILDING_IDS, GOALS, PROJECT_IDS, PROJECTS, SPECIES, UPGRADES, UPGRADE_IDS } from './config';
 import type { BuildingId } from './config';
-import { isNight } from './time';
 
 export interface BotResult {
   rankMinutes: (number | null)[];
@@ -65,7 +64,6 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
     type Opt = { cost: number; go: () => void; pay?: boolean; later?: boolean };
     const opts: Opt[] = [];
     for (const id of UPGRADE_IDS) {
-      if (id === 'icebox') continue;
       if (canBuy(s, id).ok) opts.push({ cost: UPGRADES[id].cost, go: () => { buyUpgrade(s, id); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}`); } });
     }
     for (const b of s.boats) {
@@ -75,9 +73,8 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
       }
     }
     for (const id of BUILDING_IDS) {
-      if (id === 'coldstore' && s.rank < 2) continue; // the scripted player does not use the cold store, but buys it for the goals
       // The lighthouse is the road to the King Fish: only once the fleet is worth night trips.
-      if (id === 'lighthouse' && s.boats.filter((b) => b.hull === 3).length < 1) continue;
+      if (id === 'lighthouse' && s.boats.filter((b) => b.hull === 3).length < 2) continue;
       const c = canBuyBuilding(s, id);
       if (c.ok) opts.push({ cost: c.cost!, pay: id === 'smokehouse' || id === 'restaurant' || id === 'lighthouse', go: () => { buyBuilding(s, id as BuildingId); if (id === 'smokehouse') for (const sp of SPECIES) setSmokeList(s, sp, true); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}${s.buildings[id]}`); } });
     }
@@ -160,7 +157,7 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
     for (const b of s.boats) {
       if (b.captain && !b.captain.unpaid) continue;
       if (b.status === 'returned') { cancelCast(s); unloadBoat(s, b.id); acted = true; busy = 1.5; }
-      else if (b.status === 'docked' && !b.damaged && (!isNight(s) || s.buildings.lighthouse > 0)) {
+      else if (b.status === 'docked' && !b.damaged) {
         // The best zone this boat can reach and the player can pay for.
         const zone = reachableZones(b).filter((z) => tripCostFor(z, b) <= s.money).pop();
         if (zone === undefined) continue;
@@ -188,6 +185,9 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
       busy = tune.haulSeconds * 0.5;
       continue;
     }
+    // 2c. shop & hire whenever something can be paid for (boats now sail all night too, so there is no quiet moment to wait for)
+    hires();
+    if (shop()) { busy = tune.shopSeconds; continue; }
     // 3. haul dock crates (best first)
     const free = dockCrates(s).filter((c) => c.carrier === undefined && c.freshness > 0);
     if (free.length) {
@@ -197,9 +197,6 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
       busy = tune.haulSeconds * 0.5;
       continue;
     }
-    // 4. shop & hire
-    hires();
-    if (shop()) { busy = tune.shopSeconds; continue; }
     // 5. fish off the pier
     if (s.fishing.phase === 'idle') castLine(s, rng);
   }

@@ -18,10 +18,10 @@ describe('guide advice', () => {
     s.money = tripCostFor('shallows') - 1;
     expect(guideAdvice(s)).toMatchObject({ why: 'cost', how: 'pier', target: 'pierEnd', need: { have: s.money } });
   });
-  it('send: at night boats cannot sail, so go to the pier', () => {
+  it('send: night makes no difference, boats can sail', () => {
     const s = at('send');
     s.dayTime = (23 - START_HOUR) * HOUR_SECONDS;
-    expect(guideAdvice(s)).toMatchObject({ why: 'night', how: 'pier', target: 'pierEnd' });
+    expect(guideAdvice(s)).toBeNull();
   });
   it('space: not enough money shows the gap and how to earn, in order', () => {
     const s = at('space');

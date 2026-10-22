@@ -18,7 +18,6 @@ import { LABEL, UPGRADE, boatType, crates } from '../text';
 import type { Screen } from './types';
 
 const UPGRADE_LOOK: Record<UpgradeId, { tone: CardTone; icon: IconName }> = {
-  icebox: { tone: 'blue', icon: 'ice' },
   handcart: { tone: 'orange', icon: 'cart' },
   stall1: { tone: 'green', icon: 'stall' },
   stall2: { tone: 'purple', icon: 'stall' },

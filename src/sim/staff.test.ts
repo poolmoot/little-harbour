@@ -3,10 +3,10 @@ import { step, startGame } from './sim';
 import { Rng } from './rng';
 import { initialState } from './state';
 import type { GameState } from './state';
-import { dockCrates, addCrate, iceCrates, pickUp, handCrates } from './crates';
-import { canHireCaptain, fireCaptain, fireDockhand, hireCaptain, hireDockhand, payWages, refreshCandidates, setBoatTarget, setHaulPolicy, stepCaptains } from './staff';
+import { dockCrates, addCrate, pickUp, handCrates } from './crates';
+import { canHireCaptain, fireCaptain, fireDockhand, hireCaptain, hireDockhand, payWages, refreshCandidates, setBoatTarget, stepCaptains } from './staff';
 import { holdSize, rareMult, tripTimeFor } from './fleet';
-import { CAPTAIN_WAGE, DOCKHAND_WAGE } from './config';
+import { CAPTAIN_WAGE, DOCKHAND_WAGE, ZONES } from './config';
 import { dispatchBoat, stepBoats } from './boats';
 import { captainWage } from './captains';
 import { rollCatch } from './catch';
@@ -54,7 +54,7 @@ describe('captains', () => {
     const b = s.boats[0];
     const cap = (trait: 'swift' | 'lucky' | 'careful' | 'thrifty') => ({ id: 1, name: 'X', trait });
     b.captain = cap('swift');
-    expect(tripTimeFor(b, 'shallows')).toBeCloseTo(25 * 0.85);
+    expect(tripTimeFor(b, 'shallows')).toBeCloseTo(ZONES.shallows.trip * 0.85);
     b.captain = cap('lucky');
     expect(rareMult(b)).toBeCloseTo(1.25);
     b.captain = cap('careful');
@@ -63,11 +63,11 @@ describe('captains', () => {
     b.captain = null;
     s.candidates = [{ id: 50, name: 'Thr', trait: 'thrifty' }];
     hireCaptain(s, 50, 1);
-    expect(captainWage(s.boats[0].captain!, 0)).toBe(28);
+    expect(captainWage(s.boats[0].captain!, 0)).toBe(42);
     s.boats[0].captain!.unpaid = true; // an absent captain gives no bonus
     expect(holdSize(b)).toBe(4);
   });
-  it('sails by itself: unloads, re-sends, and only in daylight', () => {
+  it('sails by itself: unloads, re-sends, day and night', () => {
     const s = ranked(3300);
     const r = rng();
     s.boats[0].captain = { id: 5, name: 'Ansel', trait: 'swift' };
@@ -77,15 +77,13 @@ describe('captains', () => {
     run(s, 40, r); // trip is ~21 s: back, unloaded, sent again
     expect(dockCrates(s).length).toBeGreaterThanOrEqual(4);
     expect(s.book.herring.caught + s.book.mackerel.caught + s.book.flounder.caught).toBeGreaterThanOrEqual(4);
-    // night: unloads but does not sail again
+    // night: captains keep sailing
     s.dayTime = 215;
     s.lastPhase = 'night';
     s.boats[0].status = 'returned';
     s.boats[0].catch = ['herring'];
     stepCaptains(s);
-    expect(s.boats[0].status).toBe('docked');
-    stepCaptains(s);
-    expect(s.boats[0].status).toBe('docked');
+    expect(s.boats[0].status).toBe('out');
   });
   it('sails to its assigned zone and cannot be assigned beyond the hull', () => {
     const s = ranked(3300);
@@ -118,7 +116,7 @@ describe('wages', () => {
     const s = ranked(3300);
     s.boats[0].captain = { id: 5, name: 'A', trait: 'swift' };
     s.dockhands = [{ id: 6, name: 'Pip', slot: 0, job: null }];
-    s.money = 50; // enough for the captain only
+    s.money = CAPTAIN_WAGE + 10; // enough for the captain only
     payWages(s, s.stats);
     expect(s.money).toBe(10);
     expect(s.boats[0].captain!.unpaid).toBe(false);
@@ -186,25 +184,56 @@ describe('dockhands', () => {
     expect(a.some((id) => b.includes(id))).toBe(false);
     expect(a).toContain(gold.id);
   });
-  it('haul policy "ice" fills the ice box first, then sends the rest to market', () => {
+  it('go home to sleep at night: nobody starts a job, and they wake and work again at dawn', () => {
     const s = ranked(500);
-    s.upgrades.icebox = true;
-    s.upgrades.handcart = true;
     hire(s);
-    setHaulPolicy(s, 'ice');
-    for (let i = 0; i < 8; i++) addCrate(s, 'seabass', 'dock', 0);
-    run(s, 90);
-    expect(iceCrates(s)).toHaveLength(6);
-    expect(s.stats.sold).toBeGreaterThanOrEqual(2);
-    expect(dockCrates(s)).toHaveLength(0);
+    s.dayTime = 205; // just before night
+    s.lastPhase = 'dusk';
+    for (let i = 0; i < 4; i++) addCrate(s, 'mackerel', 'dock', 0);
+    const r = rng();
+    const evs = [];
+    for (let t = 0; t < 60; t += 0.25) evs.push(...step(s, 0.25, r));
+    expect(evs.filter((e) => e.type === 'workersSleep')).toHaveLength(1);
+    expect(s.dockhands[0].job).toBeNull();
+    expect(dockCrates(s).length).toBeGreaterThan(0); // left for the morning
+    s.dayTime = 358;
+    const wake = [];
+    for (let t = 0; t < 4; t += 0.25) wake.push(...step(s, 0.25, r));
+    expect(wake.filter((e) => e.type === 'workersWake')).toHaveLength(1);
+    step(s, 0.25, r);
+    expect(s.dockhands[0].job).not.toBeNull();
   });
-  it('policy "ice" without an ice box falls back to market', () => {
+  it('a worker already carrying at nightfall delivers first; one walking to a crate lets go and walks home', () => {
     const s = ranked(500);
     hire(s);
-    setHaulPolicy(s, 'ice');
-    addCrate(s, 'seabass', 'dock', 0);
-    step(s, 0.1, rng());
-    expect(s.dockhands[0].job?.dest).toBe('market');
+    hire(s);
+    s.dayTime = 200;
+    for (let i = 0; i < 4; i++) addCrate(s, 'mackerel', 'dock', 0);
+    const r = rng();
+    step(s, 0.1, r); // both start 'out'
+    const jobs = s.dockhands.map((d) => d.job!);
+    expect(jobs.map((j) => j.phase)).toEqual(['out', 'out']);
+    s.dayTime = 211;
+    s.lastPhase = 'night';
+    step(s, 0.1, r);
+    expect(s.dockhands.every((d) => d.job?.phase === 'back')).toBe(true);
+    expect(s.crates.every((c) => c.carrier === undefined)).toBe(true);
+    for (let t = 0; t < 60; t += 0.25) step(s, 0.25, r);
+    expect(s.dockhands.every((d) => d.job === null)).toBe(true);
+    // carrying workers deliver first
+    const t2 = ranked(500);
+    hire(t2);
+    t2.dayTime = 200;
+    addCrate(t2, 'mackerel', 'dock', 0);
+    const r2 = rng();
+    for (let t = 0; t < 12 && t2.dockhands[0].job?.phase !== 'haul'; t += 0.25) step(t2, 0.25, r2);
+    expect(t2.dockhands[0].job?.phase).toBe('haul');
+    t2.dayTime = 212;
+    t2.lastPhase = 'night';
+    const sold0 = t2.stats.sold;
+    for (let t = 0; t < 40; t += 0.25) step(t2, 0.25, r2);
+    expect(t2.stats.sold).toBe(sold0 + 1);
+    expect(t2.dockhands[0].job).toBeNull();
   });
   it('the player can still take a crate a dockhand has claimed, and firing returns carried crates', () => {
     const s = ranked(500);
@@ -232,19 +261,19 @@ describe('new zones', () => {
     const n = (m: number) => rollCatch('deep', 'day', 6000, new Rng(11), m).filter((x) => x === 'sturgeon').length;
     expect(n(2.2)).toBeGreaterThan(n(1) * 1.6);
   });
-  it('trip times are 80 s and 120 s and a boat needs the hull', () => {
+  it('trip times follow the zone table and a boat needs the hull', () => {
     const s = initialState();
     s.boats[0].hull = 2;
     s.money = 200;
     expect(dispatchBoat(s, 1, 'deep')[0].type).toBe('denied');
     dispatchBoat(s, 1, 'opensea');
-    expect(s.boats[0].tripTime).toBe(80);
+    expect(s.boats[0].tripTime).toBe(ZONES.opensea.trip);
     s.boats[0].status = 'docked';
     s.boats[0].hull = 3;
     s.money = 1000;
     dispatchBoat(s, 1, 'deep');
-    expect(s.boats[0].tripTime).toBe(120);
-    stepBoats(s, 121, rng());
+    expect(s.boats[0].tripTime).toBe(ZONES.deep.trip);
+    stepBoats(s, ZONES.deep.trip + 1, rng());
     expect(s.boats[0].catch).toHaveLength(4);
   });
 });

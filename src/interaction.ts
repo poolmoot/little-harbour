@@ -8,7 +8,7 @@ import { SAY2 } from './ui/screenText';
 import { BUILDING_LABEL, say } from './ui/text';
 
 
-export type TargetKind = 'crate' | 'boat' | 'market' | 'shipyard' | 'board' | 'icebox' | 'fishing' | 'inn' | 'plot';
+export type TargetKind = 'crate' | 'boat' | 'market' | 'shipyard' | 'board' | 'fishing' | 'inn' | 'plot' | 'berth';
 export interface Target {
   kind: TargetKind;
   id: number;
@@ -17,11 +17,10 @@ export interface Target {
   dist: number;
 }
 
-export const STATIONS: Record<Exclude<TargetKind, 'crate' | 'boat' | 'plot'>, { x: number; z: number; range: number }> = {
+export const STATIONS: Record<Exclude<TargetKind, 'crate' | 'boat' | 'plot' | 'berth'>, { x: number; z: number; range: number }> = {
   market: { ...LAYOUT.stations.market, range: INTERACT_RANGE },
   shipyard: { ...LAYOUT.stations.shipyard, range: INTERACT_RANGE },
   board: { ...LAYOUT.stations.board, range: INTERACT_RANGE },
-  icebox: { ...LAYOUT.stations.icebox, range: INTERACT_RANGE },
   inn: { ...LAYOUT.stations.inn, range: INTERACT_RANGE },
   fishing: { x: LAYOUT.fishingSpot.x, z: LAYOUT.fishingSpot.z, range: 3.2 },
 };
@@ -42,7 +41,7 @@ export function interact(t: Target | null, s: GameState, rng: Rng): Interaction 
     case 'market': return { open: 'market' };
     case 'shipyard': return { open: 'shipyard' };
     case 'board': return { open: 'board' };
-    case 'icebox': return { open: 'ice' };
+    case 'berth': return { open: 'berth', arg: t.id };
     case 'inn': return handCrates(s).some((c) => c.king) ? { evs: deliverKingFish(s) } : { open: 'hire' };
     case 'plot': return { open: 'plot', arg: t.id };
     case 'fishing': return { evs: s.fishing.phase === 'idle' ? castLine(s, rng) : hook(s, rng) };
@@ -64,6 +63,10 @@ export function findTarget(s: GameState, p: { x: number; z: number }): Target | 
     const berth = LAYOUT.berths[b.berth];
     consider('boat', b.id, berth.edgeX, berth.edgeZ, BOAT_RANGE);
   }
+  // an empty boat spot on the pier: a boat for sale
+  LAYOUT.berths.forEach((berth, i) => {
+    if (!s.boats.some((b) => b.berth === i)) consider('berth', i, berth.edgeX, berth.edgeZ, BOAT_RANGE);
+  });
   BUILDING_IDS.forEach((id, i) => {
     const p = LAYOUT.plots[id];
     consider('plot', i, p.doorX, p.doorZ, INTERACT_RANGE);
@@ -100,7 +103,7 @@ if (!t) return null;
       const id = BUILDING_IDS[t.id];
       return { text: BUILDING_LABEL.prompt(id, s.buildings[id]), key: true };
     }
-    case 'icebox': return { text: s.upgrades.icebox ? say.iceOwned : say.iceBuy, key: true };
+    case 'berth': return { text: say.berthFree, key: true };
     case 'fishing':
       if (s.fishing.phase === 'idle') return { text: say.cast, key: true };
       if (s.fishing.phase === 'bite') return { text: say.pullNow, key: true, hot: true };

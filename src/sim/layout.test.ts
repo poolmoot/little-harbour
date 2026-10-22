@@ -111,11 +111,11 @@ const near = (dist: ArrayLike<number>, x: number, z: number, range: number, none
   return best;
 };
 
-const SEA_ROW = ['market', 'icebox', 'board', 'tower'];
-const WEST_ROW = ['shipyard', 'coldstore', 'smokehouse'];
+const SEA_ROW = ['market', 'board', 'tower'];
+const WEST_ROW = ['shipyard', 'smokehouse'];
 const EAST_ROW = ['inn', 'restaurant'];
 const named = (n: string) => BOXES.find((b) => b.name === n)!;
-const poseOf = (n: string) => ({ market: L.market, shipyard: L.shipyard, inn: L.inn, tower: L.bellTower, board: L.noticeBoard, icebox: L.iceBox, coldstore: L.plots.coldstore, smokehouse: L.plots.smokehouse, restaurant: L.plots.restaurant } as Record<string, { x: number; z: number; rot: number }>)[n];
+const poseOf = (n: string) => ({ market: L.market, shipyard: L.shipyard, inn: L.inn, tower: L.bellTower, board: L.noticeBoard, smokehouse: L.plots.smokehouse, restaurant: L.plots.restaurant } as Record<string, { x: number; z: number; rot: number }>)[n];
 const corners = (b: Box) => {
   const c = Math.cos(b.a), s = Math.sin(b.a);
   return [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz]) => ({ x: b.cx + sx * b.hx * c + sz * b.hz * s, z: b.cz - sx * b.hx * s + sz * b.hz * c }));
@@ -133,7 +133,7 @@ describe('town layout', () => {
     const xs = SEA_ROW.map((n) => poseOf(n).x);
     for (let i = 1; i < xs.length; i++) expect(xs[i]).toBeGreaterThan(xs[i - 1]);
     expect(L.market.x).toBeLessThan(-L.pierHalfWidth - 1);
-    expect(L.iceBox.x).toBeGreaterThan(L.pierHalfWidth + 1);
+    expect(L.noticeBoard.x).toBeGreaterThan(L.pierHalfWidth + 1);
     expect(L.bellTower.x).toBe(poseOf('tower').x);
     expect(L.bellTower.z).toBe(poseOf('tower').z);
   });

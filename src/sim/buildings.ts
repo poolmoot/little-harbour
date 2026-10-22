@@ -1,10 +1,10 @@
 import {
-  BUILDINGS, COLD_CAPACITY, FISH_PRICE, RESTAURANT_CAPACITY, RESTAURANT_MIN_FRESH, RESTAURANT_MULT, RESTAURANT_VARIETY_BONUS,
+  BUILDINGS, FISH_PRICE, RESTAURANT_CAPACITY, RESTAURANT_MIN_FRESH, RESTAURANT_MULT, RESTAURANT_VARIETY_BONUS,
   SMOKE_RACKS, SMOKE_SECONDS, SPECIES,
 } from './config';
 import { restaurantTownMult, saleTownMult } from './town';
 import type { BuildingId, Species } from './config';
-import { coldCrates, handCrates, isSpoiled, removeCrate, smokeCrates } from './crates';
+import { handCrates, isSpoiled, removeCrate, smokeCrates } from './crates';
 import { earnSale, spend } from './ledger';
 import { rankOf } from './rank';
 import type { Check, Crate, Ev, GameState } from './state';
@@ -35,29 +35,6 @@ export function buyBuilding(state: GameState, id: BuildingId): Ev[] {
   spend(state, chk.cost!);
   state.buildings[id] += 1;
   return [{ type: 'buildingBuilt', id, level: state.buildings[id] }];
-}
-
-// ---- Cold store ----------------------------------------------------------------
-
-export const coldCapacity = (state: GameState): number => COLD_CAPACITY[state.buildings.coldstore];
-export const coldRoom = (state: GameState): number => coldCapacity(state) - coldCrates(state).length;
-
-export function storeInCold(state: GameState, crateId: number): Ev[] {
-  if (!state.buildings.coldstore) return [{ type: 'denied', reason: 'You need a cold store first.' }];
-  const c = state.crates.find((k) => k.id === crateId && k.loc === 'hand');
-  if (!c) return [{ type: 'denied', reason: 'You are not carrying that.' }];
-  if (c.king || c.smoked) return [{ type: 'denied', reason: 'That never goes bad. It does not need the cold store.' }];
-  if (coldRoom(state) <= 0) return [{ type: 'denied', reason: 'The cold store is full.' }];
-  c.loc = 'cold';
-  return [{ type: 'crateStored', crateId }];
-}
-
-export function takeFromCold(state: GameState, crateId: number): Ev[] {
-  const c = state.crates.find((k) => k.id === crateId && k.loc === 'cold');
-  if (!c) return [{ type: 'denied', reason: 'Nothing there.' }];
-  if (handCrates(state).length >= carryCapacity(state)) return [{ type: 'denied', reason: 'Your hands are full.' }];
-  c.loc = 'hand';
-  return [{ type: 'crateTaken', crateId }];
 }
 
 // ---- Smokehouse ----------------------------------------------------------------

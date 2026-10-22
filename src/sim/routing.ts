@@ -1,7 +1,7 @@
-// Where a free worker takes crates: restaurant, then collecting smoked crates, then the smokehouse, then storage or the market.
-import { FISH_PRICE, ICE_CAPACITY } from './config';
-import { dockCrates, iceCrates, isSpoiled, smokeCrates, carryCapacity } from './crates';
-import { coldRoom, rackRoom, restaurantRoom, restaurantWants } from './buildings';
+// Where a free worker takes crates: restaurant, then collecting smoked crates, then the smokehouse, then the market.
+import { FISH_PRICE } from './config';
+import { dockCrates, isSpoiled, smokeCrates, carryCapacity } from './crates';
+import { rackRoom, restaurantRoom, restaurantWants } from './buildings';
 import { crateValue } from './market';
 import type { Crate, Dest, GameState } from './state';
 
@@ -18,8 +18,6 @@ export function roomFor(state: GameState, dest: Dest): number {
   switch (dest) {
     case 'restaurant': return state.buildings.restaurant ? restaurantRoom(state) - reserved(state, dest) : 0;
     case 'smoke': return state.buildings.smokehouse ? rackRoom(state) - reserved(state, dest) : 0;
-    case 'cold': return state.buildings.coldstore ? coldRoom(state) - reserved(state, dest) : 0;
-    case 'ice': return state.upgrades.icebox ? ICE_CAPACITY - iceCrates(state).length - reserved(state, dest) : 0;
     default: return Infinity;
   }
 }
@@ -30,14 +28,10 @@ const claimed = (state: GameState, c: Crate): boolean => c.carrier !== undefined
 export function destFor(state: GameState, c: Crate): Dest {
   if (!c.smoked && restaurantWants(state, c) && roomFor(state, 'restaurant') > 0) return 'restaurant';
   if (!c.smoked && !c.golden && state.smokeList.includes(c.species) && roomFor(state, 'smoke') > 0) return 'smoke';
-  if (state.haulPolicy === 'ice') {
-    if (roomFor(state, 'cold') > 0) return 'cold';
-    if (roomFor(state, 'ice') > 0) return 'ice';
-  }
   return 'market';
 }
 
-const RANK: Record<Dest, number> = { restaurant: 0, smoke: 2, cold: 3, ice: 3, market: 3 };
+const RANK: Record<Dest, number> = { restaurant: 0, smoke: 2, market: 3 };
 
 /** Decide the next job for an idle worker, or null when there is nothing to do. */
 export function planJob(state: GameState): Plan | null {

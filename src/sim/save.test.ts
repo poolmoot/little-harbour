@@ -16,13 +16,11 @@ describe('save', () => {
     const st = memory();
     const s = initialState();
     s.money = 321;
-    s.upgrades.icebox = true;
-    const c = addCrate(s, 'snapper', 'ice');
+    const c = addCrate(s, 'snapper', 'dock');
     c.freshness = 61.5;
     saveGame(s, st);
     const l = loadGame(st, new Rng(1))!;
     expect(l.money).toBe(321);
-    expect(l.upgrades.icebox).toBe(true);
     expect(l.crates[0].freshness).toBe(61.5);
   });
   it('puts boats that were out back at the berth with the catch ready', () => {
@@ -72,8 +70,8 @@ describe('migration from the MVP save', () => {
     };
     st.setItem('harbour-game-save', JSON.stringify(old));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(7);
-    expect(l.money).toBe(777);
+    expect(l.version).toBe(8);
+    expect(l.money).toBe(777 + 120); // the ice box is refunded
     expect(l.boats).toHaveLength(2);
     for (const b of l.boats) {
       expect(b.hold).toBe(2);
@@ -81,7 +79,6 @@ describe('migration from the MVP save', () => {
       expect(b.gear).toBe(0);
       expect(b.captain).toBeNull();
     }
-    expect(l.upgrades.icebox).toBe(true);
     expect((l.upgrades as Record<string, boolean>).hold1).toBeUndefined();
     expect(l.book.herring.caught).toBe(12);
     expect(l.book.lobster.bestSale).toBe(88);
@@ -127,8 +124,8 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     const st = memory();
     st.setItem('harbour-game-save', JSON.stringify(v3()));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(7);
-    expect(l.money).toBe(4321);
+    expect(l.version).toBe(8);
+    expect(l.money).toBe(4321 + 120);
     expect(l.day).toBe(12);
     expect(l.lifetime).toBe(9000);
     expect(l.rank).toBe(2);
@@ -138,8 +135,9 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     expect(l.dockhands).toHaveLength(1);
     expect(l.book.seabass.caught).toBe(4);
     expect(l.crates[0].freshness).toBe(55);
-    expect(l.upgrades).toEqual({ icebox: true, handcart: true, stall1: true, stall2: false });
-    expect(l.buildings).toEqual({ coldstore: 0, smokehouse: 0, restaurant: 0, lighthouse: 0 });
+    expect(l.crates[0].loc).toBe('dock');
+    expect(l.upgrades).toEqual({ handcart: true, stall1: true, stall2: false });
+    expect(l.buildings).toEqual({ smokehouse: 0, restaurant: 0, lighthouse: 0 });
     expect(l.weather).toBe('calm');
     expect(l.smokeList).toEqual(['herring', 'mackerel']);
     expect(l.contracts).toEqual({ offers: [], active: null, coolUntil: 0 });
@@ -149,7 +147,7 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     const st = memory();
     st.setItem('harbour-game-save', JSON.stringify(v3()));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.money).toBe(4321);
+    expect(l.money).toBe(4321 + 120);
     expect(l.goal).toBeGreaterThanOrEqual(10);
     // The next unmet goal is a building one: the player has built nothing yet.
     const s2 = loadGame(st, new Rng(1))!;
@@ -186,9 +184,59 @@ describe('migration to version 6 (starting guide)', () => {
     const store = new Map<string, string>();
     store.set(SAVE_KEY, JSON.stringify(old));
     const s = loadGame({ getItem: (k) => store.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
-    expect(s.version).toBe(7);
+    expect(s.version).toBe(8);
     expect(s.guide.step).toBeGreaterThanOrEqual(8);
     expect(s.guide.welcomed).toBe(true);
     expect(s.guide.gentle).toBe(false);
+  });
+});
+
+describe('migration to version 7 (ice box and cold store removed)', () => {
+  const v6 = () => {
+    const s = initialState();
+    s.money = 1000; s.lifetime = 5000; s.rank = 2; s.tally.sold = 60;
+    s.goal = 14;
+    s.upgrades.handcart = true;
+    const old = JSON.parse(JSON.stringify(s)) as Record<string, any>;
+    old.version = 6;
+    old.upgrades.icebox = true;
+    old.buildings.coldstore = 2;
+    old.haulPolicy = 'ice';
+    old.crates = [
+      { id: 11, species: 'cod', freshness: 83.25, loc: 'ice' },
+      { id: 12, species: 'tuna', freshness: 41, loc: 'cold' },
+      { id: 13, species: 'herring', freshness: 10, loc: 'hand' },
+      { id: 14, species: 'mackerel', freshness: 70, loc: 'dock', x: 1.6, z: -3, layer: 0 },
+    ];
+    return old;
+  };
+  const load = (raw: unknown) => {
+    const store = new Map<string, string>([[SAVE_KEY, JSON.stringify(raw)]]);
+    return loadGame({ getItem: (k) => store.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
+  };
+  it('puts stored crates back on the dock as fresh as they were, and refunds what was spent', () => {
+    const l = load(v6());
+    expect(l.version).toBe(8);
+    expect(l.money).toBe(1000 + 120 + 600 + 2000);
+    const byId = (id: number) => l.crates.find((c) => c.id === id)!;
+    expect(byId(11)).toMatchObject({ loc: 'dock', freshness: 83.25 });
+    expect(byId(12)).toMatchObject({ loc: 'dock', freshness: 41 });
+    expect(byId(13).loc).toBe('hand');
+    const spots = [11, 12, 14].map((id) => `${byId(id).x},${byId(id).z},${byId(id).layer}`);
+    expect(new Set(spots).size).toBe(3);
+    expect(l.upgrades).toEqual({ handcart: true, stall1: false, stall2: false });
+    expect(l.buildings).toEqual({ smokehouse: 0, restaurant: 0, lighthouse: 0 });
+    expect((l as unknown as Record<string, unknown>).haulPolicy).toBeUndefined();
+    expect(l.lifetime).toBe(5000);
+    expect(l.tally.sold).toBe(60);
+  });
+  it('moves the goal along because the cold store goal is gone, and loads a save with nothing stored unchanged', () => {
+    expect(load(v6()).goal).toBe(13);
+    const early = v6(); early.goal = 4;
+    expect(load(early).goal).toBe(4);
+    const plain = v6(); plain.upgrades.icebox = false; plain.buildings.coldstore = 0; plain.crates = [];
+    const l = load(plain);
+    expect(l.money).toBe(1000);
+    expect(l.crates).toEqual([]);
   });
 });

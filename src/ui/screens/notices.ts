@@ -2,7 +2,7 @@ import { HOUR_SECONDS, ORDER_BONUS, ORDER_REFILL_DELAY, PROJECTS, PROJECT_IDS } 
 import { rankOf } from '../../sim/rank';
 import { canBuyProject, projectDone } from '../../sim/town';
 import { contractsUnlocked } from '../../sim/contracts';
-import { formatClock } from '../../sim/time';
+import { formatClock, gameSecondsFor } from '../../sim/time';
 import type { Contract, GameState } from '../../sim/state';
 import { hex, SPECIES_COLOUR } from '../../palette';
 import { button, buyLabel, empty, item, lockNote, meter, money, price, section } from '../components';
@@ -22,7 +22,7 @@ function orders(s: GameState): string {
   let body = s.orders.length ? '' : empty('No orders right now.');
   for (const o of s.orders) {
     const left = Math.max(0, o.deadline - s.clock);
-    const by = formatClock((s.dayTime + left) % DAY_SECONDS);
+    const by = formatClock((s.dayTime + gameSecondsFor(s.dayTime, left)) % DAY_SECONDS);
     const frac = left / FULL_METER_SECONDS;
     body += item({
       art: fishIcon(hex(SPECIES_COLOUR[o.species]), 28),

@@ -17,7 +17,7 @@ import type { MarkIcon } from './markIcons';
  * Positions come from LAYOUT; the bubbles are worked out from the game state (no rules live here).
  */
 
-type MarkId = 'market' | 'icebox' | 'board' | 'shipyard' | 'inn' | BuildingId;
+type MarkId = 'market' | 'board' | 'shipyard' | 'inn' | BuildingId;
 
 interface Def {
   id: MarkId;
@@ -53,11 +53,9 @@ function mk(id: MarkId, icon: MarkIcon, pose: Pose, hz: number, o: { signLx?: nu
 }
 const DEFS: Def[] = [
   mk('market', 'fish', L.market, FOOT.market[1], { signLz: 1.55, sy: 2.0, scale: 0.85, mount: 'rail', doorLx: -1.5, station: L.stations.market, bubbleY: 3.7, lx: -0.55 }),
-  mk('icebox', 'ice', L.iceBox, FOOT.iceBox[1], { signLz: 1.0, sy: 1.5, scale: 0.7, mount: 'posts', doorLx: 0, station: L.stations.icebox, bubbleY: 2.5, lx: -0.8, postFrom: 0 }),
   mk('board', 'paper', L.noticeBoard, FOOT.noticeBoard[1], { signLz: 0.3, sy: 3.05, scale: 0.8, mount: 'posts', doorLx: 0, station: L.stations.board, bubbleY: 4.2, lx: -1.0, postFrom: 2.55 }),
   mk('shipyard', 'anchor', L.shipyard, FOOT.shipyard[1], { signLx: -1.1, signLz: FOOT.shipyard[1] + 0.5, sy: 3.4, scale: 1, mount: 'wall', doorLx: -1.1, station: L.stations.shipyard, bubbleY: 5.4, lx: 1.4 }),
   mk('inn', 'mug', L.inn, FOOT.inn[1], { signLx: -1.8, signLz: FOOT.inn[1] + 0.5, sy: 3.05, scale: 1, mount: 'wall', doorLx: -1.8, station: L.stations.inn, bubbleY: 5.6, lx: 1.2 }),
-  mk('coldstore', 'snow', P.coldstore, FOOT.coldstore[1], { signLz: FOOT.coldstore[1] + 0.5, sy: 2.85, scale: 0.95, mount: 'wall', doorLx: 0, station: { x: P.coldstore.doorX, z: P.coldstore.doorZ }, bubbleY: 4.4, plot: 'coldstore', lotDepth: 3.8 }),
   mk('smokehouse', 'smoke', P.smokehouse, FOOT.smokehouse[1], { signLx: 1.2, signLz: FOOT.smokehouse[1] + 0.5, sy: 3.0, scale: 0.95, mount: 'wall', doorLx: 1.2, station: { x: P.smokehouse.doorX, z: P.smokehouse.doorZ }, bubbleY: 5.0, plot: 'smokehouse', lotDepth: 3.6 }),
   mk('restaurant', 'plate', P.restaurant, FOOT.restaurant[1], { signLx: -1.5, signLz: FOOT.restaurant[1] + 0.35, sy: 3.45, scale: 0.95, mount: 'wall', doorLx: -1.5, station: { x: P.restaurant.doorX, z: P.restaurant.doorZ }, bubbleY: 5.4, plot: 'restaurant', lotDepth: 3.6 }),
   mk('lighthouse', 'light', P.lighthouse, FOOT.lighthouse[1], { signLz: 1.7, sy: 2.7, scale: 0.8, mount: 'wall', doorLx: 0, station: { x: P.lighthouse.doorX, z: P.lighthouse.doorZ }, bubbleY: 4.4, plot: 'lighthouse', lotDepth: 2.6 }),
@@ -277,7 +275,6 @@ export class BuildingMarks {
       return canBuyBuilding(s, m.def.plot).ok ? 'up' : null;
     }
     if (id === 'market') return canBuy(s, s.upgrades.stall1 ? 'stall2' : 'stall1').ok ? 'up' : null;
-    if (id === 'icebox') return canBuy(s, 'icebox').ok ? 'up' : null;
     return null;
   }
 

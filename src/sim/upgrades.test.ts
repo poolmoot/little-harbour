@@ -5,19 +5,19 @@ import { zoneUnlocked } from './boats';
 import { buyUpgrade, canBuy } from './upgrades';
 import { buyBoat, buyBoatUpgrade, canBuyBoat, holdSize, trackCost, tripTimeFor, rareMult } from './fleet';
 import { stallLevel } from './market';
-import { DEMAND_DROPS } from './config';
+import { DEMAND_DROPS, ZONES } from './config';
 import { sellCrate } from './market';
 import { addCrate } from './crates';
 
 describe('harbour upgrades', () => {
   it('cannot buy without enough money, and spends the cost when bought', () => {
     const s = initialState();
-    expect(buyUpgrade(s, 'icebox')[0].type).toBe('denied');
-    s.money = 130;
-    expect(buyUpgrade(s, 'icebox')[0].type).toBe('upgradeBought');
+    expect(buyUpgrade(s, 'handcart')[0].type).toBe('denied');
+    s.money = 210;
+    expect(buyUpgrade(s, 'handcart')[0].type).toBe('upgradeBought');
     expect(s.money).toBe(10);
-    expect(s.stats.spent).toBe(120);
-    expect(canBuy(s, 'icebox').ok).toBe(false);
+    expect(s.stats.spent).toBe(200);
+    expect(canBuy(s, 'handcart').ok).toBe(false);
   });
   it('handcart raises carrying capacity', () => {
     const s = initialState();
@@ -55,7 +55,7 @@ describe('per-boat upgrades', () => {
     expect(holdSize(s.boats[0])).toBe(8);
     expect(holdSize(s.boats[1])).toBe(4);
     buyBoatUpgrade(s, 1, 'sails');
-    expect(tripTimeFor(s.boats[0], 'shallows')).toBeCloseTo(25 * 0.85);
+    expect(tripTimeFor(s.boats[0], 'shallows')).toBeCloseTo(ZONES.shallows.trip * 0.85);
     buyBoatUpgrade(s, 1, 'gear');
     expect(rareMult(s.boats[0])).toBe(1.5);
   });

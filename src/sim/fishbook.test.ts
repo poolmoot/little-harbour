@@ -118,7 +118,7 @@ describe('version 4 saves', () => {
     const s = initialState();
     s.money = 777;
     s.lifetime = 4000;
-    addCrate(s, 'cod', 'ice');
+    addCrate(s, 'cod', 'dock');
     s.book.herring.caught = 5; s.book.mackerel.caught = 5; s.book.flounder.caught = 5;
     saveGame(s, st);
     const raw = JSON.parse(d.get('harbour-game-save')!);
@@ -128,7 +128,7 @@ describe('version 4 saves', () => {
     for (const sp of Object.keys(raw.book)) raw.book[sp] = { caught: raw.book[sp].caught, bestSale: raw.book[sp].bestSale };
     d.set('harbour-game-save', JSON.stringify(raw));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(7);
+    expect(l.version).toBe(8);
     expect(l.money).toBe(777);
     expect(l.crates[0].size).toBe(midSize('cod'));
     expect(l.crates[0].golden).toBeUndefined();

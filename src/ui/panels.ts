@@ -1,5 +1,5 @@
 import type { BuildingId, ProjectId, Species, Track, UpgradeId, ZoneId } from '../sim/config';
-import type { DayStats, GameState, HaulPolicy } from '../sim/state';
+import type { DayStats, GameState } from '../sim/state';
 import type { AudioSettings, VolumeKey } from '../audio/settings';
 import type { QualityMode } from '../view/quality';
 import { money, nameFeedback } from './components';
@@ -10,7 +10,6 @@ import { countedUp } from './awayFlow';
 import { berthScreen } from './screens/berth';
 import { boatScreen } from './screens/boat';
 import { crewScreen } from './screens/crew';
-import { iceboxScreen } from './screens/icebox';
 import { ledgerScreen } from './screens/ledger';
 import { logbookScreen } from './screens/logbook';
 import { marketScreen } from './screens/market';
@@ -25,7 +24,7 @@ import { shipyardScreen } from './screens/shipyard';
 import { titleScreen } from './screens/title';
 import type { AwayInfo, Screen, ScreenView } from './screens/types';
 
-export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'ice' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away' | 'welcome' | 'help' | 'tips' | 'berth';
+export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away' | 'welcome' | 'help' | 'tips' | 'berth';
 
 const SCREENS: Record<PanelKind, Screen> = {
   boat: boatScreen,
@@ -34,7 +33,6 @@ const SCREENS: Record<PanelKind, Screen> = {
   shipyard: shipyardScreen,
   board: noticesScreen,
   logbook: logbookScreen,
-  ice: iceboxScreen,
   summary: ledgerScreen,
   title: titleScreen,
   pause: pauseScreen,
@@ -61,14 +59,9 @@ export interface PanelActions {
   fireCaptain(boatId: number): void;
   hireDockhand(): void;
   fireDockhand(id: number): void;
-  setPolicy(p: HaulPolicy): void;
-  store(id: number): void;
-  take(id: number): void;
   /** Build a building, or upgrade it. */
   build(id: BuildingId): void;
   buildProject(id: ProjectId): void;
-  coldIn(crateId: number): void;
-  coldOut(crateId: number): void;
   smokeIn(crateId: number): void;
   smokeOut(crateId: number): void;
   sellToRestaurant(crateId: number): void;
@@ -308,14 +301,9 @@ export class Panels {
       case 'firecap': this.actions.fireCaptain(Number(a)); break;
       case 'hiredock': this.actions.hireDockhand(); break;
       case 'firedock': this.actions.fireDockhand(Number(a)); break;
-      case 'policy': this.actions.setPolicy(a as HaulPolicy); break;
       case 'openboat': this.open('boat', Number(a)); break;
-      case 'store': this.actions.store(Number(a)); break;
-      case 'take': this.actions.take(Number(a)); break;
       case 'build': this.actions.build(a as BuildingId); break;
       case 'project': this.actions.buildProject(a as ProjectId); break;
-      case 'coldin': this.actions.coldIn(Number(a)); break;
-      case 'coldout': this.actions.coldOut(Number(a)); break;
       case 'smokein': this.actions.smokeIn(Number(a)); break;
       case 'smokeout': this.actions.smokeOut(Number(a)); break;
       case 'restsell': this.actions.sellToRestaurant(Number(a)); break;

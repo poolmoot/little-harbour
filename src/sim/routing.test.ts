@@ -11,7 +11,6 @@ function setup(): GameState {
   const s = initialState();
   s.lifetime = 70000;
   s.money = 100000;
-  s.upgrades.icebox = true;
   s.dockhands.push({ id: 90, name: 'Pip', slot: 0, job: null });
   return s;
 }
@@ -81,21 +80,6 @@ describe('worker routing', () => {
     expect(s.money - before).toBe(Math.round(110 * 1.6));
     expect(s.crates.some((k) => k.id === c.id)).toBe(false);
   });
-  it('storage means the cold store first, then the ice box', () => {
-    const s = setup();
-    s.haulPolicy = 'ice';
-    buyBuilding(s, 'coldstore');
-    dockCrate(s, 'cod');
-    stepDockhands(s, 0.1);
-    expect(s.dockhands[0].job!.dest).toBe('cold');
-    run(s, 80);
-    expect(s.crates[0].loc).toBe('cold');
-    s.buildings.coldstore = 0;
-    dockCrate(s, 'tuna');
-    s.dockhands[0].job = null;
-    stepDockhands(s, 0.1);
-    expect(s.dockhands[0].job!.dest).toBe('ice');
-  });
   it('walk paths stay on the quay and have a length', () => {
     const p = walkPath({ x: 1.2, z: 1.6 }, { x: LAYOUT.plots.lighthouse.doorX, z: LAYOUT.plots.lighthouse.doorZ });
     for (const pt of p) expect(pt.x).toBeGreaterThanOrEqual(LAYOUT.quayMinX);
@@ -105,7 +89,7 @@ describe('worker routing', () => {
   it('plots stand inside the town and do not overlap each other or the other buildings', () => {
     const plots = BUILDING_IDS.filter((id) => id !== 'lighthouse');
     const mine = BOXES.filter((b) => (plots as string[]).includes(b.name));
-    expect(mine).toHaveLength(3);
+    expect(mine).toHaveLength(2);
     for (const b of mine) {
       expect(b.cx - b.hx).toBeGreaterThanOrEqual(LAYOUT.quayMinX);
       expect(b.cx + b.hx).toBeLessThanOrEqual(LAYOUT.quayMaxX);

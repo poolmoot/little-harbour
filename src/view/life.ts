@@ -53,7 +53,7 @@ const WALKERS: { look: FigureLook; pace: number }[] = [
 ];
 /** Places people like to walk to: stalls, doors, the board, the pier head. */
 const HAUNTS: [number, number][] = [
-  ...[LAYOUT.market, LAYOUT.noticeBoard, LAYOUT.inn, LAYOUT.shipyard, LAYOUT.plots.coldstore, LAYOUT.plots.smokehouse, LAYOUT.plots.restaurant, LAYOUT.bellTower]
+  ...[LAYOUT.market, LAYOUT.noticeBoard, LAYOUT.inn, LAYOUT.shipyard, LAYOUT.plots.smokehouse, LAYOUT.plots.restaurant, LAYOUT.bellTower]
     .map((o) => { const p = toWorld(o, 0, 5.5); return [p.x, p.z] as [number, number]; }),
   [0, 4], [0, 2], [0, -3], [-1, -10], [1, -6], [-5, 8], [5, 8], [0, 12], [-7, 12], [7, 12], [0, 14],
 ];

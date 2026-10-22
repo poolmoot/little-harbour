@@ -42,7 +42,7 @@ export const FRONTAGE = { west: S.x0 + S.front, east: S.x1 - S.front, sea: S.z0 
 /** Lamp posts in the gaps between buildings on the two side rows, and a row along the low wall on the camera side; and the lamps on the pier. */
 export const WALL_Z = S.z1 + 0.5;
 export const STREET_LAMPS: [number, number][] = [
-  [S.x0 - 0.25, 4.55], [S.x0 - 0.25, 10.75], [S.x1 + 0.25, 8.65],
+  [S.x0 - 0.25, 5.5], [S.x0 - 0.25, 13.2], [S.x1 + 0.25, 8.65],
   ...[-12, -9, -6, 6, 9, 12].map((x) => [x, WALL_Z] as [number, number]),
 ];
 export const PIER_LAMPS: [number, number, boolean][] = [[-1.85, -4, true], [1.85, -10.5, true], [-1.85, -16, true], [1.85, -4, false], [-1.85, -10.5, false], [1.85, -16, false]];
@@ -61,7 +61,6 @@ export const NPC_POSTS = {
 
 /** Everything with a corner: buildings, plots, tubs, tables. */
 export const BOXES: Box[] = [
-  local('icebox', L.iceBox, 0, 0, FOOT.iceBox[0], FOOT.iceBox[1]),
   local('market', L.market, 0, 0, STALL_REACH[2], FOOT.market[1]),
   local('shipyard', L.shipyard, 0, 0, FOOT.shipyard[0], FOOT.shipyard[1]),
   local('shipyard hull', L.shipyard, FOOT.shipyard[0] + 2.2, 0, 1.5, 0.8),

@@ -7,7 +7,7 @@ export const SPECIES = [
 export type Species = (typeof SPECIES)[number];
 export type ZoneId = 'shallows' | 'reef' | 'opensea' | 'deep';
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
-export type UpgradeId = 'icebox' | 'handcart' | 'stall1' | 'stall2';
+export type UpgradeId = 'handcart' | 'stall1' | 'stall2';
 
 export const FISH_PRICE: Record<Species, number> = {
   herring: 6, mackerel: 10, flounder: 18, seabass: 28, snapper: 40, lobster: 90,
@@ -16,10 +16,10 @@ export const FISH_PRICE: Record<Species, number> = {
 
 /** trip = seconds at sea. tripCost + crateCost x hold size = food, supplies and ice, paid when the boat leaves. needsHull = minimum hull tier (0 Rowboat .. 3 Trawler). */
 export const ZONES: Record<ZoneId, { trip: number; tripCost: number; crateCost: number; needsHull: number; table: Partial<Record<Species, number>> }> = {
-  shallows: { trip: 25, tripCost: 1, crateCost: 0.5, needsHull: 0, table: { herring: 50, mackerel: 30, flounder: 20 } },
-  reef: { trip: 50, tripCost: 4, crateCost: 4, needsHull: 1, table: { seabass: 50, snapper: 35, lobster: 15 } },
-  opensea: { trip: 80, tripCost: 10, crateCost: 12, needsHull: 2, table: { cod: 50, tuna: 35, swordfish: 15 } },
-  deep: { trip: 120, tripCost: 30, crateCost: 60, needsHull: 3, table: { anglerfish: 50, squid: 35, sturgeon: 15 } },
+  shallows: { trip: 32, tripCost: 1, crateCost: 0.5, needsHull: 0, table: { herring: 50, mackerel: 30, flounder: 20 } },
+  reef: { trip: 65, tripCost: 4, crateCost: 4, needsHull: 1, table: { seabass: 50, snapper: 35, lobster: 15 } },
+  opensea: { trip: 105, tripCost: 10, crateCost: 12, needsHull: 2, table: { cod: 50, tuna: 35, swordfish: 15 } },
+  deep: { trip: 155, tripCost: 30, crateCost: 60, needsHull: 3, table: { anglerfish: 50, squid: 35, sturgeon: 15 } },
 };
 export const ZONE_IDS: ZoneId[] = ['shallows', 'reef', 'opensea', 'deep'];
 
@@ -34,14 +34,20 @@ export const DAY_SECONDS = 360;
 export const HOUR_SECONDS = DAY_SECONDS / 24;
 export const START_HOUR = 6;
 export const PHASE_HOURS = { dawnStart: 6, dayStart: 8, duskStart: 18, nightStart: 20 };
+/** The night passes this many times faster than the rest of the day, so the player can keep playing. */
+export const NIGHT_SPEED = 2.5;
+/** Clock seconds (since 06:00) when the night starts; the night then runs to the end of the day. */
+export const NIGHT_START_TIME = (PHASE_HOURS.nightStart - START_HOUR) * HOUR_SECONDS;
+/** Real seconds one in-game day takes now that the night runs faster. */
+export const DAY_REAL_SECONDS = NIGHT_START_TIME + (DAY_SECONDS - NIGHT_START_TIME) / NIGHT_SPEED;
+/** With the lighthouse built, trips that leave at night take this share of the normal time. */
+export const LIGHTHOUSE_NIGHT_TRIP_MULT = 0.7;
 
 // Crates
 export const DOCK_DECAY_SECONDS = 150;
-export const ICE_DECAY_SECONDS = 600;
 export const MIN_PRICE_MULT = 0.3;
 export const CARRY_BASE = 2;
 export const CARRY_HANDCART = 4;
-export const ICE_CAPACITY = 6;
 /** Crates on the dock share a spot, up to this many: 1 is a crate, 2 a double crate, 3-4 a big metal crate. */
 export const DOCK_BIN_SIZE = 4;
 
@@ -70,12 +76,11 @@ export const FISH_HOOK_WINDOW = 0.7;
 
 /** Harbour-wide purchases. Names and descriptions are in ui/text.ts. */
 export const UPGRADES: Record<UpgradeId, { cost: number; requires?: UpgradeId; rank: number }> = {
-  icebox: { cost: 120, rank: 0 },
   handcart: { cost: 200, rank: 0 },
   stall1: { cost: 2000, rank: 2 },
   stall2: { cost: 9000, requires: 'stall1', rank: 3 },
 };
-export const UPGRADE_IDS: UpgradeId[] = ['icebox', 'handcart', 'stall1', 'stall2'];
+export const UPGRADE_IDS: UpgradeId[] = ['handcart', 'stall1', 'stall2'];
 
 // ---- Fleet (per-boat tracks) -------------------------------------------
 export type Track = 'hull' | 'hold' | 'gear' | 'sails';
@@ -111,9 +116,9 @@ export const TOP_RANK = RANK_THRESHOLDS.length - 1;
 // ---- Staff --------------------------------------------------------------
 export type Trait = 'swift' | 'lucky' | 'careful' | 'thrifty';
 export const TRAITS: Trait[] = ['swift', 'lucky', 'careful', 'thrifty'];
-export const CAPTAIN_WAGE = 40;
+export const CAPTAIN_WAGE = 60;
 /** A captain's pay a day by the hull of the boat they sail (Rowboat .. Trawler), before level and Thrifty. */
-export const CAPTAIN_WAGE_BY_HULL = [40, 120, 500, 1500];
+export const CAPTAIN_WAGE_BY_HULL = [CAPTAIN_WAGE, 120, 500, 1500];
 /** Trips finished to reach captain level 1..5. */
 export const CAPTAIN_LEVEL_TRIPS = [0, 8, 20, 40, 70];
 export const CAPTAIN_MAX_LEVEL = CAPTAIN_LEVEL_TRIPS.length;
@@ -150,8 +155,8 @@ export function toWorld(o: { x: number; z: number; rot?: number }, lx: number, l
 const SQ = { x0: -12.4, x1: 12.4, z0: 0, z1: 16, cx: 0, cz: 8, front: 3.5, lane: 4.5 };
 /** Half sizes (across, deep) of each building's ground footprint. */
 export const FOOT = {
-  market: [4.0, 1.5], coldstore: [2.4, 2.0], smokehouse: [2.0, 1.9], restaurant: [2.6, 1.9], shipyard: [3.1, 2.1],
-  inn: [3.5, 2.6], bellTower: [1.65, 1.65], noticeBoard: [1.0, 0.3], iceBox: [0.9, 0.7], lighthouse: [1.6, 1.6],
+  market: [4.0, 1.5], smokehouse: [2.0, 1.9], restaurant: [2.6, 1.9], shipyard: [3.1, 2.1],
+  inn: [3.5, 2.6], bellTower: [1.65, 1.65], noticeBoard: [1.0, 0.3], lighthouse: [1.6, 1.6],
 } as const;
 type Pose = { x: number; z: number; rot: number };
 /** The sea row: doors face the camera (+z), the back is the water. Its front wall stands on z = 0. */
@@ -168,17 +173,16 @@ const plot = (o: Pose, n: keyof typeof FOOT, doorLx: number) => {
   const d = spot(o, doorLx, FOOT[n][1] + 1.0);
   return { ...o, doorX: d.x, doorZ: d.z };
 };
-const MARKET = seaRow(-7, 'market'), ICE = seaRow(3.9, 'iceBox'), BOARD = seaRow(6.3, 'noticeBoard'), TOWER = seaRow(9.5, 'bellTower');
-const YARD = westRow(0.8, 'shipyard'), COLD = westRow(7.6, 'coldstore'), SMOKE = westRow(13.5, 'smokehouse');
+const MARKET = seaRow(-7, 'market'), BOARD = seaRow(4.9, 'noticeBoard'), TOWER = seaRow(9.5, 'bellTower');
+const YARD = westRow(0.8, 'shipyard'), SMOKE = westRow(9.2, 'smokehouse');
 const INN = eastRow(4.5, 'inn'), REST = eastRow(11.9, 'restaurant');
 /** The lighthouse stands at the end of a short breakwater that leaves the square's top-right corner and runs out over the water. */
 const LIGHT: Pose = { x: 13.6, z: -8, rot: 0 };
 const LIGHT_D = spot(LIGHT, 0, FOOT.lighthouse[1] + 1.0);
-const ICE_STATION = spot(ICE, 0, FOOT.iceBox[1] + 1.0);
 /**
  * The town is one small square. The sea is at -z, the camera looks from +z. Along the sea side (doors towards the camera, water right behind),
- * west to east: market, a gap where the pier runs out from the square, ice box, notice board, clock tower. Down the west side (doors towards
- * +x, from the water): shipyard, cold store, smokehouse. Down the east side (doors towards -x): inn, restaurant with its terrace in front.
+ * west to east: market, a gap where the pier runs out from the square, notice board, clock tower. Down the west side (doors towards
+ * +x, from the water): shipyard, smokehouse. Down the east side (doors towards -x): inn, restaurant with its terrace in front.
  * The camera side is open, with a low wall and steps up to the decorative hillside. The lighthouse is on a short breakwater from the top-right
  * corner. In front of every door is a frontage `square.front` deep (stations, queue, terrace); beside it a walking lane `square.lane` wide runs
  * along all three rows, and the middle of the square is open. See `layoutBoxes.ts` for every solid thing and the lanes that must stay clear.
@@ -210,20 +214,16 @@ export const LAYOUT = {
   bellTower: TOWER,
   dockhandHome: { x: 1.2, z: 1.6 },
   marketDrop: spot(MARKET, -1.5, FOOT.market[1] + 1.0),
-  iceDrop: ICE_STATION,
   noticeBoard: BOARD,
-  iceBox: ICE,
-  /** Where the player stands to use the market, shipyard, board, ice box and inn (in front of each door, in the frontage). */
+  /** Where the player stands to use the market, shipyard, board and inn (in front of each door, in the frontage). */
   stations: {
     market: spot(MARKET, -1.5, FOOT.market[1] + 1.0),
     shipyard: spot(YARD, -1.1, FOOT.shipyard[1] + 1.0),
     board: spot(BOARD, 0, FOOT.noticeBoard[1] + 1.0),
-    icebox: ICE_STATION,
     inn: spot(INN, -1.8, FOOT.inn[1] + 1.0),
   },
-  /** Four building plots, turned like the rest. The door is where workers stop (in front of the building). */
+  /** Three building plots, turned like the rest. The door is where workers stop (in front of the building). */
   plots: {
-    coldstore: plot(COLD, 'coldstore', 0),
     smokehouse: plot(SMOKE, 'smokehouse', 1.2),
     restaurant: plot(REST, 'restaurant', -1.5),
     lighthouse: { ...LIGHT, doorX: LIGHT_D.x, doorZ: LIGHT_D.z },
@@ -244,25 +244,22 @@ export const LAYOUT = {
   crowdGap: 2.2,
 };
 /** Half sizes (across, deep) of what each plot's building takes up on the ground. */
-export const PLOT_HALF: Record<'coldstore' | 'smokehouse' | 'restaurant' | 'lighthouse', [number, number]> = {
-  coldstore: [...FOOT.coldstore], smokehouse: [...FOOT.smokehouse], restaurant: [...FOOT.restaurant], lighthouse: [...FOOT.lighthouse],
+export const PLOT_HALF: Record<'smokehouse' | 'restaurant' | 'lighthouse', [number, number]> = {
+  smokehouse: [...FOOT.smokehouse], restaurant: [...FOOT.restaurant], lighthouse: [...FOOT.lighthouse],
 };
 export const INTERACT_RANGE = 2.8;
 export const CRATE_RANGE = 1.3;
 export const BOAT_RANGE = 2.4;
 
 // ---- Tycoon stage: buildings -----------------------------------------------
-export type BuildingId = 'coldstore' | 'smokehouse' | 'restaurant' | 'lighthouse';
-export const BUILDING_IDS: BuildingId[] = ['coldstore', 'smokehouse', 'restaurant', 'lighthouse'];
+export type BuildingId = 'smokehouse' | 'restaurant' | 'lighthouse';
+export const BUILDING_IDS: BuildingId[] = ['smokehouse', 'restaurant', 'lighthouse'];
 /** rank = rank needed. cost[i] = price to reach level i (index 0 unused). */
 export const BUILDINGS: Record<BuildingId, { rank: number; cost: number[] }> = {
-  coldstore: { rank: 1, cost: [0, 600, 2000, 6000] },
   smokehouse: { rank: 1, cost: [0, 900, 3000, 8000] },
   restaurant: { rank: 2, cost: [0, 3000, 9000, 22000] },
-  lighthouse: { rank: 3, cost: [0, 12000] },
+  lighthouse: { rank: 3, cost: [0, 24000] },
 };
-export const COLD_CAPACITY = [0, 12, 24, 40];
-export const COLD_DECAY_SECONDS = 1200;
 export const SMOKE_RACKS = [0, 2, 4, 6];
 export const SMOKE_SECONDS = [0, 45, 35, 25];
 export const SMOKED_MULT = 1.6;
@@ -326,7 +323,9 @@ export const BANDSTAND_GOLDEN_MULT = 2; // golden fish more common
 export const STATUE_SALE_MULT = 1.05; // every sale pays more
 
 // ---- King Fish and the money-per-minute figure ----------------------------------
-export const KING_CHANCE = 0.02;
+export const KING_CHANCE = 0.018;
+/** The King Fish chance grows with Nets and a Lucky or experienced captain, but never past this (the old best: Nets 2.2 x Lucky 1.25), so the extra Nets levels do not rush the ending. */
+export const KING_MULT_MAX = 2.75;
 export const RATE_SAMPLE_SECONDS = 5;
 export const RATE_WINDOW_SECONDS = 120;
 
@@ -360,7 +359,7 @@ export const BOOK_REWARD_STARS: Record<ZoneId, number> = { shallows: 100, reef: 
 export const AWAY_MIN_SECONDS = 60; // shorter absences are ignored
 export const AWAY_MAX_SECONDS = 8 * 3600; // time away counts for at most 8 hours
 export const AWAY_SHARE = 0.5; // the harbour earns half as much when you are not there
-export const AWAY_SIM_SECONDS = DAY_SECONDS; // one in-game day is simulated to measure the rate
+export const AWAY_SIM_SECONDS = DAY_REAL_SECONDS; // one in-game day is simulated to measure the rate
 
 // ---- Goals -------------------------------------------------------------------
 export type GoalKind =
@@ -380,7 +379,6 @@ export const GOALS: GoalDef[] = [
   { id: 'worker', kind: 'dockhands', n: 1, reward: 40, arrow: 'inn' },
   { id: 'boat2', kind: 'boats', n: 2, reward: 50, arrow: 'shipyard' },
   { id: 'reef', kind: 'zoneSent', zone: 'reef', n: 1, reward: 40 },
-  { id: 'cold', kind: 'building', building: 'coldstore', reward: 40 },
   { id: 'smoke', kind: 'building', building: 'smokehouse', reward: 50 },
   { id: 'rank2', kind: 'rank', n: 2, reward: 100 },
   { id: 'captain', kind: 'captains', n: 1, reward: 60, arrow: 'inn' },

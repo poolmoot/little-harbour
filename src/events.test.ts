@@ -123,8 +123,8 @@ describe('town sounds', () => {
 describe('tycoon events', () => {
   const cases: [Ev, string][] = [
     [{ type: 'goalDone', index: 0, id: 'send', reward: 10 }, 'fx.goalComplete'],
-    [{ type: 'buildingBuilt', id: 'coldstore', level: 1 }, 'fx.buildingBuilt'],
-    [{ type: 'buildingBuilt', id: 'coldstore', level: 2 }, 'fx.buildingUpgraded'],
+    [{ type: 'buildingBuilt', id: 'smokehouse', level: 1 }, 'fx.buildingBuilt'],
+    [{ type: 'buildingBuilt', id: 'smokehouse', level: 2 }, 'fx.buildingUpgraded'],
     [{ type: 'boatDamaged', boatId: 1 }, 'fx.boatDamaged'],
     [{ type: 'contractAccepted', contractId: 1 }, 'fx.contractAccepted'],
     [{ type: 'contractDone', contractId: 1, reward: 50 }, 'fx.contractDone'],
@@ -187,11 +187,23 @@ describe('plots and the King Fish at the inn', () => {
 
   it('prompts to build on an empty plot and to open a built one', () => {
     const s = initialState();
-    const p = LAYOUT.plots.coldstore;
+    const p = LAYOUT.plots.smokehouse;
     const t = findTarget(s, { x: p.doorX, z: p.doorZ });
-    expect(promptFor(s, t)?.text).toBe('Cold store: build here');
-    s.buildings.coldstore = 1;
-    expect(promptFor(s, t)?.text).toBe('Cold store: open');
+    expect(promptFor(s, t)?.text).toBe('Smokehouse: build here');
+    s.buildings.smokehouse = 1;
+    expect(promptFor(s, t)?.text).toBe('Smokehouse: open');
+  });
+
+  it('opens the boat spot window at an empty spot on the pier, and not where a boat is tied up', () => {
+    const s = initialState();
+    const b1 = LAYOUT.berths[1];
+    const t = findTarget(s, { x: b1.edgeX, z: b1.edgeZ });
+    expect(t?.kind).toBe('berth');
+    expect(promptFor(s, t)?.text).toBeTruthy();
+    const i = interact(t, s, new Rng(1));
+    expect(i).toEqual({ open: 'berth', arg: 1 });
+    const b0 = LAYOUT.berths[0];
+    expect(findTarget(s, { x: b0.edgeX, z: b0.edgeZ })?.kind).toBe('boat');
   });
 
   it('delivers the King Fish at the inn instead of opening the hire window', () => {

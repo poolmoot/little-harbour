@@ -20,12 +20,12 @@ import { advanceClock } from './time';
 export { initialState } from './state';
 export type { GameState, Ev } from './state';
 export { dispatchBoat, unloadBoat } from './boats';
-export { pickUp, pickUpBin, binCrates, storeInIce, takeFromIce, handCrates, dockCrates, carryCapacity } from './crates';
+export { pickUp, pickUpBin, binCrates, handCrates, dockCrates, carryCapacity } from './crates';
 export { sellAll, sellCrate } from './market';
 export { castLine, hook, cancelCast } from './fishing';
 export { buyUpgrade } from './upgrades';
 export { buyBoat, buyBoatUpgrade, bestZone } from './fleet';
-export { buyBuilding, canBuyBuilding, nextBuildingCost, buildingMaxLevel, storeInCold, takeFromCold, smokeCrate, collectSmoked, setSmokeList, sellToRestaurant, restaurantPrice } from './buildings';
+export { buyBuilding, canBuyBuilding, nextBuildingCost, buildingMaxLevel, smokeCrate, collectSmoked, setSmokeList, sellToRestaurant, restaurantPrice } from './buildings';
 export { acceptContract } from './contracts';
 export { buyProject, canBuyProject, projectDone } from './town';
 export { captainLevel, captainWage } from './captains';
@@ -37,7 +37,7 @@ export { applyAway, awayEarnings, measureAwayRate } from './away';
 export type { AwayResult } from './away';
 export { moneyPerMinute } from './income';
 export { rankOf } from './rank';
-export { fireCaptain, fireDockhand, hireCaptain, hireDockhand, setBoatTarget, setHaulPolicy } from './staff';
+export { fireCaptain, fireDockhand, hireCaptain, hireDockhand, setBoatTarget } from './staff';
 
 export { bookCompletion, crateSize, crateStars, starsFor, sizeMult, midSize, zoneFish } from './fishbook';
 export { renameBoat, setHarbourName, checkName } from './names';
@@ -65,6 +65,12 @@ export function step(state: GameState, dt: number, rng: Rng): Ev[] {
     evs.push(w.ev);
   }
   evs.push(...clockEvs);
+  if (state.dockhands.length > 0) {
+    for (const e of clockEvs) {
+      if (e.type === 'phaseChanged' && e.phase === 'night') evs.push({ type: 'workersSleep' });
+      if (e.type === 'phaseChanged' && e.phase === 'dawn') evs.push({ type: 'workersWake' });
+    }
+  }
   evs.push(...stepBoats(state, dt, rng));
   evs.push(...stepCaptains(state));
   evs.push(...stepDockhands(state, dt));
