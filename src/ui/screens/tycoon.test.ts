@@ -142,7 +142,7 @@ describe('notice board', () => {
   });
 
   it('shows the order pay accurately', () => {
-    expect(noticesScreen(ctx(rich())).note).toBe('Each crate for an order sells for double the price. Finish the whole order and you get 50% extra on top.');
+    expect(noticesScreen(ctx(rich())).note).toBe('Order fish sell for double, plus a bonus when the order is done.');
   });
 
   it('shows two offers with Accept buttons', () => {

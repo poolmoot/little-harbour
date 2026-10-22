@@ -137,3 +137,11 @@ more chances at the King Fish, its chance boost is capped at the old best (`KING
 2.75) and the base chance is 1.8%. Medians on 8 seeds: ranks at 2.5, 10.0, 27.5 and 50.7
 minutes; King Fish at the inn at about 113 minutes.
 
+## Boat sizes up to 6, boat window tabs, short help at the bottom (2026-10-22)
+
+Boat size now has 6 upgrades: after the Trawler come the Big Trawler (30,000), the Fishing
+Ship (90,000) and the Flagship (250,000). They need the top rank, fish the same places and
+bring home 4, 8 and 14 more crates each trip (`HULL_EXTRA_CRATES`). Captain pay and boat care
+grow with them. The boat window has three tabs: Upgrade, Captain, Where to fish. Every window
+shows its help line below the content, and help lines are one short sentence.
+

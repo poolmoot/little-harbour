@@ -48,7 +48,7 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-export const HULL_ICONS: IconName[] = ['rowboat', 'sloop', 'cutter', 'trawler'];
+export const HULL_ICONS: IconName[] = ['rowboat', 'sloop', 'cutter', 'trawler', 'trawler', 'trawler', 'trawler'];
 
 const svg = (inner: string, w: number, h: number, box: string) =>
   `<svg class="ic" width="${w}" height="${h}" viewBox="${box}" aria-hidden="true">${inner}</svg>`;

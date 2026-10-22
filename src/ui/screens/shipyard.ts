@@ -56,23 +56,23 @@ function boatCard(b: GameState['boats'][number]): string {
 }
 
 function yourBoats(s: GameState): string {
-  return section(YARD_TEXT.yourBoats(s.boats.length, MAX_BOATS)) + `<p class="yard-help">${YARD_TEXT.yourBoatsHelp}</p>`
-    + (s.boats.length ? s.boats.map(boatCard).join('') : `<p class="dim">${YARD_TEXT.noBoats}</p>`);
+  return section(YARD_TEXT.yourBoats(s.boats.length, MAX_BOATS))
+    + (s.boats.length ? s.boats.map(boatCard).join('') : `<p class="dim">${YARD_TEXT.noBoats}</p>`) + `<p class="yard-help">${YARD_TEXT.yourBoatsHelp}</p>`;
 }
 
 function buyBoat(s: GameState): string {
   const o = boatOffer(s);
   if (o.cost === null) return section(YARD_TEXT.buyTitle) + `<p class="yard-help">${YARD_TEXT.allBoats}</p>`;
-  return section(YARD_TEXT.buyTitle) + `<p class="yard-help">${YARD_TEXT.buyHelp}</p>`
+  return section(YARD_TEXT.buyTitle)
     + `<div class="bcard offer"><div class="bcard-art">${offerIcon(64)}</div>`
     + `<div class="bcard-main"><div class="item-title ol">${BOAT_OFFER_TEXT.name} <span class="dim">· ${BOAT_OFFER_TEXT.spot(o.spot)}</span></div>`
     + `<div class="bcard-line">${o.can}</div>${o.lock}</div>`
-    + `<div class="bcard-act">${offerButton(s, o)}</div></div>`;
+    + `<div class="bcard-act">${offerButton(s, o)}</div></div><p class="yard-help">${YARD_TEXT.buyHelp}</p>`;
 }
 
 function harbour(s: GameState): string {
   const rank = rankOf(s);
-  return section(YARD_TEXT.harbourTitle) + `<p class="yard-help">${YARD_TEXT.harbourHelp}</p>` + cards(UPGRADE_IDS.map((id) => {
+  return section(YARD_TEXT.harbourTitle) + cards(UPGRADE_IDS.map((id) => {
     const u = UPGRADES[id];
     const owned = s.upgrades[id];
     const chk = canBuy(s, id);
@@ -90,7 +90,7 @@ function harbour(s: GameState): string {
           + `<span class="price ol">${LOCK_TEXT.price}: ${priceLabel(u.cost)}</span>`
           + button({ label: rankLocked ? `${icon('lock', 18)}${LOCK_TEXT.locked}` : buyLabel(YARD_TEXT.buy, u.cost), act: 'buy', a: id, size: 'sm', off: !chk.ok }),
     });
-  }), 230);
+  }), 230) + `<p class="yard-help">${YARD_TEXT.harbourHelp}</p>`;
 }
 
 /** One page for everything: your boats, a new boat, and what helps the whole harbour. No hidden tabs. */

@@ -22,7 +22,7 @@ export interface BoatTier {
 
 const WHITE = 0xf4f1e8, CREAM = 0xf2e6c4, NAVY = 0x2a4a7a, RED = 0xd6453a, IRON = 0x2d3236, BRASS = 0xe0b040;
 
-/** Rowboat, sloop, cutter, trawler. */
+/** Rowboat, sloop, cutter, trawler, big trawler, fishing ship, flagship. */
 export const BOAT_TIERS: readonly BoatTier[] = [
   { // a varnished wooden dinghy
     shape: { len: 4, hw: 0.8, H: 0.72, sheerBow: 0.3, sheerStern: 0.18, bowFrac: 0.4, bowPow: 0.7, sternTaper: 0.26, keelBow: 0.28, keelStern: 0.1, draft: 0.36 },
@@ -43,6 +43,21 @@ export const BOAT_TIERS: readonly BoatTier[] = [
     shape: { len: 7, hw: 1.4, H: 1.12, sheerBow: 0.62, sheerStern: 0.1, bowFrac: 0.34, bowPow: 0.62, sternTaper: 0.16, keelBow: 0.4, keelStern: 0.12, draft: 0.55 },
     paint: { bottom: IRON, stripe: WHITE, side: 0xcf4436, sheer: WHITE },
     rail: IRON, inside: 0xa9b4bd, deckY: 0.5, mastH: 3.9, mastZ: 0.3, crates: [3, 4, -0.4, -0.5, 0.6], captainZ: 3.0,
+  },
+  { // Big Trawler: a deep blue steel boat with a two-floor wheelhouse and a yellow crane
+    shape: { len: 7.2, hw: 1.5, H: 1.2, sheerBow: 0.66, sheerStern: 0.1, bowFrac: 0.34, bowPow: 0.6, sternTaper: 0.16, keelBow: 0.42, keelStern: 0.12, draft: 0.6 },
+    paint: { bottom: IRON, stripe: 0xf2c14a, side: 0x22508c, sheer: WHITE },
+    rail: IRON, inside: 0xa9b4bd, deckY: 0.55, mastH: 4.2, mastZ: 0.3, crates: [3, 4, -0.5, -0.5, 0.62], captainZ: 3.05,
+  },
+  { // Fishing Ship: a white ship with a green stripe, a tall bridge, two funnels and a net drum
+    shape: { len: 7.4, hw: 1.55, H: 1.28, sheerBow: 0.7, sheerStern: 0.12, bowFrac: 0.32, bowPow: 0.58, sternTaper: 0.14, keelBow: 0.44, keelStern: 0.12, draft: 0.64 },
+    paint: { bottom: 0x7a2a26, stripe: 0x2f9a5a, side: WHITE, sheer: 0x2f9a5a },
+    rail: 0xdde3e6, inside: 0xb9c4cc, deckY: 0.6, mastH: 4.4, mastZ: 0.3, crates: [3, 4, -0.55, -0.5, 0.64], captainZ: 3.1,
+  },
+  { // Flagship: a black ship with gold trim, a three-floor bridge, a radar dome and a big flag
+    shape: { len: 7.5, hw: 1.6, H: 1.34, sheerBow: 0.74, sheerStern: 0.14, bowFrac: 0.3, bowPow: 0.56, sternTaper: 0.14, keelBow: 0.46, keelStern: 0.12, draft: 0.68 },
+    paint: { bottom: 0x8a2a24, stripe: BRASS, side: 0x1c2228, sheer: BRASS },
+    rail: BRASS, inside: 0xb9c4cc, deckY: 0.64, mastH: 4.6, mastZ: 0.3, crates: [3, 4, -0.6, -0.5, 0.66], captainZ: 3.15,
   },
 ];
 
@@ -202,7 +217,82 @@ function trawler(t: BoatTier, b: BoatBuild): void {
   }
 }
 
-const BUILDERS = [rowboat, sloop, cutter, trawler];
+/** What sets the three ships after the Trawler apart. */
+interface ShipLook {
+  floors: number; // wheelhouse floors
+  house: number; // wheelhouse colour
+  roof: number;
+  funnels: number;
+  funnel: number;
+  crane: boolean;
+  drum: boolean;
+  dome: boolean;
+  flag: number | null;
+}
+
+/** A big steel ship: raised bow with a winch, a wheelhouse of 2-3 floors, funnels, and the gear its look asks for. */
+function ship(look: ShipLook) {
+  return (t: BoatTier, b: BoatBuild): void => {
+    const s = t.shape, g = b.group, fore = s.H + 0.14, d = t.deckY;
+    const iron = flat(IRON, 0.5), house = flat(look.house, 0.75), roof = flat(look.roof, 0.6), houseZ = 1.8;
+    shell(t, 0.2, g);
+    foredeck(t, 0.2, fore, g);
+    cy(0.28, 0.28, 0.56, iron, 0, fore + 0.36, stationZ(s, 0.13), g, 10).rotation.z = Math.PI / 2; // winch
+    for (const side of [-1, 1]) bx(0.1, 0.64, 0.12, flat(0xe0902a, 0.6), side * 0.36, fore + 0.32, stationZ(s, 0.13), g);
+    // wheelhouse: each floor a little smaller, windows round the top one
+    const fh = 0.95;
+    let w = 2.1, l = 2.2, y = d;
+    for (let f = 0; f < look.floors; f++) {
+      bx(w, fh, l, house, 0, y + fh / 2, houseZ, g);
+      bx(w + 0.16, 0.08, l + 0.2, roof, 0, y + fh + 0.04, houseZ, g);
+      bx(w - 0.2, 0.32, 0.06, windowMat, 0, y + fh * 0.62, houseZ - l / 2, g);
+      for (const side of [-1, 1]) bx(0.06, 0.32, l - 0.4, windowMat, side * (w / 2), y + fh * 0.62, houseZ, g);
+      y += fh + 0.08;
+      w -= 0.3;
+      l -= 0.35;
+    }
+    for (const side of [-1, 1]) ring(0.2, 0.06, flat(0xf08a2a, 0.6), side * 1.06, d + 0.42, houseZ + 0.7, g).rotation.y = Math.PI / 2; // lifebuoys
+    // funnels behind the wheelhouse
+    for (let i = 0; i < look.funnels; i++) {
+      const fx = look.funnels === 1 ? 0.5 : i === 0 ? -0.45 : 0.45;
+      cy(0.2, 0.24, 1.0, flat(look.funnel, 0.7), fx, d + 1.6, houseZ + 0.95, g, 10);
+      cy(0.21, 0.21, 0.14, iron, fx, d + 2.15, houseZ + 0.95, g, 10);
+    }
+    // radar mast on the roof
+    cy(0.035, 0.035, 0.7, iron, -0.4, y + 0.35, houseZ, g, 5);
+    bx(0.6, 0.06, 0.1, flat(WHITE, 0.6), -0.4, y + 0.66, houseZ, g);
+    if (look.dome) cy(0.24, 0.24, 0.3, flat(WHITE, 0.4), 0.35, y + 0.15, houseZ, g, 12);
+    if (look.flag !== null) {
+      cy(0.03, 0.03, 1.3, iron, 0.35, y + 0.65, houseZ + 0.5, g, 5);
+      bx(0.04, 0.42, 0.7, flat(look.flag, 0.6), 0.35, y + 1.05, houseZ + 0.85, g);
+    }
+    // a yellow crane on the working deck
+    if (look.crane) {
+      const crane = flat(0xf2c14a, 0.6);
+      cy(0.12, 0.14, 1.6, crane, -0.75, d + 0.8, stationZ(s, 0.55), g, 8);
+      bx(0.12, 0.12, 2.2, crane, -0.75, d + 1.65, stationZ(s, 0.55) - 0.8, g).rotation.x = 0.35;
+    }
+    // a big net drum at the stern
+    if (look.drum) {
+      const dz = stationZ(s, 0.9);
+      cy(0.42, 0.42, 1.5, flat(0x3f8a5f, 0.8), 0, d + 0.55, dz, g, 12).rotation.z = Math.PI / 2;
+      for (const side of [-1, 1]) cy(0.5, 0.5, 0.06, iron, side * 0.78, d + 0.55, dz, g, 12).rotation.z = Math.PI / 2;
+    }
+    // stern gantry and tyre fenders like the trawler
+    const gz = stationZ(s, 0.97);
+    for (const side of [-1, 1]) bx(0.1, 2.1, 0.1, iron, side * 1.0, d + 1.05, gz, g).rotation.z = -side * 0.12;
+    bx(1.95, 0.1, 0.1, iron, 0, d + 2.08, gz, g);
+    for (const side of [-1, 1]) for (const u of [0.42, 0.6, 0.78]) {
+      ring(0.2, 0.085, flat(0x1d2024, 0.9), side * (halfWidthAt(s, u) + 0.07), gunwaleY(s, u) - 0.32, stationZ(s, u), g).rotation.y = Math.PI / 2;
+    }
+  };
+}
+
+const bigTrawler = ship({ floors: 2, house: 0xeee6d2, roof: 0xf2c14a, funnels: 1, funnel: 0x22508c, crane: true, drum: false, dome: false, flag: null });
+const fishingShip = ship({ floors: 2, house: WHITE, roof: 0x2f9a5a, funnels: 2, funnel: 0x2f9a5a, crane: false, drum: true, dome: false, flag: null });
+const flagship = ship({ floors: 3, house: 0xf4f1e8, roof: 0x1c2228, funnels: 2, funnel: 0x1c2228, crane: true, drum: true, dome: true, flag: RED });
+
+const BUILDERS = [rowboat, sloop, cutter, trawler, bigTrawler, fishingShip, flagship];
 
 /** Build the static model for a boat size. Fixed parts are merged so each boat costs only a handful of draw calls. */
 export function buildBoat(tier: number): BoatBuild {

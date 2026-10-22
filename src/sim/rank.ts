@@ -1,4 +1,4 @@
-import { MAX_BOATS, RANK_THRESHOLDS, TOP_RANK } from './config';
+import { BIG_HULL_RANK, MAX_BOATS, RANK_THRESHOLDS, TOP_RANK, TRACK_MAX } from './config';
 import type { Ev, GameState } from './state';
 
 export function rankIndex(lifetime: number): number {
@@ -20,7 +20,9 @@ export function rankProgress(state: GameState): { frac: number; next: number; ne
 /** How many boats may be owned at this rank. */
 export const maxBoats = (rank: number): number => Math.min(MAX_BOATS, rank + 1);
 /** Highest hull tier that may be bought at this rank. */
-export const maxHullTier = (rank: number): number => Math.min(3, rank);
+export const maxHullTier = (rank: number): number => (rank >= BIG_HULL_RANK ? TRACK_MAX.hull : Math.min(3, rank));
+/** The rank a Boat size level needs. */
+export const hullRank = (level: number): number => (level > 3 ? BIG_HULL_RANK : level);
 export const DOCKHANDS_RANK = 1;
 export const CAPTAINS_RANK = 1;
 export const dockhandsUnlocked = (rank: number): boolean => rank >= DOCKHANDS_RANK;

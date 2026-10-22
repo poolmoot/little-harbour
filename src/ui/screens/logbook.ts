@@ -58,5 +58,5 @@ export const logbookScreen: Screen = ({ state: s }) => {
     + meter(c.golden / c.total, 'gold', FISH_BOOK.goldenFound(c.golden, c.total))
     + `</div>`;
   const body = overall + ZONE_IDS.map((z) => zoneBlock(s, z)).join('');
-  return { title: 'Fish book', icon: icon('book', 28), note: `Fish you have not caught yet show as dark shapes. ${FISH_BOOK.starsHelp}`, body };
+  return { title: 'Fish book', icon: icon('book', 28), note: FISH_BOOK.starsHelp, body };
 };

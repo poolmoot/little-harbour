@@ -1,7 +1,7 @@
 // Wording for the tycoon-stage screens (goal tracker, weather chip, building windows, contracts tab,
 // workers' rules, repairs, day report, ending). Same rule as text.ts: short, common words, no jargon.
 // Names that already exist in text.ts (building names, weather names, goal lines, contract lines) are used from there.
-import { ORDER_BONUS, ORDER_CRATE_MULT, RESTAURANT_MIN_FRESH, SMOKED_MULT } from '../sim/config';
+import { ORDER_CRATE_MULT, RESTAURANT_MIN_FRESH, SMOKED_MULT } from '../sim/config';
 import type { ProjectId } from '../sim/config';
 import type { BuildingId, WeatherId } from '../sim/config';
 import type { Special } from '../sim/state';
@@ -48,7 +48,7 @@ export const PLOT_TEXT = {
 
 export const SMOKE_TEXT = {
   racks: 'Racks',
-  note: `Smoked fish sells for ${SMOKED_MULT} times the price and never goes bad.`,
+  note: `Smoked fish sells for ${SMOKED_MULT}× more and never goes bad.`,
   free: 'Free rack',
   smoking: (secs: number): string => `Smoking… ${secs}s left`,
   ready: 'Ready!',
@@ -111,7 +111,7 @@ export const CONTRACT_TEXT = {
 
 export const WORKER_TEXT = {
   smokeTitle: 'Smoke these',
-  smokeNote: 'Your workers put these fish in the smokehouse. You only see fish you have caught.',
+  smokeNote: 'Workers smoke the fish you tick.',
   smokeNone: 'Catch some fish first. They will show up here.',
   rules: 'Workers go to the restaurant first, then the smokehouse, then to the market.',
   carryingTo: (dest: string): string => `Carrying to the ${dest}`,
@@ -126,7 +126,7 @@ export const BOAT_TEXT = {
   brokenChip: 'Broken. It cannot sail.',
   fixHint: 'Go to the shipyard to get it fixed.',
   fixing: (secs: number): string => `Being fixed · ${secs}s left`,
-  stayNote: 'When it is on, this boat stays in the harbour on stormy days. It only matters for the Open Sea and the Deep Sea.',
+  stayNote: 'The boat stays home when a storm comes.',
   stayToday: 'There is a storm today, so this boat stays home.',
   cannotSail: 'Cannot sail',
 };
@@ -156,7 +156,7 @@ export const REPORT_TEXT = {
 
 export const ORDER_TEXT = {
   /** What an order really pays: each crate for the order sells for double, and a finished order adds a bonus. */
-  note: `Each crate for an order sells for ${ORDER_CRATE_MULT === 2 ? 'double' : `${ORDER_CRATE_MULT} times`} the price. Finish the whole order and you get ${pct(ORDER_BONUS)}% extra on top.`,
+  note: `Order fish sell for ${ORDER_CRATE_MULT === 2 ? 'double' : `${ORDER_CRATE_MULT}×`}, plus a bonus when the order is done.`,
 };
 
 // ---- the ending -----------------------------------------------------------------------------------------------------------
@@ -202,9 +202,9 @@ export const MARKET_TEXT = {
   emptyTitle: 'Your hands are empty',
   emptySteps: ['Walk to a boat that is back and press E to unload it', 'Pick up a crate on the dock with E', 'Bring it here and sell it'],
   prices: "Today's prices",
-  pricesNote: 'For a fully fresh crate. Each crate you sell makes that fish a little cheaper, and the price slowly goes back up.',
+  pricesNote: 'Selling a lot of one fish makes it cheaper for a while.',
   helloTitle: 'Here you sell your fish!',
-  helloLine: 'Press Sell next to a fish, or Sell all at the bottom. You get the money right away.',
+  helloLine: 'Press Sell to get money for your fish.',
   youGet: 'You get',
   today: 'Today',
   normalOnly: (n: number) => `Normal price $${n}`,
@@ -228,7 +228,7 @@ export const MARKET_TEXT = {
   smoked: 'Smoked. It never goes bad.',
   bad: 'Gone bad',
   fresh: (pct: number) => `${pct}% fresh`,
-  tip: 'Fresh fish sell for more. Fish an order wants pay double.',
+  tip: 'Fresh fish sell for more.',
 };
 
 // ---- locked things (one wording for every window) -----------------------------------------------------------
@@ -245,15 +245,15 @@ export const LOCK_TEXT = {
 // ---- the shipyard page and the boat spot window ------------------------------------------------------------
 
 export const YARD_TEXT = {
-  note: 'Buy and upgrade boats here, and buy things that help the whole harbour.',
+  note: 'Buy boats and make them better here.',
   yourBoats: (n: number, max: number): string => `Your boats (${n} of ${max})`,
-  yourBoatsHelp: 'Press Open on a boat to upgrade it, choose where it fishes, or give it a captain.',
+  yourBoatsHelp: 'Press Open to upgrade a boat.',
   noBoats: 'You have no boats yet.',
   buyTitle: 'Buy a new boat',
-  buyHelp: 'A new boat starts small. You can upgrade it after you buy it.',
+  buyHelp: 'New boats start small.',
   allBoats: 'You have all four boats. Every boat spot is used.',
   harbourTitle: 'Harbour upgrades',
-  harbourHelp: 'These help the whole harbour, not just one boat. Each one is bought once.',
+  harbourHelp: 'These help every boat.',
   upgradeShort: { hull: 'Size', hold: 'Space', gear: 'Nets', sails: 'Speed' },
   away: 'Out fishing',
   docked: 'In the harbour',
@@ -284,7 +284,7 @@ export const UPGRADE_ROW_TEXT = {
   upgrade: 'Upgrade',
   maxed: 'Fully upgraded',
   allDone: 'This is as good as it gets.',
-  upgradeNote: 'Each upgrade costs more than the last. Boat size also needs a higher harbour rank.',
+  upgradeNote: 'Each upgrade costs more than the last.',
   zoneHow: 'Upgrade Boat size on the Upgrade tab.',
 };
 
@@ -292,7 +292,7 @@ export const UPGRADE_ROW_TEXT = {
 
 export const CAPTAIN_TEXT = {
   getTitle: 'Get a captain',
-  getHelp: 'A captain sends this boat out for you, again and again. You do not need to press anything.',
+  getHelp: 'A captain sails this boat for you.',
   wage: (n: number): string => `$${n} a day`,
   hire: 'Hire',
   noneToHire: 'No captains are looking for work right now. Check the inn later.',
@@ -307,7 +307,7 @@ export const CAPTAIN_TEXT = {
   level: (n: number): string => `Level ${n}`,
   toNext: (trips: number, next: number): string => `${trips} more ${trips === 1 ? 'trip' : 'trips'} to level ${next}`,
   topLevel: 'Best there is',
-  levelHelp: 'Captains get better with every trip: better fish and shorter trips. Better captains ask for more pay, and pay is higher on bigger boats.',
+  levelHelp: 'Captains get better with every trip, and ask for more pay.',
   payOn: (boat: string, n: number): string => `$${n} a day on ${boat}`,
   levelUp: (name: string, level: number): string => `${name} is now a level ${level} captain. Better fish, shorter trips, and a little more pay.`,
 };
@@ -315,7 +315,7 @@ export const CAPTAIN_TEXT = {
 /** Town projects on the notice board. Ids and numbers are in sim/config.ts (PROJECTS). */
 export const TOWN_TEXT = {
   tab: 'Town',
-  note: 'The town is a little worn. Pay for a project once and it helps you for good.',
+  note: 'Pay once to fix the town and get a bonus forever.',
   pay: 'Pay for it',
   done: 'Done',
   doneToast: (name: string): string => `${name}: done! The town thanks you.`,

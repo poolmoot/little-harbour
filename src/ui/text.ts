@@ -2,8 +2,8 @@
 // edited in one place. Keep it simple: short, common words, short sentences, no sailing or business
 // jargon. Only the words change here; code names and save keys stay as they are.
 import {
-  BIG_CATCH_EXTRA, BUILDINGS, DEMAND_DROPS, GEAR_MULT, HOLD_SIZES, LUCKY_MULT, MARKET_DAY_MULT, REPAIR_SECONDS,
-  RESTAURANT_CAPACITY, RESTAURANT_MIN_FRESH, RESTAURANT_MULT, RESTAURANT_VARIETY_BONUS, SAILS_MULT, SMOKED_MULT, SMOKE_RACKS, SMOKE_SECONDS,
+  BIG_CATCH_EXTRA, BUILDINGS, DEMAND_DROPS, GEAR_MULT, HOLD_SIZES, HULL_EXTRA_CRATES, LUCKY_MULT, MARKET_DAY_MULT, REPAIR_SECONDS,
+  RESTAURANT_CAPACITY, RESTAURANT_MULT, SAILS_MULT, SMOKED_MULT, SMOKE_RACKS, SMOKE_SECONDS,
   STORM_CATCH_MULT, STORM_DAMAGE_CHANCE, SWIFT_MULT, THRIFTY_MULT, WEATHER_TRIP_MULT, ZONES, ZONE_IDS,
 } from '../sim/config';
 import type { BuildingId, Phase, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from '../sim/config';
@@ -25,8 +25,8 @@ export const ZONE_NAME: Record<ZoneId, string> = { shallows: 'Shallow Water', re
 export const PHASE_NAME: Record<Phase, string> = { dawn: 'Morning', day: 'Day', dusk: 'Evening', night: 'Night' };
 
 /** Boat types by size (index = boat size level). The hint tells what the name means. */
-const BOAT_TYPE = ['Rowboat', 'Sloop', 'Cutter', 'Trawler'];
-const BOAT_HINT = ['small boat', 'medium boat', 'large boat', 'big boat'];
+const BOAT_TYPE = ['Rowboat', 'Sloop', 'Cutter', 'Trawler', 'Big Trawler', 'Fishing Ship', 'Flagship'];
+const BOAT_HINT = ['small boat', 'medium boat', 'large boat', 'big boat', 'bigger boat', 'huge boat', 'the best boat'];
 export const boatType = (level: number): string => `${BOAT_TYPE[level]} (${BOAT_HINT[level]})`;
 const boatTypeShort = (level: number): string => BOAT_TYPE[level];
 
@@ -72,7 +72,7 @@ function dollars(share: number): string {
 export function trackNow(b: Boat, t: Track): string {
   const l = b[t];
   switch (t) {
-    case 'hull': return `${boatType(l)}, fishes as far as ${ZONE_NAME[ZONE_IDS[l]]}`;
+    case 'hull': return `${boatType(l)}, fishes as far as ${ZONE_NAME[ZONE_IDS[Math.min(l, ZONE_IDS.length - 1)]]}`;
     case 'hold': return `Brings home ${crates(HOLD_SIZES[l])}`;
     case 'gear': return l === 0 ? 'Normal nets' : `Catches ${GEAR_MULT[l]}× as many expensive fish`;
     case 'sails': return `A trip takes ${tripSecs(b, l)} seconds`;
@@ -83,7 +83,9 @@ export function trackNow(b: Boat, t: Track): string {
 export function trackNext(b: Boat, t: Track): string {
   const l = b[t];
   switch (t) {
-    case 'hull': return `${boatType(l + 1)}: can go to ${ZONE_NAME[ZONE_IDS[l + 1]]}, where fish are worth more`;
+    case 'hull': return l + 1 < ZONE_IDS.length
+      ? `${boatType(l + 1)}: can go to ${ZONE_NAME[ZONE_IDS[l + 1]]}, where fish are worth more`
+      : `${boatType(l + 1)}: brings home ${HULL_EXTRA_CRATES[l + 1] - HULL_EXTRA_CRATES[l]} more crates each trip`;
     case 'hold': return `Brings home ${HOLD_SIZES[l + 1]} crates (${HOLD_SIZES[l + 1] - HOLD_SIZES[l]} more each trip)`;
     case 'gear': return `Catches ${GEAR_MULT[l + 1]}× as many expensive fish`;
     case 'sails': return `A trip takes ${tripSecs(b, l + 1)} seconds (${tripSecs(b, l) - tripSecs(b, l + 1)} seconds faster)`;
@@ -104,7 +106,7 @@ export const LABEL = {
   endJob: 'End job',
   locked: 'Locked',
   tripCost: 'Trip cost',
-  tripCostNote: 'Trip cost pays for food and supplies. You pay it when the boat leaves.',
+  tripCostNote: 'You pay the trip cost when the boat leaves.',
   captain: 'Captain',
   moneyIn: 'Money in',
   moneyOut: 'Money out',
@@ -250,7 +252,7 @@ export const BUILDING_NAME: Record<BuildingId, string> = { smokehouse: 'Smokehou
 
 export const BUILDING_DESC: Record<BuildingId, string> = {
   smokehouse: `Turns a fresh crate into a smoked crate. Smoked fish sells for ${SMOKED_MULT} times the price, and it never goes bad.`,
-  restaurant: `Buys fresh fish (at least ${RESTAURANT_MIN_FRESH}% fresh) for ${RESTAURANT_MULT} times the price. It does not lower the market price. It pays ${Math.round(RESTAURANT_VARIETY_BONUS * 100)}% more for each different fish it was served today.`,
+  restaurant: `Pays ${RESTAURANT_MULT}× for very fresh fish, and more for different kinds.`,
   lighthouse: 'Lights the way, so trips at night are 30% faster. You need it to find the King Fish.',
 };
 
@@ -272,7 +274,7 @@ export const BUILDING_LABEL = {
   ready: (n: number): string => `${n} ready to collect`,
   served: (n: number, max: number): string => `Served today: ${n} of ${max}`,
   smokeTitle: 'Smoke these',
-  smokeNote: 'Tick the fish your workers should put in the smokehouse.',
+  smokeNote: 'Tick the fish workers should smoke.',
   workerRules: 'Workers go to the restaurant first, then the smokehouse, then the market.',
 };
 
@@ -284,7 +286,7 @@ export const WEATHER: Record<WeatherId, { name: string; desc: string }> = {
   fog: { name: 'Fog', desc: `Trips are ${pct(WEATHER_TRIP_MULT.fog - 1)}% longer.` },
   storm: { name: 'Storm', desc: `Trips to the Open Sea and the Deep Sea bring ${pct(STORM_CATCH_MULT - 1)}% more crates, but a boat may come home broken with no fish (about ${pct(STORM_DAMAGE_CHANCE)} in 100). The Shallow Water and the Coral Reef are safe.` },
 };
-export const WEATHER_LABEL = { today: 'Today', tomorrow: 'Tomorrow', stayHome: 'Stay home in storms', stayHomeNote: 'Tick this to keep the boat in the harbour when a storm comes. Only the Open Sea and the Deep Sea are risky.' };
+export const WEATHER_LABEL = { today: 'Today', tomorrow: 'Tomorrow', stayHome: 'Stay home in storms', stayHomeNote: 'Keeps the boat home when a storm comes.' };
 
 export function specialName(sp: Special): string {
   if (!sp) return 'Nothing special';
@@ -301,7 +303,7 @@ export const REPAIR = {
   broken: 'Broken. This boat cannot sail until it is fixed.',
   fix: (cost: number): string => `Fix the boat ($${cost})`,
   fixing: (secs: number): string => `Being fixed… ${secs}s left`,
-  note: `The boat builder needs ${REPAIR_SECONDS} seconds to fix a boat.`,
+  note: `Fixing a boat takes ${REPAIR_SECONDS} seconds.`,
 };
 
 // ---- contracts ----------------------------------------------------------------------------------
@@ -314,7 +316,7 @@ export const CONTRACT_LABEL = {
   none: 'No contracts right now. Check again tomorrow.',
   locked: 'Contracts open when you are a Boat Owner.',
   active: 'Your contract',
-  note: 'Crates count when you sell them at the market. You get the reward when the whole contract is done.',
+  note: 'Sell the fish at the market to finish the contract.',
 };
 
 export function contractText(c: Contract): string {
@@ -381,7 +383,7 @@ export const FISH_BOOK = {
   rewardStars: (zone: string, amount: number): string => `3 stars on every fish in ${zone}! Reward +$${amount}`,
   goldenToast: (fish: string): string => `A golden ${fish}! It is worth five times as much.`,
   noSmoke: 'A golden fish is too special to smoke. Sell it at the market.',
-  starsHelp: 'Bigger fish get more stars and sell for a little more.',
+  starsHelp: 'Bigger fish get more stars and more money.',
   landed: (species: Species, cm: number, stars: number): string => `You caught a ${FISH_NAME[species]}! ${sizeText(cm)}, ${starText(stars)}.`,
   goldenBanner: (fish: string): string => `Golden ${fish}!`,
   goldenBannerSub: 'A rare catch. It is worth five times as much.',
@@ -428,7 +430,7 @@ export const AWAY = {
   workLine: 'Boats with captains keep working while you are away, at half speed, for up to 8 hours.',
   nothing: 'Hire a captain and your boats will fish even when you are away.',
   tipTitle: 'A tip',
-  tip: 'Hire a captain at the inn, and your harbour will earn money even while you are away.',
+  tip: 'Hire a captain to earn money while you are away.',
   go: 'Back to the harbour',
   statsLine: 'While you were away',
 };

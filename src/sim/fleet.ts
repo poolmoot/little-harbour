@@ -1,17 +1,17 @@
 import {
-  BOAT_COST, BOAT_NAMES, GEAR_MULT, HOLD_SIZES, LUCKY_MULT, MAX_BOATS, SAILS_MULT, SWIFT_MULT, TIER_COST_MULT,
+  BOAT_COST, BOAT_NAMES, GEAR_MULT, HOLD_SIZES, HULL_EXTRA_CRATES, LUCKY_MULT, MAX_BOATS, SAILS_MULT, SWIFT_MULT, TIER_COST_MULT,
   TRACK_COST, TRACK_LEVEL_HULL, TRACK_MAX, ZONES, ZONE_IDS,
 } from './config';
 import type { Track, ZoneId } from './config';
 import { levelCatchMult, levelSpeedMult } from './captains';
 import { spend } from './ledger';
-import { maxBoats, maxHullTier, rankOf } from './rank';
+import { hullRank, maxBoats, maxHullTier, rankOf } from './rank';
 import { newBoat, nextId } from './state';
 import type { Boat, Captain, Check, Ev, GameState } from './state';
 
 /** The captain, if one is aboard and was paid today. */
 export const activeCaptain = (b: Boat): Captain | null => (b.captain && !b.captain.unpaid ? b.captain : null);
-export const holdSize = (b: Boat): number => HOLD_SIZES[b.hold] + (activeCaptain(b)?.trait === 'careful' ? 1 : 0);
+export const holdSize = (b: Boat): number => HOLD_SIZES[b.hold] + HULL_EXTRA_CRATES[b.hull] + (activeCaptain(b)?.trait === 'careful' ? 1 : 0);
 export const rareMult = (b: Boat): number => {
   const c = activeCaptain(b);
   return GEAR_MULT[b.gear] * (c?.trait === 'lucky' ? LUCKY_MULT : 1) * (c ? levelCatchMult(c) : 1);
@@ -53,7 +53,7 @@ export function canUpgradeBoat(state: GameState, boatId: number, track: Track): 
   const cost = trackCost(b, track);
   if (cost === null) return { ok: false, reason: 'Maxed' };
   if (track === 'hull' && b.hull + 1 > maxHullTier(rankOf(state))) {
-    return { ok: false, reason: 'Rank too low', needRank: b.hull + 1, cost };
+    return { ok: false, reason: 'Rank too low', needRank: hullRank(b.hull + 1), cost };
   }
   const needHull = needsHullFor(b, track);
   if (needHull !== null) return { ok: false, reason: 'Boat too small', needHull, cost };

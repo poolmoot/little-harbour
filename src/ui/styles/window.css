@@ -22,7 +22,7 @@
 .tab.on { background: linear-gradient(var(--gold-hi), var(--gold-lo)); box-shadow: inset 0 2px 0 var(--gold-gloss), inset 0 -4px 0 var(--gold-lip), var(--lift-sm); }
 .win-close { width: 48px; min-height: 44px; padding: 0 0 5px; font-size: 26px; margin-left: auto; }
 .tabs + .win-close { margin-left: 0; }
-.win-note { padding: 9px 18px 0; font-size: var(--fs-sm); color: var(--text-dim); }
+.win-note { padding: 6px 18px 0; font-size: var(--fs-sm); color: var(--text-dim); }
 .win-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px; scrollbar-width: thin; scrollbar-color: var(--info-lo) var(--well); }
 .win-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 18px 14px; background: rgba(8, 20, 60, 0.3); border-top: var(--line); font-size: var(--fs-sm); }
 
@@ -33,7 +33,7 @@
 .win.fresh :is(.card, .item):nth-child(4) { animation-delay: 0.12s; }
 .win.fresh :is(.card, .item):nth-child(n + 5) { animation-delay: 0.15s; }
 
-.split { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 14px; align-items: start; }
+.split { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 14px; align-items: start; }
 @media (max-width: 640px) { .split { grid-template-columns: minmax(0, 1fr); } }
 .portrait { display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
 .portrait-name { font-size: var(--fs-lg); }

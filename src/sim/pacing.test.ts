@@ -21,7 +21,7 @@ describe('pacing (scripted player)', () => {
       });
       expect(r.state.money).toBeGreaterThanOrEqual(0);
       // The biggest boat must be worth buying: the scripted player owns a Trawler by the top rank.
-      expect(r.state.boats.filter((b) => b.hull === 3).length, 'trawlers bought').toBeGreaterThanOrEqual(1);
+      expect(r.state.boats.filter((b) => b.hull >= 3).length, 'trawlers bought').toBeGreaterThanOrEqual(1);
       // The tycoon stage: buildings, contracts and the King Fish are all used.
       expect(r.state.buildings.smokehouse, 'smokehouse').toBeGreaterThanOrEqual(1);
       expect(r.state.buildings.restaurant, 'restaurant').toBeGreaterThanOrEqual(1);

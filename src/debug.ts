@@ -63,7 +63,7 @@ export function installDebug(g: DebugHost): void {
     /** Jump to a rank (0-4) by setting lifetime earnings. */
     rank: (r: number) => { g.state.lifetime = Math.max(g.state.lifetime, RANK_THRESHOLDS[r] ?? 0); },
     /** Add boats (as rowboats) until there are n. */
-    fleet: (n: number) => { g.state.lifetime = Math.max(g.state.lifetime, 15000); g.state.money += 20000; while (g.state.boats.length < n) buyBoat(g.state); },
+    fleet: (n: number) => { g.state.lifetime = Math.max(g.state.lifetime, 15000); g.state.money += 20000; while (g.state.boats.length < n) if (buyBoat(g.state)[0].type !== 'boatBought') break; },
     hireDockhands: (n = 1) => { g.state.lifetime = Math.max(g.state.lifetime, 500); for (let i = 0; i < n; i++) hireDockhand(g.state, g.rng); },
     captain: (boat = 0, trait: Trait = 'swift') => {
       const b = g.state.boats[boat];

@@ -84,7 +84,7 @@ class BoatModel {
   readonly group = new THREE.Group();
   private inner = new THREE.Group();
   /** One model per boat size, built the first time this boat reaches that size. */
-  private builds: (BoatBuild | null)[] = [null, null, null, null];
+  private builds: (BoatBuild | null)[] = BOAT_TIERS.map(() => null);
   private mast = new THREE.Group();
   private mastMesh: THREE.Mesh;
   private main = new Sail();
@@ -155,7 +155,7 @@ class BoatModel {
     const big = sails >= 1 ? 1.2 : 1;
     const sailOn = t < 3 ? hasMast : sails >= 1;
     this.main.mesh.visible = sailOn;
-    this.main.y0 = 0.7; this.main.h = T.mastH * 0.72 * big; this.main.len = (1.2 + 0.45 * t) * big; this.main.z = 0; this.main.dir = t === 3 ? -1 : 1;
+    this.main.y0 = 0.7; this.main.h = T.mastH * 0.72 * big; this.main.len = (1.2 + 0.45 * t) * big; this.main.z = 0; this.main.dir = t >= 3 ? -1 : 1;
     this.jib.mesh.visible = sailOn && (t >= 2 || sails >= 2);
     this.jib.y0 = 0.7; this.jib.h = T.mastH * 0.6; this.jib.len = (1.4 + 0.4 * t); this.jib.z = 0; this.jib.dir = -1;
     this.flag.visible = hasMast && (t >= 1 || sails >= 2);

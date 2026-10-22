@@ -85,13 +85,13 @@ export const UPGRADE_IDS: UpgradeId[] = ['handcart', 'stall1', 'stall2'];
 // ---- Fleet (per-boat tracks) -------------------------------------------
 export type Track = 'hull' | 'hold' | 'gear' | 'sails';
 export const TRACKS: Track[] = ['hull', 'hold', 'gear', 'sails'];
-export const TRACK_MAX: Record<Track, number> = { hull: 3, hold: 6, gear: 4, sails: 4 };
+export const TRACK_MAX: Record<Track, number> = { hull: 6, hold: 6, gear: 4, sails: 4 };
 export const HOLD_SIZES = [4, 6, 8, 12, 16, 20, 25];
 export const GEAR_MULT = [1, 1.5, 2.2, 3, 4];
 export const SAILS_MULT = [1, 0.85, 0.7, 0.6, 0.5];
 /** Smallest Boat size (hull) each level needs (index = level). The later levels are for the big boats and keep the game going. */
 export const TRACK_LEVEL_HULL: Record<Track, number[]> = {
-  hull: [0, 0, 0, 0],
+  hull: [0, 0, 0, 0, 0, 0, 0],
   hold: [0, 0, 0, 0, 2, 3, 3],
   gear: [0, 0, 0, 2, 3],
   sails: [0, 0, 0, 2, 3],
@@ -100,12 +100,16 @@ export const MAX_BOATS = 4;
 export const BOAT_NAMES = ['Gull', 'Wren', 'Marigold', 'Albatross'];
 /** Cost to reach level i of each track (index 0 unused). Hold, Gear and Sails are multiplied by TIER_COST_MULT[hull]. */
 export const TRACK_COST: Record<Track, number[]> = {
-  hull: [0, 400, 2500, 4500],
+  hull: [0, 400, 2500, 4500, 30000, 90000, 250000],
   hold: [0, 110, 450, 1200, 3000, 8000, 20000],
   gear: [0, 350, 950, 3000, 9000],
   sails: [0, 350, 800, 2500, 8000],
 };
-export const TIER_COST_MULT = [1, 1.6, 2.6, 4];
+export const TIER_COST_MULT = [1, 1.6, 2.6, 4, 5, 6, 7];
+/** The boats after the Trawler (Big Trawler, Fishing Ship, Flagship) go to the same places but bring home more crates each trip. */
+export const HULL_EXTRA_CRATES = [0, 0, 0, 0, 4, 8, 14];
+/** The boats after the Trawler need the top rank. */
+export const BIG_HULL_RANK = 4;
 /** Price of the nth boat (index = boats already owned). Bought as a rowboat. */
 export const BOAT_COST = [0, 700, 2200, 6000];
 
@@ -118,7 +122,7 @@ export type Trait = 'swift' | 'lucky' | 'careful' | 'thrifty';
 export const TRAITS: Trait[] = ['swift', 'lucky', 'careful', 'thrifty'];
 export const CAPTAIN_WAGE = 60;
 /** A captain's pay a day by the hull of the boat they sail (Rowboat .. Trawler), before level and Thrifty. */
-export const CAPTAIN_WAGE_BY_HULL = [CAPTAIN_WAGE, 120, 500, 1500];
+export const CAPTAIN_WAGE_BY_HULL = [CAPTAIN_WAGE, 120, 500, 1500, 1800, 2200, 2800];
 /** Trips finished to reach captain level 1..5. */
 export const CAPTAIN_LEVEL_TRIPS = [0, 8, 20, 40, 70];
 export const CAPTAIN_MAX_LEVEL = CAPTAIN_LEVEL_TRIPS.length;
@@ -130,7 +134,7 @@ export const CAPTAIN_LEVEL_SPEED = 0.03;
 export const VETERAN_RANK = 2;
 export const VETERAN_CHANCE: [number, number] = [0.3, 0.1];
 /** Care for each boat, paid at 06:00 with the wages, by hull (Rowboat .. Trawler). Never makes debt. */
-export const BOAT_UPKEEP = [0, 25, 120, 500];
+export const BOAT_UPKEEP = [0, 25, 120, 500, 700, 1000, 1500];
 export const DOCKHAND_WAGE = 25;
 export const MAX_DOCKHANDS = 4;
 export const CANDIDATE_COUNT = 3;

@@ -74,7 +74,7 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
     }
     for (const id of BUILDING_IDS) {
       // The lighthouse is the road to the King Fish: only once the fleet is worth night trips.
-      if (id === 'lighthouse' && s.boats.filter((b) => b.hull === 3).length < 2) continue;
+      if (id === 'lighthouse' && s.boats.filter((b) => b.hull >= 3).length < 2) continue;
       const c = canBuyBuilding(s, id);
       if (c.ok) opts.push({ cost: c.cost!, pay: id === 'smokehouse' || id === 'restaurant' || id === 'lighthouse', go: () => { buyBuilding(s, id as BuildingId); if (id === 'smokehouse') for (const sp of SPECIES) setSmokeList(s, sp, true); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}${s.buildings[id]}`); } });
     }

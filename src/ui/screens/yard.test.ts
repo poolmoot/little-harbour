@@ -79,7 +79,7 @@ describe('boat window upgrades', () => {
     const html = boatScreen(ctx(s, { arg: s.boats[0].id })).body;
     expect(html.match(/data-act="up"/g)).toHaveLength(TRACKS.length);
     expect(html).toContain('Upgrade — ');
-    expect(html).toContain('0 of 3 upgrades');
+    expect(html).toContain('0 of 6 upgrades');
     expect(html).toContain('Next:');
     expect(html).toContain('class="dots"');
   });
@@ -144,11 +144,11 @@ describe('boat spot window', () => {
 });
 
 describe('captains are easy to find', () => {
-  it('shows a Get a captain card with candidates and Hire buttons on the first page of the boat window', () => {
+  it('shows a Get a captain card with candidates and Hire buttons on the Captain tab of the boat window', () => {
     const s = rich();
     s.candidates = [{ id: 7, name: 'Ansel', trait: 'swift' }] as GameState['candidates'];
-    const v = boatScreen(ctx(s, { arg: s.boats[0].id }));
-    expect(v.tabs?.map((t) => t.id)).toEqual(['upgrades', 'grounds']);
+    const v = boatScreen(ctx(s, { arg: s.boats[0].id, tab: 'captain' }));
+    expect(v.tabs?.map((t) => t.id)).toEqual(['upgrades', 'captain', 'grounds']);
     expect(v.body).toContain('Get a captain');
     expect(v.body).toContain('Ansel');
     expect(v.body).toContain('$60 a day');
@@ -156,7 +156,7 @@ describe('captains are easy to find', () => {
   });
 
   it('explains the lock when captains are not open yet', () => {
-    const v = (() => { const s = initialState(); return boatScreen(ctx(s, { arg: s.boats[0].id })); })();
+    const v = (() => { const s = initialState(); return boatScreen(ctx(s, { arg: s.boats[0].id, tab: 'captain' })); })();
     expect(v.body).toContain('Get a captain');
     expect(v.body).toContain('Needs rank: Boat Owner (you are Beginner)');
   });
@@ -164,7 +164,7 @@ describe('captains are easy to find', () => {
   it('shows the captain, the place they fish and End job when hired', () => {
     const s = rich();
     s.boats[0].captain = { id: 7, name: 'Ansel', trait: 'swift', unpaid: false } as never;
-    const body = boatScreen(ctx(s, { arg: s.boats[0].id })).body;
+    const body = boatScreen(ctx(s, { arg: s.boats[0].id, tab: 'captain' })).body;
     expect(body).toContain('Your captain');
     expect(body).toContain('Fishes:');
     expect(body).toContain('data-act="firecap"');

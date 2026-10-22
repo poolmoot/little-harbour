@@ -168,6 +168,9 @@ stepping on each other:
 - Dock crates in bins (`DOCK_BIN_SIZE` in `config.ts`): the gameplay agent drew a plain version in
   `view/cratesView.ts` (one crate per dock spot, stretched for 2, a grey steel box for 3-4). A nicer
   double crate and metal crate are welcome.
+- Boat sizes 4-6 (Big Trawler, Fishing Ship, Flagship): the gameplay agent drew them in
+  `view/boatModels.ts` (`ship()` builder: wheelhouse floors, funnels, crane, net drum, radar dome,
+  flag). They use the Trawler icon in the windows (`HULL_ICONS`); own icons and polish are welcome.
 
 Measured by the graphics agent on High at the market: about 630–690 draw
 calls and 410k triangles, holding 60 fps with some dropped frames; shadows

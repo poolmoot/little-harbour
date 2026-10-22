@@ -111,7 +111,7 @@ function frame(v: ScreenView): string {
     : '';
   const close = v.menu ? '' : `<button class="btn danger ol win-close" data-act="close" aria-label="${LABEL.close}" title="${LABEL.close}">×</button>`;
   const head = v.bare ? '' : `<header class="win-head"><div class="win-title ol">${v.icon}${v.title}</div>${tabs}${close}</header>`;
-  return `${head}${v.note ? `<p class="win-note">${v.note}</p>` : ''}<div class="win-body">${v.body}</div>${v.foot ? `<footer class="win-foot">${v.foot}</footer>` : ''}`;
+  return `${head}<div class="win-body">${v.body}</div>${v.note ? `<p class="win-note">${v.note}</p>` : ''}${v.foot ? `<footer class="win-foot">${v.foot}</footer>` : ''}`;
 }
 
 /** The window manager: owns which screen is open, draws it in a floating window and routes button presses to game actions. */
