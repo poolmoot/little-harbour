@@ -16,7 +16,9 @@ import { marketScreen } from './screens/market';
 import { noticesScreen } from './screens/notices';
 import { endingScreen } from './screens/ending';
 import { helpScreen, tipsScreen, welcomeScreen } from './screens/guide';
+import type { Consent } from '../analytics';
 import { howtoScreen } from './screens/howto';
+import { privacyScreen, termsScreen } from './screens/legal';
 import { plotScreen } from './screens/plot';
 import { pauseScreen } from './screens/pause';
 import { settingsScreen } from './screens/settings';
@@ -24,7 +26,7 @@ import { shipyardScreen } from './screens/shipyard';
 import { titleScreen } from './screens/title';
 import type { AwayInfo, Screen, ScreenView } from './screens/types';
 
-export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away' | 'welcome' | 'help' | 'tips' | 'berth';
+export type PanelKind = 'boat' | 'hire' | 'market' | 'shipyard' | 'board' | 'logbook' | 'summary' | 'title' | 'pause' | 'settings' | 'howto' | 'plot' | 'ending' | 'away' | 'welcome' | 'help' | 'tips' | 'berth' | 'privacy' | 'terms';
 
 const SCREENS: Record<PanelKind, Screen> = {
   boat: boatScreen,
@@ -38,6 +40,8 @@ const SCREENS: Record<PanelKind, Screen> = {
   pause: pauseScreen,
   settings: settingsScreen,
   howto: howtoScreen,
+  privacy: privacyScreen,
+  terms: termsScreen,
   plot: plotScreen,
   ending: endingScreen,
   away: awayScreen,
@@ -88,6 +92,8 @@ export interface PanelActions {
   onClose(): void;
   /** A window was opened (the guide notices the notice board). */
   onOpen(kind: PanelKind): void;
+  getConsent(): Consent;
+  setConsent(on: boolean): void;
   getGuideTips(): boolean;
   setGuideTips(on: boolean): void;
   /** Show a guide card and its trail again (from the help list). */
@@ -222,7 +228,7 @@ export class Panels {
 
   /** Leave settings or how to play for the screen that opened it. */
   back(): void {
-    if (this.kind === 'settings' || this.kind === 'howto' || this.kind === 'tips') this.open(this.returnTo);
+    if (this.kind === 'settings' || this.kind === 'howto' || this.kind === 'tips' || this.kind === 'privacy' || this.kind === 'terms') this.open(this.returnTo);
   }
 
   toggle(kind: PanelKind): void {
@@ -315,11 +321,14 @@ export class Panels {
       case 'reset': this.confirmReset = true; this.render(true); break;
       case 'resetno': this.confirmReset = false; this.render(true); break;
       case 'resetyes': this.actions.resetGame(); break;
-      case 'settings': case 'howto': case 'tips':
+      case 'settings': case 'howto': case 'tips': case 'privacy': case 'terms':
         this.returnTo = this.kind === 'pause' ? 'pause' : 'title';
         this.open(act);
         break;
       case 'menuback': this.back(); break;
+      case 'consent': this.actions.setConsent(this.actions.getConsent() !== 'granted'); this.render(true); break;
+      case 'consent-yes': this.actions.setConsent(true); this.render(true); break;
+      case 'consent-no': this.actions.setConsent(false); this.render(true); break;
       case 'guidetips': this.actions.setGuideTips(!this.actions.getGuideTips()); this.render(true); break;
       case 'welcomeskip': this.actions.setGuideTips(false); this.close(); break;
       case 'guidereplay': this.actions.replayGuide(a); break;
@@ -350,7 +359,7 @@ export class Panels {
     this.lastUpdate = performance.now() / 1000;
     const view = SCREENS[this.kind]({
       state: this.getState(), arg: this.arg, tab: this.tab, confirmReset: this.confirmReset, quality: this.actions.getQuality(), summary: this.summary,
-      hasSave: this.actions.hasSave(), guideTips: this.actions.getGuideTips(), confirmNew: this.confirmNew, audio: this.actions.getAudio(),
+      hasSave: this.actions.hasSave(), guideTips: this.actions.getGuideTips(), consent: this.actions.getConsent(), confirmNew: this.confirmNew, audio: this.actions.getAudio(),
       away: this.kind === 'away' ? this.actions.getAway() : null, age: (performance.now() - this.openedAt) / 1000,
     });
     const html = frame(view);
@@ -360,7 +369,7 @@ export class Panels {
     this.last = html;
     this.overlay.classList.toggle('menu', !!view.menu);
     this.win.classList.toggle('menu', !!view.menu);
-    this.win.classList.toggle('wide', this.kind === 'settings' || this.kind === 'howto' || this.kind === 'tips');
+    this.win.classList.toggle('wide', this.kind === 'settings' || this.kind === 'howto' || this.kind === 'tips' || this.kind === 'privacy' || this.kind === 'terms');
     // Keep the reader's place when live data re-renders the list.
     const scroll = this.win.querySelector('.win-body')?.scrollTop ?? 0;
     this.win.innerHTML = html;

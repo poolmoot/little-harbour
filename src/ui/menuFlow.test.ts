@@ -15,6 +15,8 @@ describe('menu flow', () => {
   it('steps back out of settings and how to play, from either menu', () => {
     expect(escapeAction('paused', 'settings')).toBe('back');
     expect(escapeAction('title', 'howto')).toBe('back');
+    expect(escapeAction('title', 'privacy')).toBe('back');
+    expect(escapeAction('title', 'terms')).toBe('back');
   });
 
   it('does nothing on the title screen itself', () => {

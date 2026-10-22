@@ -13,11 +13,11 @@ const ctx = (over: Partial<ScreenCtx> = {}): ScreenCtx => ({
   state: initialState(), arg: 0, tab: '', confirmReset: false, quality: 'auto', summary: null,
   hasSave: false, confirmNew: false, audio: { ...DEFAULT_SETTINGS }, ...over,
 });
-const acts = (html: string) => [...html.matchAll(/data-act="([a-z]+)"/g)].map((m) => m[1]);
+const acts = (html: string) => [...html.matchAll(/data-act="([a-z-]+)"/g)].map((m) => m[1]);
 
 describe('title screen', () => {
   it('offers New game, Settings and How to play, but not Continue, without a save', () => {
-    expect(acts(titleScreen(ctx()).body)).toEqual(['newgame', 'settings', 'howto', 'tips']);
+    expect(acts(titleScreen(ctx()).body)).toEqual(['newgame', 'settings', 'howto', 'tips', 'privacy', 'terms']);
   });
 
   it('offers Continue first, with the day and money, when a save exists', () => {
@@ -25,7 +25,7 @@ describe('title screen', () => {
     state.day = 4;
     state.money = 1234;
     const v = titleScreen(ctx({ state, hasSave: true }));
-    expect(acts(v.body)).toEqual(['continue', 'newgame', 'settings', 'howto', 'tips']);
+    expect(acts(v.body)).toEqual(['continue', 'newgame', 'settings', 'howto', 'tips', 'privacy', 'terms']);
     expect(v.body).toContain('Day 4');
     expect(v.body).toContain('$1,234');
   });
@@ -109,5 +109,20 @@ describe('fish book and hints', () => {
     expect(HINTS).toContain('M sound');
     expect(HINTS).toContain('Esc menu');
     expect(HINTS.length).toBeLessThan(70);
+  });
+});
+
+describe('play data choice', () => {
+  it('asks on the title screen only while unanswered, with two equal buttons', () => {
+    const asked = titleScreen(ctx({ consent: 'pending' })).body;
+    expect(acts(asked)).toEqual(['newgame', 'settings', 'howto', 'tips', 'consent-yes', 'consent-no', 'privacy', 'terms']);
+    expect(acts(titleScreen(ctx({ consent: 'granted' })).body)).not.toContain('consent-yes');
+    expect(acts(titleScreen(ctx({ consent: 'none' })).body)).not.toContain('consent-no');
+  });
+
+  it('lets the player change the choice in Settings, and hides it when counting is unavailable', () => {
+    expect(acts(settingsScreen(ctx({ consent: 'granted' })).body)).toContain('consent');
+    expect(acts(settingsScreen(ctx({ consent: 'denied' })).body)).toContain('consent');
+    expect(acts(settingsScreen(ctx({ consent: 'none' })).body)).not.toContain('consent');
   });
 });

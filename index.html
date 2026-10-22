@@ -15,6 +15,10 @@
 posthog.init('phc_zRuyHyT7ba7zsbNmdWr8bPN8ekUCTbce7e9GEoNDixBQ', {
   api_host: 'https://eu.i.posthog.com',
   defaults: '2026-08-30',
+  capture_exceptions: true,
+  // Nothing is recorded until the player says yes on the title screen (or in Settings).
+  opt_out_capturing_by_default: true,
+  opt_out_capturing_persistence_type: 'localStorage',
 })
 </script>
 </head>
