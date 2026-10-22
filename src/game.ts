@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { GameAudio } from './audio';
 import { Input } from './input';
-import { track } from './analytics';
+import { consentStatus, setConsent, track } from './analytics';
 import { HOUR_SECONDS, START_HOUR } from './sim/config';
 import type { ZoneId } from './sim/config';
 import { clearSave, loadGame, saveGame } from './sim/save';
@@ -204,6 +204,8 @@ export class Game {
         toTitle: () => this.toTitle(),
         onClose: () => this.audio.click(),
         onOpen: (kind) => { if (kind === 'board') noteBoardOpened(this.state); },
+        getConsent: () => consentStatus(),
+        setConsent: (on) => setConsent(on),
         getGuideTips: () => this.guideTips,
         setGuideTips: (on) => this.setGuideTips(on),
         replayGuide: (key) => this.replayGuide(key),

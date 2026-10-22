@@ -30,3 +30,10 @@
 .legal-text p { font-size: var(--fs-md); line-height: 1.4; margin: 0 0 6px; }
 .legal-text ul { margin: 0 0 6px; padding-left: 20px; font-size: var(--fs-md); line-height: 1.4; }
 .legal-date { margin-top: 16px; color: var(--text-dim); font-size: var(--fs-sm); }
+
+/* The question about counting play: plain text under the title buttons, two equal buttons. */
+.consent { margin: 16px 6px 0; text-align: center; }
+.consent-title { font-size: var(--fs-md); color: var(--gold-hi); margin-bottom: 4px; }
+.consent p { margin: 0 0 10px; font-size: var(--fs-sm); line-height: 1.35; color: var(--text-dim); }
+.consent-row { display: flex; gap: 10px; justify-content: center; }
+.consent-row .btn { flex: 1 1 0; }

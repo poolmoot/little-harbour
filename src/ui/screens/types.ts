@@ -1,3 +1,4 @@
+import type { Consent } from '../../analytics';
 import type { AudioSettings } from '../../audio/settings';
 import type { DayStats, GameState } from '../../sim/state';
 import type { QualityMode } from '../../view/quality';
@@ -26,6 +27,8 @@ export interface ScreenCtx {
   audio: Readonly<AudioSettings>;
   /** What the harbour earned while the player was away (welcome-back window). */
   away?: AwayInfo | null;
+  /** The answer about counting play: not asked yet, yes, no, or 'none' when counting is not available. */
+  consent?: Consent;
   /** The Show guide tips switch. */
   guideTips?: boolean;
   /** Seconds since this window opened (lets a number count up). */

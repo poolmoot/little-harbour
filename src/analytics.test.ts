@@ -18,3 +18,10 @@ describe('analytics', () => {
     expect(JSON.stringify(t)).not.toContain('Secret');
   });
 });
+
+describe('consent', () => {
+  it('says there is nothing to ask when PostHog is missing', async () => {
+    const { consentStatus } = await import('./analytics');
+    expect(consentStatus()).toBe('none');
+  });
+});

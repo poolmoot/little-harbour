@@ -38,3 +38,21 @@ export function trackEvents(evs: Ev[]): void {
     if (t) track(t.name, t.props);
   }
 }
+
+/** What the player has chosen about counting. 'none' means the PostHog snippet is missing or blocked, so there is nothing to ask. */
+export type Consent = 'pending' | 'granted' | 'denied' | 'none';
+
+interface ConsentApi { get_explicit_consent_status?(): string; opt_in_capturing(): void; opt_out_capturing(): void }
+
+const api = (): ConsentApi | undefined => (window as unknown as { posthog?: ConsentApi }).posthog;
+
+export function consentStatus(): Consent {
+  try {
+    const s = api()?.get_explicit_consent_status?.();
+    return s === 'pending' || s === 'granted' || s === 'denied' ? s : 'none';
+  } catch { return 'none'; }
+}
+
+export function setConsent(yes: boolean): void {
+  try { if (yes) api()?.opt_in_capturing(); else api()?.opt_out_capturing(); } catch { /* counting must never break the game */ }
+}
