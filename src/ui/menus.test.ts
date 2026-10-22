@@ -17,7 +17,7 @@ const acts = (html: string) => [...html.matchAll(/data-act="([a-z]+)"/g)].map((m
 
 describe('title screen', () => {
   it('offers New game, Settings and How to play, but not Continue, without a save', () => {
-    expect(acts(titleScreen(ctx()).body)).toEqual(['newgame', 'settings', 'howto', 'tips']);
+    expect(acts(titleScreen(ctx()).body)).toEqual(['newgame', 'settings', 'howto', 'tips', 'privacy', 'terms']);
   });
 
   it('offers Continue first, with the day and money, when a save exists', () => {
@@ -25,7 +25,7 @@ describe('title screen', () => {
     state.day = 4;
     state.money = 1234;
     const v = titleScreen(ctx({ state, hasSave: true }));
-    expect(acts(v.body)).toEqual(['continue', 'newgame', 'settings', 'howto', 'tips']);
+    expect(acts(v.body)).toEqual(['continue', 'newgame', 'settings', 'howto', 'tips', 'privacy', 'terms']);
     expect(v.body).toContain('Day 4');
     expect(v.body).toContain('$1,234');
   });

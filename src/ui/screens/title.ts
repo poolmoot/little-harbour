@@ -1,6 +1,6 @@
 import { button, esc, money } from '../components';
 import { icon } from '../icons';
-import { GAME_NAME, GAME_TAGLINE, MENU } from '../menuText';
+import { GAME_NAME, GAME_TAGLINE, LEGAL, MENU } from '../menuText';
 import { GUIDE } from '../guideText';
 import { emblem } from '../intro';
 import type { Screen } from './types';
@@ -18,6 +18,7 @@ export const titleScreen: Screen = ({ state: s, hasSave, confirmNew }) => {
     };
   }
   const harbour = hasSave ? `<div class="menu-harbour ol">${esc(s.harbourName)}</div>` : '';
+  const legal = `<div class="menu-legal"><button class="legal-link" data-act="privacy">${LEGAL.privacy}</button><span aria-hidden="true">·</span><button class="legal-link" data-act="terms">${LEGAL.terms}</button></div>`;
   const items = [
     hasSave ? `${button({ label: MENU.continueGame, act: 'continue', tone: 'go', size: 'lg', wide: true })}<div class="menu-save">${MENU.saveLine(s.day, money(s.money))}</div>` : '',
     button({ label: MENU.newGame, act: 'newgame', tone: hasSave ? 'gold' : 'go', size: 'lg', wide: true }),
@@ -25,5 +26,5 @@ export const titleScreen: Screen = ({ state: s, hasSave, confirmNew }) => {
     button({ label: `${icon('help', 24)}${MENU.howToPlay}`, act: 'howto', tone: 'info', size: 'lg', wide: true }),
     button({ label: `${icon('note', 24)}${GUIDE.menuButton}`, act: 'tips', tone: 'info', size: 'lg', wide: true }),
   ].filter(Boolean);
-  return { title: GAME_NAME, icon: '', menu: true, bare: true, body: `${hero}${harbour}<div class="menu-list">${items.join('')}</div>` };
+  return { title: GAME_NAME, icon: '', menu: true, bare: true, body: `${hero}${harbour}<div class="menu-list">${items.join('')}</div>${legal}` };
 };

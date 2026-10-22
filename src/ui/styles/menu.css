@@ -21,3 +21,12 @@
 .keys .caps { display: flex; gap: 4px; }
 .howto-about { font-size: var(--fs-md); line-height: 1.35; margin-bottom: 6px; }
 .menu-harbour { margin: 0 0 12px; text-align: center; font-size: var(--fs-lg); color: var(--text); }
+
+/* Privacy and terms: plain text links under the title buttons, and plain text pages. No cards or boxes. */
+.menu-legal { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; color: var(--text-dim); font-size: var(--fs-sm); }
+.legal-link { background: none; border: 0; padding: 4px 2px; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.legal-link:hover, .legal-link:focus-visible { color: var(--text); }
+.legal-h { margin: 14px 0 4px; font-size: var(--fs-md); color: var(--gold-hi); }
+.legal-text p { font-size: var(--fs-md); line-height: 1.4; margin: 0 0 6px; }
+.legal-text ul { margin: 0 0 6px; padding-left: 20px; font-size: var(--fs-md); line-height: 1.4; }
+.legal-date { margin-top: 16px; color: var(--text-dim); font-size: var(--fs-sm); }

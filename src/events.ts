@@ -10,6 +10,7 @@ import { SAY2 } from './ui/screenText';
 import { AWAY, FISH_BOOK, FISH_NAME, KING, NAME_TOAST, RANK_NAME, ZONE_NAME, denyText, say, sayTycoon } from './ui/text';
 import { crateSize, crateStars } from './sim/fishbook';
 import { catchCheer } from './audio/town';
+import { trackEvents } from './analytics';
 import { weatherRain } from './view/townRules';
 
 /** How loud each weather layer is for a kind of weather (0 to 1). */
@@ -82,6 +83,7 @@ export class EventRouter {
     let soldCount = 0, soldTotal = 0, saveNow = false;
     const a = this.d.audio, h = this.d.hud;
     this.d.watch?.(evs);
+    trackEvents(evs);
     for (const e of evs) {
       switch (e.type) {
         case 'boatDispatched':
