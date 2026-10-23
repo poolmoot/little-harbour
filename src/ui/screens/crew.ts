@@ -1,13 +1,11 @@
 import { DOCKHAND_WAGE, MAX_DOCKHANDS, SPECIES } from '../../sim/config';
-import type { Trait } from '../../sim/config';
 import { carryCapacity } from '../../sim/crates';
 import { CAPTAINS_RANK, rankOf } from '../../sim/rank';
 import { canHireCaptain, canHireDockhand, dailyUpkeep, dailyWages } from '../../sim/staff';
 import type { Dockhand, GameState } from '../../sim/state';
-import { button, card, cards, empty, esc, face, item, lockNote, money, section, tick } from '../components';
+import { button, empty, esc, face, item, lockNote, money, section, tick } from '../components';
 import { captainLook, dockhandLook, NPC_LOOK } from '../../view/people';
 import { portrait } from '../../view/portraits';
-import type { CardTone } from '../components';
 import { fishIcon, icon } from '../icons';
 import { hex, SPECIES_COLOUR } from '../../palette';
 import { CAPTAIN_TEXT, WORKER_TEXT } from '../screenText';
@@ -16,36 +14,51 @@ import { FISH_NAME, LABEL, TRAIT, crates } from '../text';
 import { pickTab } from './types';
 import type { Screen } from './types';
 
-const TRAIT_TONE: Record<Trait, CardTone> = { swift: 'blue', lucky: 'teal', careful: 'gold', thrifty: 'purple' };
+/** One short row: a face, a name with one line about the person, then the pay and the Hire button. */
+function hireRow(o: { art: string; title: string; sub: string; pay: string; actions: string; lock?: string }): string {
+  return item({
+    art: o.art,
+    title: o.title,
+    sub: o.sub,
+    extra: o.lock ?? '',
+    right: `<span class="hire-end"><span class="hire-pay ol">${o.pay}</span>${o.actions}</span>`,
+  });
+}
 
 function hire(s: GameState): string {
   const dock = canHireDockhand(s);
-  const list = [card({
-    tone: 'green',
-    tag: 'Worker',
-    art: face(portrait(dockhandLook(s.nextId)), 84) || icon('dockhand', 56),
-    lines: [`Carries ${crates(carryCapacity(s))} at a time`, `${s.dockhands.length} of ${MAX_DOCKHANDS} hired`],
-    name: 'Worker',
-    foot: `<span class="dim">$${DOCKHAND_WAGE} a day</span>${dock.ok ? '' : lockNote({ money: s.money, rank: rankOf(s), needRank: dock.needRank, reason: dock.reason })}${button({ label: dock.ok ? 'Hire' : `${icon('lock', 18)}${LABEL.locked}`, act: 'hiredock', size: 'sm', off: !dock.ok })}`,
+  const rows = [hireRow({
+    art: face(portrait(dockhandLook(s.nextId)), 44) || icon('dockhand', 36),
+    title: 'Worker',
+    sub: `Carries ${crates(carryCapacity(s))} at a time · ${s.dockhands.length} of ${MAX_DOCKHANDS} hired`,
+    pay: `$${DOCKHAND_WAGE} a day`,
+    lock: dock.ok ? '' : lockNote({ money: s.money, rank: rankOf(s), needRank: dock.needRank, reason: dock.reason }),
+    actions: button({ label: dock.ok ? 'Hire' : `${icon('lock', 18)}${LABEL.locked}`, act: 'hiredock', size: 'sm', off: !dock.ok }),
   })];
   const captainsOpen = rankOf(s) >= CAPTAINS_RANK;
   const free = s.boats.filter((b) => !b.captain);
+  const captains: string[] = [];
   for (const c of s.candidates) {
     const info = TRAIT[c.trait];
     let actions: string;
-    if (!captainsOpen) actions = lockNote({ money: s.money, rank: rankOf(s), needRank: CAPTAINS_RANK, reason: 'Captains sail a boat for you.' }) + button({ label: `${icon('lock', 18)}${LABEL.locked}`, tone: 'ghost', size: 'sm', off: true });
+    let pay = `$${captainWage(c, free[0]?.hull ?? 0)} a day`;
+    if (!captainsOpen) actions = button({ label: `${icon('lock', 18)}${LABEL.locked}`, tone: 'ghost', size: 'sm', off: true });
     else if (free.length === 0) actions = button({ label: 'No free boat', tone: 'ghost', size: 'sm', off: true });
-    else actions = free.map((b) => button({ label: `Hire for ${esc(b.name)}`, act: 'hirecap', a: c.id, b: b.id, size: 'sm', off: !canHireCaptain(s, b.id).ok })).join('');
-    list.push(card({
-      tone: TRAIT_TONE[c.trait],
-      tag: 'Captain',
-      art: face(portrait(captainLook(c.id, c.trait)), 84) || icon(c.trait, 56),
-      lines: [`${info.name} · ${CAPTAIN_TEXT.level(captainLevel(c))}`, info.desc],
-      name: c.name,
-      foot: `<span class="dim">${free.length ? free.map((b) => CAPTAIN_TEXT.payOn(esc(b.name), captainWage(c, b.hull))).join('<br>') : CAPTAIN_TEXT.wage(captainWage(c, 0))}</span>${actions}`,
+    else if (free.length === 1) actions = button({ label: 'Hire', act: 'hirecap', a: c.id, b: free[0].id, size: 'sm', off: !canHireCaptain(s, free[0].id).ok });
+    else {
+      pay = '';
+      actions = free.map((b) => button({ label: `${esc(b.name)} · $${captainWage(c, b.hull)}`, act: 'hirecap', a: c.id, b: b.id, size: 'sm', off: !canHireCaptain(s, b.id).ok })).join('');
+    }
+    captains.push(hireRow({
+      art: face(portrait(captainLook(c.id, c.trait)), 44) || icon(c.trait, 36),
+      title: `${c.name} · ${info.name}`,
+      sub: info.desc,
+      pay,
+      actions,
     }));
   }
-  return cards(list) + (captainsOpen ? `<p class="dim">${CAPTAIN_TEXT.levelHelp}</p>` : '');
+  const lock = captainsOpen ? '' : lockNote({ money: s.money, rank: rankOf(s), needRank: CAPTAINS_RANK, reason: 'Captains sail a boat for you.' });
+  return `<div class="hire-list">${rows.join('')}${section('Captains')}${lock}${captains.join('')}</div>` + (captainsOpen && free.length > 1 ? `<p class="dim">${CAPTAIN_TEXT.pickBoat}</p>` : '');
 }
 
 function dockhandTask(d: Dockhand): string {
@@ -99,6 +112,6 @@ export const crewScreen: Screen = (ctx) => {
     tabs,
     tab,
     body: tab === 'hire' ? hire(s) : roster(s),
-    foot: `<span class="dim">Pay is taken at 06:00 each day. People you cannot pay do not work that day.</span><span class="ol">Pay each day · $${money(dailyWages(s))}${dailyUpkeep(s) ? ` · Boat care $${money(dailyUpkeep(s))}` : ''}</span>`,
+    foot: `<span class="dim">Paid at 06:00 each day. No pay, no work.</span><span class="ol">Pay each day · $${money(dailyWages(s))}${dailyUpkeep(s) ? ` · Boat care $${money(dailyUpkeep(s))}` : ''}</span>`,
   };
 };

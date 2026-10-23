@@ -308,6 +308,7 @@ export const CAPTAIN_TEXT = {
   toNext: (trips: number, next: number): string => `${trips} more ${trips === 1 ? 'trip' : 'trips'} to level ${next}`,
   topLevel: 'Best there is',
   levelHelp: 'Captains get better with every trip: better fish and shorter trips. Better captains ask for more pay, and pay is higher on bigger boats.',
+  pickBoat: 'Pick the boat a captain will sail. The price is the pay for that boat.',
   payOn: (boat: string, n: number): string => `$${n} a day on ${boat}`,
   levelUp: (name: string, level: number): string => `${name} is now a level ${level} captain. Better fish, shorter trips, and a little more pay.`,
 };
