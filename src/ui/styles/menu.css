@@ -3,9 +3,9 @@
 .win.menu { width: min(460px, 92vw); }
 .win.menu.wide { width: min(620px, 94vw); }
 
-.menu-hero { padding: 6px 0 2px; text-align: center; font-size: 46px; line-height: 1; color: var(--gold-hi); }
-.menu-tag { text-align: center; color: var(--text-dim); margin-bottom: 14px; font-size: var(--fs-md); }
-.menu-list { display: flex; flex-direction: column; gap: 12px; padding: 4px 6px 6px; }
+.menu-hero { padding: 0 0 2px; text-align: center; font-size: 36px; line-height: 1; color: var(--gold-hi); }
+.menu-tag { text-align: center; color: var(--text-dim); margin-bottom: 8px; font-size: var(--fs-md); }
+.menu-list { display: flex; flex-direction: column; gap: 9px; padding: 2px 6px 4px; }
 .menu-list .btn .ic { margin-bottom: 3px; }
 .menu-save { margin-top: -6px; text-align: center; color: var(--text-dim); font-size: var(--fs-sm); }
 .menu-ask { text-align: center; font-size: var(--fs-lg); padding: 4px 0 0; }
@@ -20,7 +20,7 @@
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; margin-bottom: 4px; }
 .keys .caps { display: flex; gap: 4px; }
 .howto-about { font-size: var(--fs-md); line-height: 1.35; margin-bottom: 6px; }
-.menu-harbour { margin: 0 0 12px; text-align: center; font-size: var(--fs-lg); color: var(--text); }
+.menu-harbour { margin: 0 0 8px; text-align: center; font-size: var(--fs-lg); color: var(--text); }
 
 /* Privacy and terms: plain text links under the title buttons, and plain text pages. No cards or boxes. */
 .menu-legal { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; color: var(--text-dim); font-size: var(--fs-sm); }
@@ -37,3 +37,10 @@
 .consent p { margin: 0 0 10px; font-size: var(--fs-sm); line-height: 1.35; color: var(--text-dim); }
 .consent-row { display: flex; gap: 10px; justify-content: center; }
 .consent-row .btn { flex: 1 1 0; }
+
+/* The three smaller choices sit side by side so the title window stays short. */
+.menu-row { display: flex; gap: 8px; }
+.menu-row .btn { flex: 1 1 0; padding-left: 8px; padding-right: 8px; white-space: nowrap; }
+.menu-row .btn .ic { margin: 0 4px 2px 0; vertical-align: middle; }
+.consent { margin-top: 12px; }
+.menu-legal { margin-top: 8px; }

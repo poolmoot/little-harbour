@@ -195,3 +195,11 @@
 .offer-hero .offer-name { font-size: 30px; }
 .offer-hero .offer-spot { font-size: var(--fs-sm); }
 .offer-text { margin: 12px 0 4px; font-size: var(--fs-md); line-height: 1.35; }
+
+/* Hire rows: pay above the Hire button, kept narrow so the list stays short. */
+.hire-end { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-width: 96px; text-align: center; }
+.hire-pay { font-size: var(--fs-sm); color: var(--gold-hi); }
+.hire-pay:empty { display: none; }
+.hire-list .item { padding: 6px 10px 8px; margin-bottom: 6px; gap: 10px; }
+.hire-list .section { margin: 8px 0 4px; }
+.hire-list .btn.sm { min-height: 34px; padding-top: 3px; padding-bottom: 7px; }
