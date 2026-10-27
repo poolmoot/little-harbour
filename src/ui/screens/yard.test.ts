@@ -1,3 +1,4 @@
+import { UPGRADE_IDS } from '../../sim/config';
 import { TRACK_MAX } from '../../sim/config';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../audio/settings';
@@ -43,7 +44,7 @@ describe('shipyard page', () => {
 
   it('shows each harbour upgrade with its price and a Buy button in view', () => {
     const v = shipyardScreen(ctx(rich()));
-    expect(v.body.match(/data-act="buy"/g)).toHaveLength(3);
+    expect(v.body.match(/data-act="buy"/g)).toHaveLength(UPGRADE_IDS.length);
     expect(v.body).toContain('Buy — ');
   });
 

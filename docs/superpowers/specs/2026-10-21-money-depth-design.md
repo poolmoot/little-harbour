@@ -145,3 +145,9 @@ bring home 4, 8 and 14 more crates each trip (`HULL_EXTRA_CRATES`). Captain pay 
 grow with them. The boat window has three tabs: Upgrade, Captain, Where to fish. Every window
 shows its help line below the content, and help lines are one short sentence.
 
+## Bigger carts (2026-10-27)
+
+After the Handcart (4 crates, $200) come the Big Cart (6 crates, $2,500, rank 2) and the
+Horse Wagon (8 crates, $12,000, rank 3). Each needs the one before. They count for the
+player and every worker (`carryCapacity`). Save version 9 adds them; older saves have neither.
+

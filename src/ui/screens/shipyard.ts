@@ -19,6 +19,8 @@ import type { Screen } from './types';
 
 const UPGRADE_LOOK: Record<UpgradeId, { tone: CardTone; icon: IconName }> = {
   handcart: { tone: 'orange', icon: 'cart' },
+  bigcart: { tone: 'gold', icon: 'cart' },
+  wagon: { tone: 'green', icon: 'cart' },
   stall1: { tone: 'green', icon: 'stall' },
   stall2: { tone: 'purple', icon: 'stall' },
 };

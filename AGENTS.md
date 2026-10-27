@@ -113,7 +113,7 @@ See "Code map" at the bottom for a file-by-file list.
    `view/textures.ts`, the panel code) before writing new ones.
 5. Changing the saved-state shape needs a version bump and a migration in
    `src/sim/save.ts`, with a test that an old save still loads. (Now at
-   version 8; version 8 added town projects, captain trips and the boat-care line; version 7 removed the ice box and cold store; version 3 added the day report's trip-cost line; version 4 the
+   version 9; version 9 added the Big Cart and the Horse Wagon; version 8 added town projects, captain trips and the boat-care line; version 7 removed the ice box and cold store; version 3 added the day report's trip-cost line; version 4 the
    tycoon stage (buildings, weather, contracts, goals, King Fish); version 5
    fish sizes, golden fish, names and earnings while away; version 6 the
    starting guide; version 7 removed the ice box and the cold store: stored crates go back
@@ -268,7 +268,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `orders.ts` — notice-board orders and bonuses.
 - `rank.ts` — rank from lifetime earnings and what each rank allows.
 - `ledger.ts` — money in and out, kept for the day report.
-- `upgrades.ts` — harbour-wide purchases (handcart, stalls).
+- `upgrades.ts` — harbour-wide purchases (handcart, Big Cart, Horse Wagon, stalls).
 - `staff.ts` — captains, workers, wages and boat care, and the workers' carrying jobs.
 - `captains.ts` — captain levels from trips, pay by boat and level, the level bonuses.
 - `town.ts` — town projects: buying them and the lasting bonus each gives.

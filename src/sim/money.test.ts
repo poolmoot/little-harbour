@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BOAT_UPKEEP, CAPTAIN_LEVEL_TRIPS, TRACK_MAX, CAPTAIN_WAGE_BY_HULL, DEMAND_RECOVER, PROJECTS, PROJECT_IDS, ROAD_SPEED_MULT,
+  BOAT_UPKEEP, CAPTAIN_LEVEL_TRIPS, CARRY_BIGCART, CARRY_HANDCART, CARRY_WAGON, TRACK_MAX, UPGRADES, CAPTAIN_WAGE_BY_HULL, DEMAND_RECOVER, PROJECTS, PROJECT_IDS, ROAD_SPEED_MULT,
 } from './config';
 import { captainLevel, captainWage, noteCaptainTrip, tripsToNextLevel } from './captains';
+import { carryCapacity } from './crates';
+import { buyUpgrade, canBuy } from './upgrades';
 import { canUpgradeBoat, rareMult, tripTimeFor } from './fleet';
 import { recoverDemand, unitPrice } from './market';
 import { netProfit } from './ledger';
@@ -148,7 +150,7 @@ describe('version 8 save', () => {
     old.candidates = [{ id: 5, name: 'Brigid', trait: 'swift', wage: 40 }];
     const mem = new Map<string, string>([['harbour-game-save', JSON.stringify(old)]]);
     const l = loadGame({ getItem: (k) => mem.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
-    expect(l.version).toBe(8);
+    expect(l.version).toBe(9);
     expect(PROJECT_IDS.every((id) => l.town[id] === false)).toBe(true);
     expect(l.stats.upkeep).toBe(0);
     expect(l.boats[0].captain).toEqual({ id: 4, name: 'Ansel', trait: 'lucky', trips: 0 });
@@ -168,6 +170,37 @@ describe('more boat upgrades', () => {
     expect(TRACK_MAX.hold).toBeGreaterThan(3);
     expect(TRACK_MAX.gear).toBeGreaterThan(2);
     expect(TRACK_MAX.sails).toBeGreaterThan(2);
+  });
+});
+
+describe('bigger carts', () => {
+  it('the Big Cart and the Horse Wagon let you and your workers carry more, in order', () => {
+    const s = ranked(3);
+    expect(canBuy(s, 'bigcart').ok).toBe(false); // the Handcart comes first
+    buyUpgrade(s, 'handcart');
+    expect(carryCapacity(s)).toBe(CARRY_HANDCART);
+    expect(canBuy(s, 'wagon').ok).toBe(false); // then the Big Cart
+    buyUpgrade(s, 'bigcart');
+    expect(carryCapacity(s)).toBe(CARRY_BIGCART);
+    buyUpgrade(s, 'wagon');
+    expect(carryCapacity(s)).toBe(CARRY_WAGON);
+    expect(CARRY_WAGON).toBeGreaterThan(CARRY_BIGCART);
+  });
+
+  it('need a higher rank', () => {
+    const s = ranked(1);
+    s.upgrades.handcart = true;
+    expect(canBuy(s, 'bigcart')).toMatchObject({ ok: false, needRank: UPGRADES.bigcart.rank });
+  });
+
+  it('an older save loads without them', () => {
+    const old = JSON.parse(JSON.stringify(initialState()));
+    old.version = 8;
+    old.upgrades = { handcart: true, stall1: false, stall2: false };
+    const mem = new Map<string, string>([['harbour-game-save', JSON.stringify(old)]]);
+    const l = loadGame({ getItem: (k) => mem.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
+    expect(l.upgrades).toEqual({ handcart: true, bigcart: false, wagon: false, stall1: false, stall2: false });
+    expect(carryCapacity(l)).toBe(CARRY_HANDCART);
   });
 });
 

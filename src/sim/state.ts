@@ -250,7 +250,7 @@ export interface Check {
   needHull?: number; // set when only a bigger boat is missing (Boat size level)
 }
 
-export const STATE_VERSION = 8;
+export const STATE_VERSION = 9;
 
 function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
@@ -280,7 +280,7 @@ export function initialState(): GameState {
     dayTime: 0,
     clock: 0,
     nextId: 3,
-    upgrades: { handcart: false, stall1: false, stall2: false },
+    upgrades: { handcart: false, bigcart: false, wagon: false, stall1: false, stall2: false },
     lifetime: 0,
     rank: 0,
     dockhands: [],
