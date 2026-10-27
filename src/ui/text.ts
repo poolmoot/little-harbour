@@ -2,7 +2,7 @@
 // edited in one place. Keep it simple: short, common words, short sentences, no sailing or business
 // jargon. Only the words change here; code names and save keys stay as they are.
 import {
-  BIG_CATCH_EXTRA, BUILDINGS, CARRY_BASE, CARRY_BIGCART, CARRY_HANDCART, CARRY_WAGON, DEMAND_DROPS, GEAR_MULT, HOLD_SIZES, HULL_EXTRA_CRATES, LUCKY_MULT, MARKET_DAY_MULT, REPAIR_SECONDS,
+  BIG_CATCH_EXTRA, BUILDINGS, CARRY_BASE, CARRY_BIGCART, CARRY_HANDCART, CARRY_STEAMWAGON, CARRY_WAGON, DEMAND_DROPS, GEAR_MULT, HOLD_SIZES, HULL_EXTRA_CRATES, LUCKY_MULT, MARKET_DAY_MULT, REPAIR_SECONDS,
   RESTAURANT_CAPACITY, RESTAURANT_MULT, SAILS_MULT, SMOKED_MULT, SMOKE_RACKS, SMOKE_SECONDS,
   STORM_CATCH_MULT, STORM_DAMAGE_CHANCE, SWIFT_MULT, THRIFTY_MULT, WEATHER_TRIP_MULT, ZONES, ZONE_IDS,
 } from '../sim/config';
@@ -53,6 +53,7 @@ export const UPGRADE: Record<UpgradeId, { name: string; desc: string }> = {
   handcart: { name: 'Handcart', desc: `You and your workers carry ${CARRY_HANDCART} crates, not ${CARRY_BASE}.` },
   bigcart: { name: 'Big Cart', desc: `You and your workers carry ${CARRY_BIGCART} crates.` },
   wagon: { name: 'Horse Wagon', desc: `You and your workers carry ${CARRY_WAGON} crates.` },
+  steamwagon: { name: 'Steam Wagon', desc: `You and your workers carry ${CARRY_STEAMWAGON} crates.` },
   stall1: { name: 'Bigger stall', desc: `Each crate you sell makes that fish cheaper for a while. With this stall it drops less: ${dollars(DEMAND_DROPS[1])} on a $100 fish, not ${dollars(DEMAND_DROPS[0])}.` },
   stall2: { name: 'Big stall', desc: `The price drops even less: only ${dollars(DEMAND_DROPS[2])} on a $100 fish for each crate you sell.` },
 };

@@ -280,7 +280,7 @@ export function initialState(): GameState {
     dayTime: 0,
     clock: 0,
     nextId: 3,
-    upgrades: { handcart: false, bigcart: false, wagon: false, stall1: false, stall2: false },
+    upgrades: { handcart: false, bigcart: false, wagon: false, steamwagon: false, stall1: false, stall2: false },
     lifetime: 0,
     rank: 0,
     dockhands: [],

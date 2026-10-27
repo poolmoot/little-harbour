@@ -184,7 +184,10 @@ describe('bigger carts', () => {
     expect(carryCapacity(s)).toBe(CARRY_BIGCART);
     buyUpgrade(s, 'wagon');
     expect(carryCapacity(s)).toBe(CARRY_WAGON);
-    expect(CARRY_WAGON).toBeGreaterThan(CARRY_BIGCART);
+    expect(canBuy(s, 'steamwagon')).toMatchObject({ ok: false, needRank: UPGRADES.steamwagon.rank });
+    s.lifetime = 72000;
+    buyUpgrade(s, 'steamwagon');
+    expect(carryCapacity(s)).toBe(10);
   });
 
   it('need a higher rank', () => {
@@ -199,7 +202,7 @@ describe('bigger carts', () => {
     old.upgrades = { handcart: true, stall1: false, stall2: false };
     const mem = new Map<string, string>([['harbour-game-save', JSON.stringify(old)]]);
     const l = loadGame({ getItem: (k) => mem.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
-    expect(l.upgrades).toEqual({ handcart: true, bigcart: false, wagon: false, stall1: false, stall2: false });
+    expect(l.upgrades).toEqual({ handcart: true, bigcart: false, wagon: false, steamwagon: false, stall1: false, stall2: false });
     expect(carryCapacity(l)).toBe(CARRY_HANDCART);
   });
 });

@@ -7,7 +7,7 @@ export const SPECIES = [
 export type Species = (typeof SPECIES)[number];
 export type ZoneId = 'shallows' | 'reef' | 'opensea' | 'deep';
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
-export type UpgradeId = 'handcart' | 'bigcart' | 'wagon' | 'stall1' | 'stall2';
+export type UpgradeId = 'handcart' | 'bigcart' | 'wagon' | 'steamwagon' | 'stall1' | 'stall2';
 
 export const FISH_PRICE: Record<Species, number> = {
   herring: 6, mackerel: 10, flounder: 18, seabass: 28, snapper: 40, lobster: 90,
@@ -48,11 +48,12 @@ export const DOCK_DECAY_SECONDS = 150;
 export const MIN_PRICE_MULT = 0.3;
 export const CARRY_BASE = 2;
 export const CARRY_HANDCART = 4;
-/** Crates you and each worker carry with the Big Cart and the Horse Wagon (they follow the Handcart). */
+/** Crates you and each worker carry with the Big Cart, the Horse Wagon and the Steam Wagon (each follows the one before). */
 export const CARRY_BIGCART = 6;
 export const CARRY_WAGON = 8;
-/** Crates on the dock share a spot, up to this many: 1 is a crate, 2 a double crate, 3-4 a big metal crate. */
-export const DOCK_BIN_SIZE = 4;
+export const CARRY_STEAMWAGON = 10;
+/** Crates on the dock share a spot, up to this many. The crate grows with them: 1 wood, 2 wood and metal, 3-4 metal, 5-8 one big gold crate. */
+export const DOCK_BIN_SIZE = 8;
 
 // Market
 /** Demand drop per crate sold, by market stall level. */
@@ -82,10 +83,11 @@ export const UPGRADES: Record<UpgradeId, { cost: number; requires?: UpgradeId; r
   handcart: { cost: 200, rank: 0 },
   bigcart: { cost: 2500, requires: 'handcart', rank: 2 },
   wagon: { cost: 12000, requires: 'bigcart', rank: 3 },
+  steamwagon: { cost: 40000, requires: 'wagon', rank: 4 },
   stall1: { cost: 2000, rank: 2 },
   stall2: { cost: 9000, requires: 'stall1', rank: 3 },
 };
-export const UPGRADE_IDS: UpgradeId[] = ['handcart', 'bigcart', 'wagon', 'stall1', 'stall2'];
+export const UPGRADE_IDS: UpgradeId[] = ['handcart', 'bigcart', 'wagon', 'steamwagon', 'stall1', 'stall2'];
 
 // ---- Fleet (per-boat tracks) -------------------------------------------
 export type Track = 'hull' | 'hold' | 'gear' | 'sails';

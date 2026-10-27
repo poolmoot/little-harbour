@@ -39,8 +39,8 @@ function migrate(raw: unknown): GameState | null {
   const base = initialState();
   const old = d.version < 2;
   const s: GameState = { ...base, ...d, version: STATE_VERSION } as GameState;
-  // version 9 added the Big Cart and the Horse Wagon: older saves have neither
-  s.upgrades = { handcart: !!d.upgrades?.handcart, bigcart: !!d.upgrades?.bigcart, wagon: !!d.upgrades?.wagon, stall1: !!d.upgrades?.stall1, stall2: !!d.upgrades?.stall2 };
+  // version 9 added the Big Cart, Horse Wagon and Steam Wagon: older saves have none
+  s.upgrades = { handcart: !!d.upgrades?.handcart, bigcart: !!d.upgrades?.bigcart, wagon: !!d.upgrades?.wagon, steamwagon: !!d.upgrades?.steamwagon, stall1: !!d.upgrades?.stall1, stall2: !!d.upgrades?.stall2 };
   s.demand = { ...base.demand, ...(d.demand ?? {}) };
   s.book = { ...base.book, ...(d.book ?? {}) };
   for (const sp of SPECIES) s.book[sp] = { ...base.book[sp], ...s.book[sp] };

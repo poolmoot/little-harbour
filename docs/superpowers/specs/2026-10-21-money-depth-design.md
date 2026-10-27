@@ -147,7 +147,11 @@ shows its help line below the content, and help lines are one short sentence.
 
 ## Bigger carts (2026-10-27)
 
-After the Handcart (4 crates, $200) come the Big Cart (6 crates, $2,500, rank 2) and the
-Horse Wagon (8 crates, $12,000, rank 3). Each needs the one before. They count for the
+After the Handcart (4 crates, $200) come the Big Cart (6 crates, $2,500, rank 2), the
+Horse Wagon (8 crates, $12,000, rank 3) and the Steam Wagon (10 crates, $40,000, rank 4).
+Each needs the one before. They count for the
 player and every worker (`carryCapacity`). Save version 9 adds them; older saves have neither.
+
+A dock spot now holds up to 8 crates (`DOCK_BIN_SIZE`). Its one drawn crate grows and changes as
+it fills: 1 wood, 2 wood with steel bands, 3-4 steel, 5-8 one big gold crate.
 

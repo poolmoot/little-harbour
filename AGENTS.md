@@ -113,7 +113,7 @@ See "Code map" at the bottom for a file-by-file list.
    `view/textures.ts`, the panel code) before writing new ones.
 5. Changing the saved-state shape needs a version bump and a migration in
    `src/sim/save.ts`, with a test that an old save still loads. (Now at
-   version 9; version 9 added the Big Cart and the Horse Wagon; version 8 added town projects, captain trips and the boat-care line; version 7 removed the ice box and cold store; version 3 added the day report's trip-cost line; version 4 the
+   version 9; version 9 added the Big Cart, Horse Wagon and Steam Wagon; version 8 added town projects, captain trips and the boat-care line; version 7 removed the ice box and cold store; version 3 added the day report's trip-cost line; version 4 the
    tycoon stage (buildings, weather, contracts, goals, King Fish); version 5
    fish sizes, golden fish, names and earnings while away; version 6 the
    starting guide; version 7 removed the ice box and the cold store: stored crates go back
@@ -166,8 +166,8 @@ stepping on each other:
   without it.
 - A small level badge for experienced captains (`captainLevel` in `sim/captains.ts`).
 - Dock crates in bins (`DOCK_BIN_SIZE` in `config.ts`): the gameplay agent drew a plain version in
-  `view/cratesView.ts` (one crate per dock spot, stretched for 2, a grey steel box for 3-4). A nicer
-  double crate and metal crate are welcome.
+  `view/cratesView.ts` (one crate per dock spot of up to 8: wood, wood with steel bands, steel,
+  then a big gold crate for 5-8). Nicer versions are welcome; keep the gold bin apart from golden-fish crates.
 - Boat sizes 4-6 (Big Trawler, Fishing Ship, Flagship): the gameplay agent drew them in
   `view/boatModels.ts` (`ship()` builder: wheelhouse floors, funnels, crane, net drum, radar dome,
   flag). They use the Trawler icon in the windows (`HULL_ICONS`); own icons and polish are welcome.
@@ -268,7 +268,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `orders.ts` — notice-board orders and bonuses.
 - `rank.ts` — rank from lifetime earnings and what each rank allows.
 - `ledger.ts` — money in and out, kept for the day report.
-- `upgrades.ts` — harbour-wide purchases (handcart, Big Cart, Horse Wagon, stalls).
+- `upgrades.ts` — harbour-wide purchases (handcart, Big Cart, Horse Wagon, Steam Wagon, stalls).
 - `staff.ts` — captains, workers, wages and boat care, and the workers' carrying jobs.
 - `captains.ts` — captain levels from trips, pay by boat and level, the level bonuses.
 - `town.ts` — town projects: buying them and the lasting bonus each gives.

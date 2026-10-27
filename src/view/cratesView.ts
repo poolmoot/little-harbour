@@ -13,23 +13,38 @@ const tmp = new THREE.Color();
 const TWEEN = 0.3;
 
 let crateBody: THREE.Group | null = null;
+let bandBody: THREE.Group | null = null;
 let metalBody: THREE.Group | null = null;
+let goldBody: THREE.Group | null = null;
 const crateTopGeo = new THREE.BoxGeometry(0.54, 0.08, 0.4);
 
 /** Every crate is drawn a little bigger than its box, and a dock spot with several crates as one long or big crate. */
 const CRATE_SCALE = 1.15;
+/** The four dock-crate looks as a spot fills up: wood, wood with steel bands, steel, gold. */
+const enum Look { Wood, Banded, Metal, Gold }
+const lookFor = (n: number): Look => (n <= 1 ? Look.Wood : n === 2 ? Look.Banded : n <= 4 ? Look.Metal : Look.Gold);
 const BIN_SHAPE = [
   new THREE.Vector3(1, 1, 1), // 1 crate: wood
-  new THREE.Vector3(1.55, 1, 1.05), // 2 crates: a long double crate
-  new THREE.Vector3(1.45, 1.35, 1.2), // 3-4 crates: one big metal crate
+  new THREE.Vector3(1.55, 1, 1.05), // 2 crates: a long wooden crate with steel bands
+  new THREE.Vector3(1.45, 1.35, 1.2), // 3-4 crates: a big steel crate
+  new THREE.Vector3(1.55, 1.6, 1.25), // 5-8 crates: the biggest, a gold crate
 ];
-const shapeFor = (n: number): THREE.Vector3 => BIN_SHAPE[Math.min(n, 3) - 1];
 
-/** The big metal crate's body: brushed steel sides with dark bands and corner posts. Shared by every crate. */
-function makeMetalBody(): THREE.Group {
+/** Steel bands round a wooden crate (drawn over the wood for the double crate). */
+function makeBands(): THREE.Group {
   const g = new THREE.Group();
-  const steel = toon(new THREE.MeshStandardMaterial({ color: 0x9aa7b1, metalness: 0.65, roughness: 0.35 }));
-  const band = toon(new THREE.MeshStandardMaterial({ color: 0x4f5a63, metalness: 0.7, roughness: 0.4 }));
+  const band = toon(new THREE.MeshStandardMaterial({ color: 0x5d6870, metalness: 0.7, roughness: 0.4 }));
+  for (const y of [0.1, 0.3]) bx(0.67, 0.045, 0.53, band, 0, y, 0, g);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(0.06, 0.42, 0.06, band, sx * 0.31, 0.21, sz * 0.24, g);
+  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
+  return g;
+}
+
+/** A solid crate: sides, corner posts and two bands. Used for the steel crate and, in gold, the biggest crate. */
+function makeMetalBody(side: number, trim: number, metalness: number, roughness: number, glow = 0): THREE.Group {
+  const g = new THREE.Group();
+  const steel = toon(new THREE.MeshStandardMaterial({ color: side, metalness, roughness, emissive: glow ? side : 0x000000, emissiveIntensity: glow }));
+  const band = toon(new THREE.MeshStandardMaterial({ color: trim, metalness: 0.7, roughness: 0.4 }));
   bx(0.64, 0.4, 0.5, steel, 0, 0.2, 0, g);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) bx(0.05, 0.42, 0.05, band, sx * 0.31, 0.21, sz * 0.24, g);
   for (const y of [0.1, 0.3]) bx(0.66, 0.04, 0.52, band, 0, y, 0, g);
@@ -48,13 +63,16 @@ function makeCrateMesh(species: Species): THREE.Group {
     bx(0.66, 0.05, 0.52, dark, 0, 0.03, 0, crateBody);
     bake(crateBody); // two wood meshes and one ink outline, shared by every crate
   }
-  if (!metalBody) metalBody = makeMetalBody();
+  if (!bandBody) bandBody = makeBands();
+  if (!metalBody) metalBody = makeMetalBody(0x9aa7b1, 0x4f5a63, 0.65, 0.35);
+  if (!goldBody) goldBody = makeMetalBody(0xf2c230, 0xa8741a, 0.85, 0.25, 0.12);
   const g = crateBody.clone();
-  g.userData.wood = [...g.children];
-  const metal = metalBody.clone();
-  metal.visible = false;
-  g.add(metal);
-  g.userData.metal = metal;
+  const wood = [...g.children];
+  const extra = [bandBody, metalBody, goldBody].map((b) => { const c = b.clone(); c.visible = false; g.add(c); return c; });
+  // What to show for each look: wood, wood + bands, steel, gold.
+  g.userData.parts = [wood, [...wood, extra[0]], [extra[1]], [extra[2]]];
+  g.userData.all = [...wood, ...extra];
+  g.userData.look = Look.Wood;
   const top = new THREE.Mesh(crateTopGeo, toon(new THREE.MeshStandardMaterial({ color: SPECIES_COLOUR[species], roughness: 0.55 })));
   top.position.y = 0.4;
   top.castShadow = true;
@@ -182,15 +200,15 @@ export class CratesView {
         e.mesh.scale.setScalar(ts);
       }
       e.mesh.rotation.set(0, ry, 0);
-      // One crate per dock spot: the leader takes the spot's shape (long, or big and metal); the others are not drawn.
+      // One crate per dock spot: the leader grows and changes look as the spot fills (wood, banded, steel, gold); the others are not drawn.
       const onDock = c.loc === 'dock';
       e.mesh.visible = !onDock || binN > 0;
-      if (onDock && binN > 0) e.mesh.scale.multiply(shapeFor(binN));
-      const metal = onDock && binN >= 3;
-      const m = e.mesh.userData.metal as THREE.Object3D;
-      if (m.visible !== metal) {
-        m.visible = metal;
-        for (const w of e.mesh.userData.wood as THREE.Object3D[]) w.visible = !metal;
+      const look = onDock && binN > 0 ? lookFor(binN) : Look.Wood;
+      if (onDock && binN > 0) e.mesh.scale.multiply(BIN_SHAPE[look]);
+      if (e.mesh.userData.look !== look) {
+        e.mesh.userData.look = look;
+        const show = new Set(e.mesh.userData.parts[look] as THREE.Object3D[]);
+        for (const o of e.mesh.userData.all as THREE.Object3D[]) o.visible = show.has(o);
       }
     }
     for (const [id, e] of this.entries) {

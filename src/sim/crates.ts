@@ -1,5 +1,5 @@
 import {
-  CARRY_BASE, CARRY_BIGCART, CARRY_HANDCART, CARRY_WAGON, CRATE_RANGE, DOCK_BIN_SIZE, DOCK_DECAY_SECONDS, LAYOUT, MIN_PRICE_MULT,
+  CARRY_BASE, CARRY_BIGCART, CARRY_HANDCART, CARRY_STEAMWAGON, CARRY_WAGON, CRATE_RANGE, DOCK_BIN_SIZE, DOCK_DECAY_SECONDS, LAYOUT, MIN_PRICE_MULT,
 } from './config';
 import type { Species } from './config';
 import type { Crate, CrateLoc, Ev, GameState } from './state';
@@ -25,7 +25,7 @@ export const smokeCrates = (s: GameState) => cratesAt(s, 'smoke');
 
 export function carryCapacity(state: GameState): number {
   const u = state.upgrades;
-  return u.wagon ? CARRY_WAGON : u.bigcart ? CARRY_BIGCART : u.handcart ? CARRY_HANDCART : CARRY_BASE;
+  return u.steamwagon ? CARRY_STEAMWAGON : u.wagon ? CARRY_WAGON : u.bigcart ? CARRY_BIGCART : u.handcart ? CARRY_HANDCART : CARRY_BASE;
 }
 
 /** Dock spots use the outer columns only (first and last), so the bigger bin crates have room side by side. */

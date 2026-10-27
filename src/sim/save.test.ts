@@ -136,7 +136,7 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     expect(l.book.seabass.caught).toBe(4);
     expect(l.crates[0].freshness).toBe(55);
     expect(l.crates[0].loc).toBe('dock');
-    expect(l.upgrades).toEqual({ handcart: true, bigcart: false, wagon: false, stall1: true, stall2: false });
+    expect(l.upgrades).toEqual({ handcart: true, bigcart: false, wagon: false, steamwagon: false, stall1: true, stall2: false });
     expect(l.buildings).toEqual({ smokehouse: 0, restaurant: 0, lighthouse: 0 });
     expect(l.weather).toBe('calm');
     expect(l.smokeList).toEqual(['herring', 'mackerel']);
@@ -224,7 +224,7 @@ describe('migration to version 7 (ice box and cold store removed)', () => {
     expect(byId(13).loc).toBe('hand');
     const spots = [11, 12, 14].map((id) => `${byId(id).x},${byId(id).z},${byId(id).layer}`);
     expect(new Set(spots).size).toBe(3);
-    expect(l.upgrades).toEqual({ handcart: true, bigcart: false, wagon: false, stall1: false, stall2: false });
+    expect(l.upgrades).toEqual({ handcart: true, bigcart: false, wagon: false, steamwagon: false, stall1: false, stall2: false });
     expect(l.buildings).toEqual({ smokehouse: 0, restaurant: 0, lighthouse: 0 });
     expect((l as unknown as Record<string, unknown>).haulPolicy).toBeUndefined();
     expect(l.lifetime).toBe(5000);
