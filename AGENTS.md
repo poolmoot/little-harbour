@@ -113,7 +113,7 @@ See "Code map" at the bottom for a file-by-file list.
    `view/textures.ts`, the panel code) before writing new ones.
 5. Changing the saved-state shape needs a version bump and a migration in
    `src/sim/save.ts`, with a test that an old save still loads. (Now at
-   version 9; version 9 added the Big Cart, Horse Wagon and Steam Wagon; version 8 added town projects, captain trips and the boat-care line; version 7 removed the ice box and cold store; version 3 added the day report's trip-cost line; version 4 the
+   version 10; version 10 added the restaurant upgrades and the drinks line; version 9 added the Big Cart, Horse Wagon and Steam Wagon; version 8 added town projects, captain trips and the boat-care line; version 7 removed the ice box and cold store; version 3 added the day report's trip-cost line; version 4 the
    tycoon stage (buildings, weather, contracts, goals, King Fish); version 5
    fish sizes, golden fish, names and earnings while away; version 6 the
    starting guide; version 7 removed the ice box and the cold store: stored crates go back
@@ -171,6 +171,10 @@ stepping on each other:
 - Boat sizes 4-6 (Big Trawler, Fishing Ship, Flagship): the gameplay agent drew them in
   `view/boatModels.ts` (`ship()` builder: wheelhouse floors, funnels, crane, net drum, radar dome,
   flag). They use the Trawler icon in the windows (`HULL_ICONS`); own icons and polish are welcome.
+  Sizes 7-9 (Ocean Ship, Factory Ship, Royal Ship) use the same builder.
+- The restaurant room (`view/restaurantRoom.ts`), drawn by the gameplay agent: guests sit by being
+  lowered into their chairs (no sitting pose yet), plain boxes for furniture. A sitting pose, eating
+  animation and nicer furniture are welcome.
 
 Measured by the graphics agent on High at the market: about 630–690 draw
 calls and 410k triangles, holding 60 fps with some dropped frames; shadows
@@ -208,6 +212,8 @@ In `docs/superpowers/specs/`, oldest first:
 7. `2026-10-21-money-depth-design.md` — trip costs that grow with the hold,
    captains who level up and ask more pay, boat care, and the town projects; then more boat
    upgrade levels, prices shown in money, the easier start and the bigger dock crates.
+8. `2026-10-28-restaurant-and-big-ships-design.md` — dearer carts and ships, boat sizes up
+   to 9, the restaurant's four upgrades and its live 3D room.
 
 Where they disagree, the newer one wins. Write a short spec like these
 before building any large new feature, and keep the cost tables in the spec
@@ -272,6 +278,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `staff.ts` — captains, workers, wages and boat care, and the workers' carrying jobs.
 - `captains.ts` — captain levels from trips, pay by boat and level, the level bonuses.
 - `town.ts` — town projects: buying them and the lasting bonus each gives.
+- `restaurant.ts` — the restaurant's four upgrades (tables, kitchen, waiters, decoration) and the morning drinks money.
 - `save.ts` — save/load and migrations between save versions.
 - `bot.ts` — the scripted player used by the pacing test and `npm run tune`.
 - `goals.ts` — the goal chain (rules in `config.ts` GOALS), progress, rewards, old-save catch-up.
@@ -342,6 +349,7 @@ game bundle); `docs/superpowers/specs/` design notes.
 - `boatsView.ts` — the four boat models and their upgrades.
 - `hull.ts` — hull shape geometry.
 - `cratesView.ts` — crates on the dock, in hands, on ice.
+- `restaurantRoom.ts` — the live 3D restaurant room in the restaurant window (own small renderer; `game.ts` draws only this while the window is open). It follows the restaurant upgrades.
 - `staffView.ts` — workers and captains.
 - `figures.ts` — people models and their walk, idle, carry, fishing and wave animation (one shared rig).
 - `gait.ts` — pure walk maths: foot paths (planted, then swung), two-bone leg solver, hip bob, run blend. `gait.test.ts` also checks that a real figure's boots do not slide.

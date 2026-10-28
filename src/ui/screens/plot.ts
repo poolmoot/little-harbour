@@ -41,7 +41,7 @@ export const plotScreen: Screen = (ctx) => {
   if (s.buildings[id] === 0) return forSaleView(s, id);
   switch (id) {
     case 'smokehouse': return smokehouseView(s);
-    case 'restaurant': return restaurantView(s);
+    case 'restaurant': return restaurantView(s, ctx.tab);
     case 'lighthouse': return lighthouseView(s);
   }
 };

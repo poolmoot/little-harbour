@@ -1,4 +1,4 @@
-import { BOAT_NAMES, BUILDING_IDS, LAYOUT, PROJECT_IDS, SPECIES, ZONE_IDS } from './config';
+import { BOAT_NAMES, BUILDING_IDS, LAYOUT, PROJECT_IDS, REST_MAX, REST_TRACKS, SPECIES, ZONE_IDS } from './config';
 import { freeDockSlot } from './crates';
 import { applyAway } from './away';
 import type { AwayResult } from './away';
@@ -67,6 +67,9 @@ function migrate(raw: unknown): GameState | null {
   s.orderCooldowns = Array.isArray(d.orderCooldowns) ? d.orderCooldowns : [];
   s.dockhands = Array.isArray(d.dockhands) ? d.dockhands : [];
   s.candidates = Array.isArray(d.candidates) ? d.candidates.map(cleanCaptain) : [];
+  // ---- restaurant upgrades (version 10): older saves start at level 0
+  s.restaurantUp = { ...base.restaurantUp };
+  for (const t of REST_TRACKS) s.restaurantUp[t] = Math.max(0, Math.min(REST_MAX, Math.floor(Number(d.restaurantUp?.[t]) || 0)));
   // ---- town projects (version 8)
   s.town = { ...base.town };
   for (const id of PROJECT_IDS) s.town[id] = !!d.town?.[id];

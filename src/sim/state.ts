@@ -1,7 +1,7 @@
 import { DEFAULT_HARBOUR_NAME, DEFAULT_SMOKE_LIST, PROJECT_IDS, SPECIES, START_MONEY, ZONE_IDS } from './config';
 import { newGuide } from './guide';
 import type { GuideState, UnlockId } from './guide';
-import type { BuildingId, Phase, ProjectId, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from './config';
+import type { BuildingId, Phase, ProjectId, RestTrack, Species, Track, Trait, UpgradeId, WeatherId, ZoneId } from './config';
 
 export type CrateLoc = 'dock' | 'hand' | 'haul' | 'smoke';
 export interface Crate {
@@ -97,6 +97,7 @@ export interface DayStats {
   bonus: number; // order bonuses
   wages: number;
   upkeep: number; // care for the boats, paid at 06:00
+  drinks: number; // the restaurant's drinks money (Decoration), paid at 06:00
   tripCosts: number; // food and supplies paid when boats leave
   rewards: number; // goal rewards (not part of earned)
   away: number; // earnings while the player was away (not part of earned)
@@ -165,6 +166,7 @@ export interface GameState {
   buildings: Record<BuildingId, number>; // level 0 = not built
   smokeList: Species[]; // fish workers put in the smokehouse
   restaurant: { served: number; kinds: Species[] }; // today's service
+  restaurantUp: Record<RestTrack, number>; // restaurant upgrades, level 0..REST_MAX
   weather: WeatherId; // today
   special: Special; // today
   nextWeather: WeatherId; // tomorrow (forecast)
@@ -213,6 +215,8 @@ export type Ev =
   | { type: 'wagesPaid'; paid: number; unpaid: number; upkeep: number }
   | { type: 'captainLevelUp'; boatId: number; name: string; level: number }
   | { type: 'projectDone'; id: ProjectId }
+  | { type: 'restUpgraded'; track: RestTrack; level: number }
+  | { type: 'drinksPaid'; amount: number }
   | { type: 'phaseChanged'; phase: Phase }
   | { type: 'workersSleep' }
   | { type: 'workersWake' }
@@ -250,7 +254,7 @@ export interface Check {
   needHull?: number; // set when only a bigger boat is missing (Boat size level)
 }
 
-export const STATE_VERSION = 9;
+export const STATE_VERSION = 10;
 
 function perSpecies<T>(f: () => T): Record<Species, T> {
   const o = {} as Record<Species, T>;
@@ -259,7 +263,7 @@ function perSpecies<T>(f: () => T): Record<Species, T> {
 }
 
 export function emptyStats(): DayStats {
-  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, upkeep: 0, tripCosts: 0, rewards: 0, away: 0, spent: 0, best: { species: null, price: 0 } };
+  return { earned: 0, sold: 0, spoiled: 0, filled: 0, missed: 0, income: perSpecies(() => 0), bonus: 0, wages: 0, upkeep: 0, drinks: 0, tripCosts: 0, rewards: 0, away: 0, spent: 0, best: { species: null, price: 0 } };
 }
 
 export function emptyTally(): Tally {
@@ -299,6 +303,7 @@ export function initialState(): GameState {
     buildings: { smokehouse: 0, restaurant: 0, lighthouse: 0 },
     smokeList: [...DEFAULT_SMOKE_LIST],
     restaurant: { served: 0, kinds: [] },
+    restaurantUp: { tables: 0, kitchen: 0, waiters: 0, decor: 0 },
     weather: 'calm',
     special: null,
     nextWeather: 'calm',

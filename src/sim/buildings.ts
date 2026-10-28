@@ -1,8 +1,9 @@
 import {
-  BUILDINGS, FISH_PRICE, RESTAURANT_CAPACITY, RESTAURANT_MIN_FRESH, RESTAURANT_MULT, RESTAURANT_VARIETY_BONUS,
+  BUILDINGS, FISH_PRICE, RESTAURANT_CAPACITY, RESTAURANT_MULT, RESTAURANT_VARIETY_BONUS,
   SMOKE_RACKS, SMOKE_SECONDS, SPECIES,
 } from './config';
 import { restaurantTownMult, saleTownMult } from './town';
+import { restaurantMinFresh, restKitchenMult, restTablesExtra } from './restaurant';
 import type { BuildingId, Species } from './config';
 import { handCrates, isSpoiled, removeCrate, smokeCrates } from './crates';
 import { earnSale, spend } from './ledger';
@@ -101,18 +102,18 @@ export function setSmokeList(state: GameState, species: Species, on: boolean): E
 
 // ---- Restaurant ------------------------------------------------------------------
 
-export const restaurantCapacity = (state: GameState): number => RESTAURANT_CAPACITY[state.buildings.restaurant];
+export const restaurantCapacity = (state: GameState): number => (state.buildings.restaurant ? RESTAURANT_CAPACITY[state.buildings.restaurant] + restTablesExtra(state) : 0);
 export const restaurantRoom = (state: GameState): number => restaurantCapacity(state) - state.restaurant.served;
 
 /** What the restaurant pays for this crate right now (ignores the market price level). */
 export function restaurantPrice(state: GameState, c: Crate): number {
   const kindsBefore = state.restaurant.kinds.filter((k) => k !== c.species).length;
-  return Math.round(FISH_PRICE[c.species] * RESTAURANT_MULT * (1 + RESTAURANT_VARIETY_BONUS * kindsBefore) * restaurantTownMult(state) * saleTownMult(state));
+  return Math.round(FISH_PRICE[c.species] * RESTAURANT_MULT * (1 + RESTAURANT_VARIETY_BONUS * kindsBefore) * restaurantTownMult(state) * saleTownMult(state) * restKitchenMult(state));
 }
 
 /** Would the restaurant buy this crate today? */
 export function restaurantWants(state: GameState, c: Crate): boolean {
-  return state.buildings.restaurant > 0 && restaurantRoom(state) > 0 && !c.smoked && !c.king && !c.golden && c.freshness >= RESTAURANT_MIN_FRESH;
+  return state.buildings.restaurant > 0 && restaurantRoom(state) > 0 && !c.smoked && !c.king && !c.golden && c.freshness >= restaurantMinFresh(state);
 }
 
 export function serveRestaurantCrate(state: GameState, c: Crate, staff: boolean): Ev[] {
@@ -133,7 +134,7 @@ export function sellToRestaurant(state: GameState, crateId: number): Ev[] {
   if (!state.buildings.restaurant) return [{ type: 'denied', reason: 'You need a restaurant first.' }];
   const c = state.crates.find((k) => k.id === crateId && k.loc === 'hand');
   if (!c) return [{ type: 'denied', reason: 'You are not carrying that.' }];
-  if (c.freshness < RESTAURANT_MIN_FRESH && !c.smoked) return [{ type: 'denied', reason: 'The restaurant wants fresher fish.' }];
+  if (c.freshness < restaurantMinFresh(state) && !c.smoked) return [{ type: 'denied', reason: 'The restaurant wants fresher fish.' }];
   return serveRestaurantCrate(state, c, false);
 }
 

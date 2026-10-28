@@ -22,7 +22,7 @@ export interface BoatTier {
 
 const WHITE = 0xf4f1e8, CREAM = 0xf2e6c4, NAVY = 0x2a4a7a, RED = 0xd6453a, IRON = 0x2d3236, BRASS = 0xe0b040;
 
-/** Rowboat, sloop, cutter, trawler, big trawler, fishing ship, flagship. */
+/** Rowboat, sloop, cutter, trawler, big trawler, fishing ship, flagship, ocean ship, factory ship, royal ship. */
 export const BOAT_TIERS: readonly BoatTier[] = [
   { // a varnished wooden dinghy
     shape: { len: 4, hw: 0.8, H: 0.72, sheerBow: 0.3, sheerStern: 0.18, bowFrac: 0.4, bowPow: 0.7, sternTaper: 0.26, keelBow: 0.28, keelStern: 0.1, draft: 0.36 },
@@ -58,6 +58,21 @@ export const BOAT_TIERS: readonly BoatTier[] = [
     shape: { len: 7.5, hw: 1.6, H: 1.34, sheerBow: 0.74, sheerStern: 0.14, bowFrac: 0.3, bowPow: 0.56, sternTaper: 0.14, keelBow: 0.46, keelStern: 0.12, draft: 0.68 },
     paint: { bottom: 0x8a2a24, stripe: BRASS, side: 0x1c2228, sheer: BRASS },
     rail: BRASS, inside: 0xb9c4cc, deckY: 0.64, mastH: 4.6, mastZ: 0.3, crates: [3, 4, -0.6, -0.5, 0.66], captainZ: 3.15,
+  },
+  { // Ocean Ship: a sea-green ship with an orange stripe, a tall white bridge and twin cranes
+    shape: { len: 7.55, hw: 1.65, H: 1.4, sheerBow: 0.78, sheerStern: 0.14, bowFrac: 0.3, bowPow: 0.55, sternTaper: 0.13, keelBow: 0.48, keelStern: 0.12, draft: 0.7 },
+    paint: { bottom: 0x7a2a26, stripe: 0xf08a2a, side: 0x2f7f7a, sheer: WHITE },
+    rail: 0xdde3e6, inside: 0xb9c4cc, deckY: 0.68, mastH: 4.7, mastZ: 0.3, crates: [3, 4, -0.62, -0.5, 0.68], captainZ: 3.18,
+  },
+  { // Factory Ship: a big grey ship with a yellow stripe, a long house and three funnels
+    shape: { len: 7.6, hw: 1.7, H: 1.46, sheerBow: 0.8, sheerStern: 0.14, bowFrac: 0.29, bowPow: 0.54, sternTaper: 0.12, keelBow: 0.5, keelStern: 0.12, draft: 0.72 },
+    paint: { bottom: 0x3a3f44, stripe: 0xf2c14a, side: 0x7d8a94, sheer: 0xf2c14a },
+    rail: IRON, inside: 0xb9c4cc, deckY: 0.72, mastH: 4.8, mastZ: 0.3, crates: [3, 4, -0.64, -0.5, 0.7], captainZ: 3.2,
+  },
+  { // Royal Ship: deep purple with gold trim, a four-floor white bridge, a crown-gold funnel and a big flag
+    shape: { len: 7.6, hw: 1.72, H: 1.5, sheerBow: 0.84, sheerStern: 0.16, bowFrac: 0.28, bowPow: 0.52, sternTaper: 0.12, keelBow: 0.5, keelStern: 0.12, draft: 0.74 },
+    paint: { bottom: 0x1c2228, stripe: BRASS, side: 0x4a2a6e, sheer: BRASS },
+    rail: BRASS, inside: 0xc9c0d8, deckY: 0.76, mastH: 5.0, mastZ: 0.3, crates: [3, 4, -0.66, -0.5, 0.72], captainZ: 3.22,
   },
 ];
 
@@ -254,7 +269,7 @@ function ship(look: ShipLook) {
     for (const side of [-1, 1]) ring(0.2, 0.06, flat(0xf08a2a, 0.6), side * 1.06, d + 0.42, houseZ + 0.7, g).rotation.y = Math.PI / 2; // lifebuoys
     // funnels behind the wheelhouse
     for (let i = 0; i < look.funnels; i++) {
-      const fx = look.funnels === 1 ? 0.5 : i === 0 ? -0.45 : 0.45;
+      const fx = look.funnels === 1 ? 0.5 : (i - (look.funnels - 1) / 2) * 0.55;
       cy(0.2, 0.24, 1.0, flat(look.funnel, 0.7), fx, d + 1.6, houseZ + 0.95, g, 10);
       cy(0.21, 0.21, 0.14, iron, fx, d + 2.15, houseZ + 0.95, g, 10);
     }
@@ -292,7 +307,11 @@ const bigTrawler = ship({ floors: 2, house: 0xeee6d2, roof: 0xf2c14a, funnels: 1
 const fishingShip = ship({ floors: 2, house: WHITE, roof: 0x2f9a5a, funnels: 2, funnel: 0x2f9a5a, crane: false, drum: true, dome: false, flag: null });
 const flagship = ship({ floors: 3, house: 0xf4f1e8, roof: 0x1c2228, funnels: 2, funnel: 0x1c2228, crane: true, drum: true, dome: true, flag: RED });
 
-const BUILDERS = [rowboat, sloop, cutter, trawler, bigTrawler, fishingShip, flagship];
+const oceanShip = ship({ floors: 3, house: WHITE, roof: 0x2f7f7a, funnels: 2, funnel: 0xf08a2a, crane: true, drum: true, dome: false, flag: null });
+const factoryShip = ship({ floors: 3, house: 0xe6e2d6, roof: 0x3a3f44, funnels: 3, funnel: 0xf2c14a, crane: true, drum: true, dome: true, flag: null });
+const royalShip = ship({ floors: 4, house: WHITE, roof: 0x4a2a6e, funnels: 1, funnel: BRASS, crane: false, drum: true, dome: true, flag: 0x4a2a6e });
+
+const BUILDERS = [rowboat, sloop, cutter, trawler, bigTrawler, fishingShip, flagship, oceanShip, factoryShip, royalShip];
 
 /** Build the static model for a boat size. Fixed parts are merged so each boat costs only a handful of draw calls. */
 export function buildBoat(tier: number): BoatBuild {

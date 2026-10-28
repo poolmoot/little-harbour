@@ -25,8 +25,8 @@ export const ZONE_NAME: Record<ZoneId, string> = { shallows: 'Shallow Water', re
 export const PHASE_NAME: Record<Phase, string> = { dawn: 'Morning', day: 'Day', dusk: 'Evening', night: 'Night' };
 
 /** Boat types by size (index = boat size level). The hint tells what the name means. */
-const BOAT_TYPE = ['Rowboat', 'Sloop', 'Cutter', 'Trawler', 'Big Trawler', 'Fishing Ship', 'Flagship'];
-const BOAT_HINT = ['small boat', 'medium boat', 'large boat', 'big boat', 'bigger boat', 'huge boat', 'the best boat'];
+const BOAT_TYPE = ['Rowboat', 'Sloop', 'Cutter', 'Trawler', 'Big Trawler', 'Fishing Ship', 'Flagship', 'Ocean Ship', 'Factory Ship', 'Royal Ship'];
+const BOAT_HINT = ['small boat', 'medium boat', 'large boat', 'big boat', 'bigger boat', 'huge boat', 'very big boat', 'giant boat', 'giant boat', 'the best boat'];
 export const boatType = (level: number): string => `${BOAT_TYPE[level]} (${BOAT_HINT[level]})`;
 const boatTypeShort = (level: number): string => BOAT_TYPE[level];
 

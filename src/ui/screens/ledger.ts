@@ -32,6 +32,7 @@ export const ledgerScreen: Screen = ({ state: s, summary }) => {
   const body = forecast(s) + section(LABEL.moneyIn) + (sales || stat('No sales', '$0'))
     + stat(`Order bonuses (${st.filled} done, ${st.missed} late)`, `+$${money(st.bonus)}`)
     + (st.rewards > 0 ? stat(REPORT_TEXT.rewards, `+$${money(st.rewards)}`) : '')
+    + (st.drinks > 0 ? stat(REPORT_TEXT.drinks, `+$${money(st.drinks)}`) : '')
     + (st.away > 0 ? stat(AWAY.statsLine, `+$${money(st.away)}`) : '')
     + section(LABEL.moneyOut) + stat('Pay for workers and captains', `-$${money(st.wages)}`) + (st.upkeep > 0 ? stat(REPORT_TEXT.upkeep, `-$${money(st.upkeep)}`) : '') + stat('Trip costs', `-$${money(st.tripCosts)}`)
     + stat('Upgrades and boats', `-$${money(st.spent)}`) + stat('Crates that went bad', `${st.spoiled}`)

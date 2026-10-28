@@ -150,7 +150,7 @@ describe('version 8 save', () => {
     old.candidates = [{ id: 5, name: 'Brigid', trait: 'swift', wage: 40 }];
     const mem = new Map<string, string>([['harbour-game-save', JSON.stringify(old)]]);
     const l = loadGame({ getItem: (k) => mem.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
-    expect(l.version).toBe(9);
+    expect(l.version).toBe(10);
     expect(PROJECT_IDS.every((id) => l.town[id] === false)).toBe(true);
     expect(l.stats.upkeep).toBe(0);
     expect(l.boats[0].captain).toEqual({ id: 4, name: 'Ansel', trait: 'lucky', trips: 0 });

@@ -13,11 +13,12 @@ import { crateValue, sellAll } from './market';
 import { canHireCaptain, canHireDockhand, dailyUpkeep, dailyWages, hireCaptain, hireDockhand, setBoatTarget } from './staff';
 import { captainWage } from './captains';
 import { buyProject, canBuyProject } from './town';
+import { canUpgradeRest, upgradeRest } from './restaurant';
 import { initialState } from './state';
 import type { GameState } from './state';
 import { startGame, step } from './sim';
 import { buyUpgrade, canBuy } from './upgrades';
-import { BUILDINGS, BUILDING_IDS, GOALS, PROJECT_IDS, PROJECTS, SPECIES, UPGRADES, UPGRADE_IDS } from './config';
+import { BUILDINGS, BUILDING_IDS, GOALS, PROJECT_IDS, PROJECTS, REST_TRACKS, SPECIES, UPGRADES, UPGRADE_IDS } from './config';
 import type { BuildingId } from './config';
 
 export interface BotResult {
@@ -77,6 +78,11 @@ export function runBot(seed: number, maxMinutes: number, tune: BotTuning = DEFAU
       if (id === 'lighthouse' && s.boats.filter((b) => b.hull >= 3).length < 2) continue;
       const c = canBuyBuilding(s, id);
       if (c.ok) opts.push({ cost: c.cost!, pay: id === 'smokehouse' || id === 'restaurant' || id === 'lighthouse', go: () => { buyBuilding(s, id as BuildingId); if (id === 'smokehouse') for (const sp of SPECIES) setSmokeList(s, sp, true); logbook.push(`${(s.clock / 60).toFixed(1)}m ${id}${s.buildings[id]}`); } });
+    }
+    // Restaurant upgrades: they earn money, so they are bought like anything else once the restaurant stands.
+    for (const t of REST_TRACKS) {
+      const c = canUpgradeRest(s, t);
+      if (c.ok) opts.push({ cost: c.cost!, go: () => { upgradeRest(s, t); logbook.push(`${(s.clock / 60).toFixed(1)}m restaurant ${t}${s.restaurantUp[t]}`); } });
     }
     // Town projects: only once nothing else is left to buy, so they fill the late game.
     for (const id of PROJECT_IDS) {

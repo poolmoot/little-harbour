@@ -6,6 +6,7 @@ import { stepGoals } from './goals';
 import { stepGuide } from './guide';
 import { stepIncome } from './income';
 import { stepRepairs } from './storm';
+import { payDrinks } from './restaurant';
 import { rollNewDay, startWeather } from './weather';
 import { recoverDemand } from './market';
 import { stepBoats } from './boats';
@@ -28,6 +29,7 @@ export { buyBoat, buyBoatUpgrade, bestZone } from './fleet';
 export { buyBuilding, canBuyBuilding, nextBuildingCost, buildingMaxLevel, smokeCrate, collectSmoked, setSmokeList, sellToRestaurant, restaurantPrice } from './buildings';
 export { acceptContract } from './contracts';
 export { buyProject, canBuyProject, projectDone } from './town';
+export { canUpgradeRest, restCost, upgradeRest, restaurantMinFresh, restDrinks } from './restaurant';
 export { captainLevel, captainWage } from './captains';
 export { currentGoal, goalProgress } from './goals';
 export { stepGuide, noteWalk, noteBoardOpened, noteWelcomed, noteAway, isGentle, guideDone, GUIDE_STEPS, UNLOCKS } from './guide';
@@ -58,6 +60,7 @@ export function step(state: GameState, dt: number, rng: Rng): Ev[] {
     if (e.type !== 'dayEnded') continue;
     discardSpoiled(state);
     evs.push(...payWages(state, e.stats)); // wages belong to the day that just ended
+    evs.push(...payDrinks(state));
     refreshCandidates(state, rng);
     resetRestaurant(state);
     const w = rollNewDay(state, rng);

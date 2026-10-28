@@ -49,6 +49,13 @@ export function spendOnUpkeep(state: GameState, amount: number): void {
   state.stats.upkeep += amount;
 }
 
-export function netProfit(st: { earned: number; wages: number; tripCosts: number; spent: number; rewards?: number; away?: number; upkeep?: number }): number {
-  return st.earned + (st.rewards ?? 0) + (st.away ?? 0) - st.wages - (st.upkeep ?? 0) - st.tripCosts - st.spent;
+/** The restaurant's drinks money (Decoration): counts toward money and rank, with its own line in the day report. */
+export function earnDrinks(state: GameState, amount: number): void {
+  state.money += amount;
+  state.lifetime += amount;
+  state.stats.drinks += amount;
+}
+
+export function netProfit(st: { earned: number; wages: number; tripCosts: number; spent: number; rewards?: number; away?: number; upkeep?: number; drinks?: number }): number {
+  return st.earned + (st.drinks ?? 0) + (st.rewards ?? 0) + (st.away ?? 0) - st.wages - (st.upkeep ?? 0) - st.tripCosts - st.spent;
 }

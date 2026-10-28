@@ -1,4 +1,4 @@
-import type { BuildingId, ProjectId, Species, Track, UpgradeId, ZoneId } from '../sim/config';
+import type { BuildingId, ProjectId, RestTrack, Species, Track, UpgradeId, ZoneId } from '../sim/config';
 import type { DayStats, GameState } from '../sim/state';
 import type { AudioSettings, VolumeKey } from '../audio/settings';
 import type { QualityMode } from '../view/quality';
@@ -66,6 +66,7 @@ export interface PanelActions {
   /** Build a building, or upgrade it. */
   build(id: BuildingId): void;
   buildProject(id: ProjectId): void;
+  upgradeRest(track: RestTrack): void;
   smokeIn(crateId: number): void;
   smokeOut(crateId: number): void;
   sellToRestaurant(crateId: number): void;
@@ -120,6 +121,8 @@ export class Panels {
   private wrap = document.createElement('div');
   private host = document.createElement('img');
   private win = document.createElement('div');
+  /** Called after the window's HTML is replaced, so the game can put live pieces (the restaurant room) into their slots. */
+  onDraw?: (win: HTMLElement) => void;
   private kind: PanelKind | null = null;
   private arg = 0;
   private tab = '';
@@ -310,6 +313,7 @@ export class Panels {
       case 'openboat': this.open('boat', Number(a)); break;
       case 'build': this.actions.build(a as BuildingId); break;
       case 'project': this.actions.buildProject(a as ProjectId); break;
+      case 'restup': this.actions.upgradeRest(a as RestTrack); break;
       case 'smokein': this.actions.smokeIn(Number(a)); break;
       case 'smokeout': this.actions.smokeOut(Number(a)); break;
       case 'restsell': this.actions.sellToRestaurant(Number(a)); break;
@@ -373,6 +377,7 @@ export class Panels {
     // Keep the reader's place when live data re-renders the list.
     const scroll = this.win.querySelector('.win-body')?.scrollTop ?? 0;
     this.win.innerHTML = html;
+    this.onDraw?.(this.win);
     const body = this.win.querySelector('.win-body');
     if (body) body.scrollTop = scroll;
   }

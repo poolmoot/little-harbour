@@ -6,7 +6,7 @@ import type { GameAudio } from './audio/index';
 import type { Hud } from './ui/hud';
 import type { PanelKind } from './ui/panels';
 import { MENU } from './ui/menuText';
-import { CAPTAIN_TEXT, SAY2, TOWN_TEXT } from './ui/screenText';
+import { CAPTAIN_TEXT, REST_UP_TEXT, SAY2, TOWN_TEXT } from './ui/screenText';
 import { AWAY, FISH_BOOK, FISH_NAME, KING, NAME_TOAST, RANK_NAME, ZONE_NAME, denyText, say, sayTycoon } from './ui/text';
 import { crateSize, crateStars } from './sim/fishbook';
 import { catchCheer } from './audio/town';
@@ -232,6 +232,14 @@ export class EventRouter {
           a.fx.buildingBuilt();
           h.toast(TOWN_TEXT.doneToast(TOWN_TEXT.project[e.id].name), 'good');
           saveNow = true;
+          break;
+        case 'restUpgraded':
+          a.fx.buildingUpgraded();
+          h.toast(REST_UP_TEXT.toast(REST_UP_TEXT.name[e.track], e.level), 'good');
+          saveNow = true;
+          break;
+        case 'drinksPaid':
+          h.toast(REST_UP_TEXT.drinks(e.amount), 'good');
           break;
         case 'captainLevelUp':
           a.fx.goalComplete();

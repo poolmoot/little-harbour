@@ -1,8 +1,8 @@
 // Wording for the tycoon-stage screens (goal tracker, weather chip, building windows, contracts tab,
 // workers' rules, repairs, day report, ending). Same rule as text.ts: short, common words, no jargon.
 // Names that already exist in text.ts (building names, weather names, goal lines, contract lines) are used from there.
-import { ORDER_CRATE_MULT, RESTAURANT_MIN_FRESH, SMOKED_MULT } from '../sim/config';
-import type { ProjectId } from '../sim/config';
+import { ORDER_CRATE_MULT, SMOKED_MULT } from '../sim/config';
+import type { ProjectId, RestTrack } from '../sim/config';
 import type { BuildingId, WeatherId } from '../sim/config';
 import type { Special } from '../sim/state';
 import type { IconName } from './icons';
@@ -75,11 +75,28 @@ export const RESTAURANT_TEXT = {
   refuse: {
     smoked: 'It only wants fresh fish, not smoked fish.',
     king: 'Not the King Fish!',
-    stale: `It must be at least ${RESTAURANT_MIN_FRESH}% fresh.`,
+    stale: (min: number): string => `It must be at least ${min}% fresh.`,
     full: 'It has bought all it wants today.',
     gone: 'That fish has gone bad.',
     golden: 'A golden fish is too special for a meal. The market pays much more.',
   },
+};
+
+/** The restaurant's Upgrade tab. Numbers are in sim/config.ts (REST_*). */
+export const REST_UP_TEXT = {
+  tabToday: 'Today',
+  tabUpgrade: 'Upgrade',
+  name: { tables: 'Tables', kitchen: 'Kitchen', waiters: 'Waiters', decor: 'Decoration' } as Record<RestTrack, string>,
+  now: {
+    tables: (n: number): string => `Buys ${n} crates a day`,
+    kitchen: (m: number): string => (m === 1 ? 'Normal price' : `Pays ${m}× more`),
+    waiters: (f: number): string => `Takes fish ${f}% fresh or more`,
+    decor: (d: number): string => (d === 0 ? 'No drinks money yet' : `Drinks bring $${d.toLocaleString('en')} every morning`),
+  },
+  note: 'Upgrade the restaurant to earn more from every fish.',
+  roomNote: 'Your restaurant right now.',
+  toast: (name: string, level: number): string => `${name} upgraded to level ${level}!`,
+  drinks: (n: number): string => `The restaurant's drinks earned $${n.toLocaleString('en')}.`,
 };
 
 export const LIGHTHOUSE_TEXT = {
@@ -145,6 +162,7 @@ export const SHIPYARD_TEXT = {
 
 export const REPORT_TEXT = {
   rewards: 'Goal rewards',
+  drinks: 'Restaurant drinks',
   upkeep: 'Care for the boats',
   tomorrow: 'Tomorrow',
   today: 'Today',

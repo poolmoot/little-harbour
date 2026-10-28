@@ -1,3 +1,4 @@
+import { RestaurantRoom } from './view/restaurantRoom';
 import { Vector3 } from 'three';
 import { GameAudio } from './audio';
 import { Input } from './input';
@@ -8,7 +9,7 @@ import { clearSave, loadGame, saveGame } from './sim/save';
 import { Rng } from './sim/rng';
 import { applyAway, buyBoat, buyBoatUpgrade, fireCaptain, fireDockhand, hireCaptain, hireDockhand, rankOf, setBoatTarget } from './sim/sim';
 import { renameBoat, setHarbourName } from './sim/sim';
-import { acceptContract, buyBuilding, buyProject, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate } from './sim/sim';
+import { acceptContract, buyBuilding, buyProject, upgradeRest, collectSmoked, repairBoat, sellToRestaurant, setSmokeList, setStayInStorms, smokeCrate } from './sim/sim';
 import { buyUpgrade, cancelCast, dispatchBoat, dockCrates, handCrates, initialState, phaseOf, sellAll, sellCrate } from './sim/sim';
 import type { Ev, GameState } from './sim/sim';
 import { startGame, step } from './sim/sim';
@@ -120,6 +121,8 @@ export class Game {
   private started = false;
   private holdHour: number | null = null;
   private frameMs = 16;
+  /** The restaurant room, made the first time its window opens. */
+  private room: RestaurantRoom | null = null;
   private quality: Quality;
   private guideTips = loadGuideTips(localStorage);
   private guideCards!: GuideCards;
@@ -182,6 +185,7 @@ export class Game {
         fireDockhand: (id) => this.run(fireDockhand(this.state, id)),
         build: (id) => this.run(buyBuilding(this.state, id)),
         buildProject: (id) => this.run(buyProject(this.state, id)),
+        upgradeRest: (t) => this.run(upgradeRest(this.state, t)),
         smokeIn: (id) => this.run(smokeCrate(this.state, id)),
         smokeOut: (id) => this.run(collectSmoked(this.state, id)),
         sellToRestaurant: (id) => this.run(sellToRestaurant(this.state, id)),
@@ -213,6 +217,13 @@ export class Game {
       },
       () => this.state,
     );
+    // The restaurant window has a slot for the live 3D room: put the room's canvas into it whenever the window is redrawn.
+    this.panels.onDraw = (win) => {
+      const slot = win.querySelector('.room-slot');
+      if (!slot) return;
+      this.room ??= new RestaurantRoom();
+      slot.appendChild(this.room.canvas);
+    };
 
     // Audio may only start after the first user input.
     const unlock = () => this.audio.unlock();
@@ -496,7 +507,9 @@ export class Game {
       frozen,
     );
     this.townLife.update(sdt, this.now, s, this.rig.skyState);
-    this.rig.render();
+    // While the restaurant room shows, draw only the room: the harbour behind the window keeps its last picture.
+    if (this.room && this.room.canvas.parentElement?.classList.contains('room-slot') && this.panels.current) this.room.render(dt, s);
+    else this.rig.render();
 
     // ui
     this.hud.update(s, promptFor(s, this.target));

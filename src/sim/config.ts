@@ -81,9 +81,9 @@ export const FISH_HOOK_WINDOW = 0.7;
 /** Harbour-wide purchases. Names and descriptions are in ui/text.ts. */
 export const UPGRADES: Record<UpgradeId, { cost: number; requires?: UpgradeId; rank: number }> = {
   handcart: { cost: 200, rank: 0 },
-  bigcart: { cost: 2500, requires: 'handcart', rank: 2 },
-  wagon: { cost: 12000, requires: 'bigcart', rank: 3 },
-  steamwagon: { cost: 40000, requires: 'wagon', rank: 4 },
+  bigcart: { cost: 8000, requires: 'handcart', rank: 2 },
+  wagon: { cost: 35000, requires: 'bigcart', rank: 3 },
+  steamwagon: { cost: 120000, requires: 'wagon', rank: 4 },
   stall1: { cost: 2000, rank: 2 },
   stall2: { cost: 9000, requires: 'stall1', rank: 3 },
 };
@@ -92,13 +92,13 @@ export const UPGRADE_IDS: UpgradeId[] = ['handcart', 'bigcart', 'wagon', 'steamw
 // ---- Fleet (per-boat tracks) -------------------------------------------
 export type Track = 'hull' | 'hold' | 'gear' | 'sails';
 export const TRACKS: Track[] = ['hull', 'hold', 'gear', 'sails'];
-export const TRACK_MAX: Record<Track, number> = { hull: 6, hold: 6, gear: 4, sails: 4 };
+export const TRACK_MAX: Record<Track, number> = { hull: 9, hold: 6, gear: 4, sails: 4 };
 export const HOLD_SIZES = [4, 6, 8, 12, 16, 20, 25];
 export const GEAR_MULT = [1, 1.5, 2.2, 3, 4];
 export const SAILS_MULT = [1, 0.85, 0.7, 0.6, 0.5];
 /** Smallest Boat size (hull) each level needs (index = level). The later levels are for the big boats and keep the game going. */
 export const TRACK_LEVEL_HULL: Record<Track, number[]> = {
-  hull: [0, 0, 0, 0, 0, 0, 0],
+  hull: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   hold: [0, 0, 0, 0, 2, 3, 3],
   gear: [0, 0, 0, 2, 3],
   sails: [0, 0, 0, 2, 3],
@@ -107,14 +107,14 @@ export const MAX_BOATS = 4;
 export const BOAT_NAMES = ['Gull', 'Wren', 'Marigold', 'Albatross'];
 /** Cost to reach level i of each track (index 0 unused). Hold, Gear and Sails are multiplied by TIER_COST_MULT[hull]. */
 export const TRACK_COST: Record<Track, number[]> = {
-  hull: [0, 400, 2500, 4500, 30000, 90000, 250000],
+  hull: [0, 400, 2500, 4500, 60000, 200000, 500000, 1200000, 3000000, 7500000],
   hold: [0, 110, 450, 1200, 3000, 8000, 20000],
   gear: [0, 350, 950, 3000, 9000],
   sails: [0, 350, 800, 2500, 8000],
 };
-export const TIER_COST_MULT = [1, 1.6, 2.6, 4, 5, 6, 7];
-/** The boats after the Trawler (Big Trawler, Fishing Ship, Flagship) go to the same places but bring home more crates each trip. */
-export const HULL_EXTRA_CRATES = [0, 0, 0, 0, 4, 8, 14];
+export const TIER_COST_MULT = [1, 1.6, 2.6, 4, 5, 6, 7, 8, 9, 10];
+/** The boats after the Trawler (Big Trawler .. Royal Ship) go to the same places but bring home more crates each trip. */
+export const HULL_EXTRA_CRATES = [0, 0, 0, 0, 4, 8, 14, 20, 28, 36];
 /** The boats after the Trawler need the top rank. */
 export const BIG_HULL_RANK = 4;
 /** Price of the nth boat (index = boats already owned). Bought as a rowboat. */
@@ -129,7 +129,7 @@ export type Trait = 'swift' | 'lucky' | 'careful' | 'thrifty';
 export const TRAITS: Trait[] = ['swift', 'lucky', 'careful', 'thrifty'];
 export const CAPTAIN_WAGE = 60;
 /** A captain's pay a day by the hull of the boat they sail (Rowboat .. Trawler), before level and Thrifty. */
-export const CAPTAIN_WAGE_BY_HULL = [CAPTAIN_WAGE, 120, 500, 1500, 1800, 2200, 2800];
+export const CAPTAIN_WAGE_BY_HULL = [CAPTAIN_WAGE, 120, 500, 1500, 1800, 2200, 2800, 3500, 4500, 6000];
 /** Trips finished to reach captain level 1..5. */
 export const CAPTAIN_LEVEL_TRIPS = [0, 8, 20, 40, 70];
 export const CAPTAIN_MAX_LEVEL = CAPTAIN_LEVEL_TRIPS.length;
@@ -141,7 +141,7 @@ export const CAPTAIN_LEVEL_SPEED = 0.03;
 export const VETERAN_RANK = 2;
 export const VETERAN_CHANCE: [number, number] = [0.3, 0.1];
 /** Care for each boat, paid at 06:00 with the wages, by hull (Rowboat .. Trawler). Never makes debt. */
-export const BOAT_UPKEEP = [0, 25, 120, 500, 700, 1000, 1500];
+export const BOAT_UPKEEP = [0, 25, 120, 500, 700, 1000, 1500, 2500, 4000, 6000];
 export const DOCKHAND_WAGE = 25;
 export const MAX_DOCKHANDS = 4;
 export const CANDIDATE_COUNT = 3;
@@ -278,6 +278,24 @@ export const DEFAULT_SMOKE_LIST: Species[] = ['herring', 'mackerel'];
 export const RESTAURANT_CAPACITY = [0, 6, 12, 20];
 export const RESTAURANT_MULT = 2;
 export const RESTAURANT_MIN_FRESH = 80;
+/** Restaurant upgrades (once it is built). Index = level 0..5. See docs/superpowers/specs/2026-10-28-restaurant-and-big-ships-design.md. */
+export type RestTrack = 'tables' | 'kitchen' | 'waiters' | 'decor';
+export const REST_TRACKS: RestTrack[] = ['tables', 'kitchen', 'waiters', 'decor'];
+export const REST_MAX = 5;
+export const REST_COST: Record<RestTrack, number[]> = {
+  tables: [0, 4000, 10000, 25000, 60000, 150000],
+  kitchen: [0, 5000, 12000, 30000, 75000, 180000],
+  waiters: [0, 3000, 8000, 20000, 50000, 120000],
+  decor: [0, 6000, 15000, 40000, 100000, 250000],
+};
+/** Tables: extra crates bought each day. */
+export const REST_TABLES_EXTRA = [0, 6, 12, 20, 30, 45];
+/** Kitchen: the restaurant's price is multiplied by this. */
+export const REST_KITCHEN_MULT = [1, 1.15, 1.3, 1.5, 1.75, 2];
+/** Waiters: the least fresh a fish may be (percent). */
+export const REST_WAITERS_MIN_FRESH = [RESTAURANT_MIN_FRESH, 70, 60, 50, 40, 30];
+/** Decoration: drinks money each morning. */
+export const REST_DECOR_INCOME = [0, 300, 800, 2000, 5000, 12000];
 export const RESTAURANT_VARIETY_BONUS = 0.1;
 
 // ---- Weather and special days ----------------------------------------------

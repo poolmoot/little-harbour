@@ -70,7 +70,7 @@ describe('migration from the MVP save', () => {
     };
     st.setItem('harbour-game-save', JSON.stringify(old));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(9);
+    expect(l.version).toBe(10);
     expect(l.money).toBe(777 + 120); // the ice box is refunded
     expect(l.boats).toHaveLength(2);
     for (const b of l.boats) {
@@ -124,7 +124,7 @@ describe('migration from version 3 (before the tycoon stage)', () => {
     const st = memory();
     st.setItem('harbour-game-save', JSON.stringify(v3()));
     const l = loadGame(st, new Rng(1))!;
-    expect(l.version).toBe(9);
+    expect(l.version).toBe(10);
     expect(l.money).toBe(4321 + 120);
     expect(l.day).toBe(12);
     expect(l.lifetime).toBe(9000);
@@ -184,7 +184,7 @@ describe('migration to version 6 (starting guide)', () => {
     const store = new Map<string, string>();
     store.set(SAVE_KEY, JSON.stringify(old));
     const s = loadGame({ getItem: (k) => store.get(k) ?? null, setItem: () => {}, removeItem: () => {} }, new Rng(1))!;
-    expect(s.version).toBe(9);
+    expect(s.version).toBe(10);
     expect(s.guide.step).toBeGreaterThanOrEqual(8);
     expect(s.guide.welcomed).toBe(true);
     expect(s.guide.gentle).toBe(false);
@@ -216,7 +216,7 @@ describe('migration to version 7 (ice box and cold store removed)', () => {
   };
   it('puts stored crates back on the dock as fresh as they were, and refunds what was spent', () => {
     const l = load(v6());
-    expect(l.version).toBe(9);
+    expect(l.version).toBe(10);
     expect(l.money).toBe(1000 + 120 + 600 + 2000);
     const byId = (id: number) => l.crates.find((c) => c.id === id)!;
     expect(byId(11)).toMatchObject({ loc: 'dock', freshness: 83.25 });
